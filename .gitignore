@@ -1,0 +1,7 @@
+# Build artifacts
+ffind
+ffind-daemon
+
+# Test artifacts
+tests/test_dir/
+tests/*.log
