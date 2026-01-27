@@ -177,6 +177,7 @@ void handle_client(int fd) {
     if (read(fd, &flags, 1) != 1) flags = 0;
     bool case_ins = flags & 1;
     bool is_regex = flags & 2;
+    bool content_glob = flags & 4;
 
     uint8_t type_filter = 0;
     if (read(fd, &type_filter, 1) != 1) type_filter = 0;
@@ -289,7 +290,11 @@ void handle_client(int fd) {
                 size_t lineno = 1;
                 while (getline(ifs, line)) {
                     bool match = false;
-                    if (is_regex) {
+                    if (content_glob) {
+                        // Use fnmatch for glob pattern matching
+                        int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
+                        match = fnmatch(content_pat.c_str(), line.c_str(), fnm_flags_content) == 0;
+                    } else if (is_regex) {
                         match = regex_search(line, *re);
                     } else if (case_ins) {
                         match = strcasestr(line.c_str(), content_pat.c_str()) != nullptr;
@@ -320,7 +325,11 @@ void handle_client(int fd) {
                 for (size_t i = 0; i < all_lines.size(); ++i) {
                     bool match = false;
                     const string& content = all_lines[i].second;
-                    if (is_regex) {
+                    if (content_glob) {
+                        // Use fnmatch for glob pattern matching
+                        int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
+                        match = fnmatch(content_pat.c_str(), content.c_str(), fnm_flags_content) == 0;
+                    } else if (is_regex) {
                         match = regex_search(content, *re);
                     } else if (case_ins) {
                         match = strcasestr(content.c_str(), content_pat.c_str()) != nullptr;
