@@ -16,3 +16,4 @@ tests/temp_test_*/
 *.o
 *.so
 *.a
+_codeql_detected_source_root

@@ -323,7 +323,100 @@ else
     FAILED_TESTS=$((FAILED_TESTS + 1))
 fi
 
-# Test 13: Error cases
+# Test 13: Color output tests
+echo ""
+echo "--- Color Output Tests ---"
+
+# Test --color=never produces no ANSI codes
+output=$("$FFIND_CLIENT" "*.txt" --color=never 2>&1 || true)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q $'\033'; then
+    echo -e "${RED}✗${NC} FAIL: --color=never still has escape codes"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+else
+    echo -e "${GREEN}✓${NC} PASS: --color=never produces no escape codes"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+fi
+
+# Test --color=always produces ANSI codes even when piped
+output=$("$FFIND_CLIENT" "*.txt" --color=always 2>&1 | cat)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q $'\033'; then
+    echo -e "${GREEN}✓${NC} PASS: --color=always produces escape codes"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: --color=always did not produce escape codes"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test content search highlighting
+output=$("$FFIND_CLIENT" -c "TODO" --color=always 2>&1 | cat)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q $'\033\[1;31m'; then
+    echo -e "${GREEN}✓${NC} PASS: Content search highlights matches (bold red)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Content search did not highlight matches"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test line number coloring (cyan)
+output=$("$FFIND_CLIENT" -c "TODO" --color=always 2>&1 | cat)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q $'\033\[36m'; then
+    echo -e "${GREEN}✓${NC} PASS: Line numbers colored (cyan)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Line numbers not colored"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test path coloring (bold)
+output=$("$FFIND_CLIENT" "*.txt" --color=always 2>&1 | cat)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q $'\033\[1m'; then
+    echo -e "${GREEN}✓${NC} PASS: Paths colored (bold)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Paths not colored"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test --color=auto with pipe (should not colorize)
+output=$("$FFIND_CLIENT" "*.txt" --color=auto 2>&1 | cat)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q $'\033'; then
+    echo -e "${RED}✗${NC} FAIL: --color=auto produced escape codes when piped"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+else
+    echo -e "${GREEN}✓${NC} PASS: --color=auto respects pipe (no colors)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+fi
+
+# Test case-insensitive content highlighting
+output=$("$FFIND_CLIENT" -c "error" -i --color=always 2>&1 | cat)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+# Check if ERROR is highlighted in the output
+if echo "$output" | grep -q $'\033\[1;31mERROR\033\[0m'; then
+    echo -e "${GREEN}✓${NC} PASS: Case-insensitive highlighting works"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Case-insensitive highlighting failed"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test combined flags with color
+output=$("$FFIND_CLIENT" -c "TODO" -i --color=always 2>&1 | cat)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q $'\033\[1;31m' && echo "$output" | grep -qi "TODO"; then
+    echo -e "${GREEN}✓${NC} PASS: Combined flags (-i) work with --color"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Combined flags with --color failed"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 14: Error cases
 echo ""
 echo "--- Error Handling Tests ---"
 

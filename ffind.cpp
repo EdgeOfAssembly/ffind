@@ -4,8 +4,17 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <regex>
 
 using namespace std;
+
+enum class ColorMode { NEVER, AUTO, ALWAYS };
+
+// ANSI color codes
+const char* RESET = "\033[0m";
+const char* BOLD = "\033[1m";
+const char* CYAN = "\033[36m";
+const char* BOLD_RED = "\033[1;31m";
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -13,7 +22,8 @@ int main(int argc, char** argv) {
              << "  ffind \"*.cpp\"\n"
              << "  ffind -path \"src/*\" -type f\n"
              << "  ffind -size +1G -mtime -7\n"
-             << "  ffind -c \"todo\" -r -i\n";
+             << "  ffind -c \"todo\" -r -i\n"
+             << "  ffind \"*.cpp\" --color=always\n";
         return 1;
     }
 
@@ -27,6 +37,7 @@ int main(int argc, char** argv) {
     int64_t size_val = 0;
     uint8_t mtime_op = 0;
     int32_t mtime_days = 0;
+    ColorMode color_mode = ColorMode::AUTO;
 
     bool has_dash = false;
     for (int i = 1; i < argc; ++i) if (argv[i][0] == '-') has_dash = true;
@@ -83,6 +94,18 @@ int main(int argc, char** argv) {
                 case_ins = true;
             } else if (arg == "-r") {
                 is_regex = true;
+            } else if (arg.starts_with("--color=")) {
+                string mode = arg.substr(8);
+                if (mode == "never") color_mode = ColorMode::NEVER;
+                else if (mode == "always") color_mode = ColorMode::ALWAYS;
+                else if (mode == "auto") color_mode = ColorMode::AUTO;
+                else { cerr << "--color must be auto/always/never\n"; return 1; }
+            } else if (arg == "--color") {
+                // Support --color as shorthand for --color=always
+                color_mode = ColorMode::ALWAYS;
+            } else if (arg[0] != '-') {
+                // Positional argument - treat as name pattern
+                name_pat = arg;
             } else {
                 cerr << "Bad arg: " << arg << "\n";
                 return 1;
@@ -94,6 +117,22 @@ int main(int argc, char** argv) {
     if (is_regex && content_pat.empty()) {
         cerr << "-r needs -c\n";
         return 1;
+    }
+
+    // Determine if we should use colors
+    bool use_colors = false;
+    if (color_mode == ColorMode::ALWAYS) {
+        use_colors = true;
+    } else if (color_mode == ColorMode::AUTO) {
+        use_colors = isatty(STDOUT_FILENO);
+    }
+    
+    // Clear color codes if not using colors
+    if (!use_colors) {
+        RESET = "";
+        BOLD = "";
+        CYAN = "";
+        BOLD_RED = "";
     }
 
     string sock_path = "/run/user/" + to_string(getuid()) + "/ffind.sock";
@@ -134,11 +173,123 @@ int main(int argc, char** argv) {
     write(c, &mtime_op, 1);
     if (mtime_op) write(c, &mtime_days, 4);
 
+    // Read and colorize output incrementally
+    bool has_content = !content_pat.empty();
+    
+    // Prepare regex for content matching if needed
+    unique_ptr<regex> re_matcher;
+    if (has_content && is_regex) {
+        regex_constants::syntax_option_type re_flags = regex_constants::ECMAScript;
+        if (case_ins) re_flags |= regex_constants::icase;
+        try {
+            re_matcher = make_unique<regex>(content_pat, re_flags);
+        } catch (const regex_error& e) {
+            cerr << "Invalid regex pattern: " << e.what() << "\n";
+            return 1;
+        }
+    }
+    
+    // Process output line by line as it arrives (streaming)
+    string line_buffer;
     char buf[8192];
     ssize_t n;
+    
+    auto process_line = [&](const string& line) {
+        if (line.empty()) return;
+        
+        if (!has_content) {
+            // Simple path output - color with bold
+            cout << BOLD << line << RESET << "\n";
+        } else {
+            // Content search: path:lineno:content format
+            size_t first_colon = line.find(':');
+            if (first_colon == string::npos) {
+                // Fallback: no colon found, just print
+                cout << line << "\n";
+                return;
+            }
+            
+            size_t second_colon = line.find(':', first_colon + 1);
+            if (second_colon == string::npos) {
+                // Fallback: only one colon, just print
+                cout << line << "\n";
+                return;
+            }
+            
+            string path = line.substr(0, first_colon);
+            string lineno = line.substr(first_colon + 1, second_colon - first_colon - 1);
+            string content = line.substr(second_colon + 1);
+            
+            // Color the path (bold) and line number (cyan)
+            cout << BOLD << path << RESET << ":" 
+                 << CYAN << lineno << RESET << ":";
+            
+            // Highlight matching content
+            if (use_colors) {
+                bool found_match = false;
+                size_t match_start = 0;
+                size_t match_len = 0;
+                
+                if (is_regex && re_matcher) {
+                    smatch match;
+                    if (regex_search(content, match, *re_matcher)) {
+                        match_start = match.position(0);
+                        match_len = match.length(0);
+                        found_match = true;
+                    }
+                } else if (case_ins) {
+                    // Case-insensitive substring search
+                    string lower_content = content;
+                    string lower_pattern = content_pat;
+                    transform(lower_content.begin(), lower_content.end(), lower_content.begin(), ::tolower);
+                    transform(lower_pattern.begin(), lower_pattern.end(), lower_pattern.begin(), ::tolower);
+                    size_t pos = lower_content.find(lower_pattern);
+                    if (pos != string::npos) {
+                        match_start = pos;
+                        match_len = content_pat.size();
+                        found_match = true;
+                    }
+                } else {
+                    // Case-sensitive substring search
+                    size_t pos = content.find(content_pat);
+                    if (pos != string::npos) {
+                        match_start = pos;
+                        match_len = content_pat.size();
+                        found_match = true;
+                    }
+                }
+                
+                if (found_match) {
+                    cout << content.substr(0, match_start)
+                         << BOLD_RED << content.substr(match_start, match_len) << RESET
+                         << content.substr(match_start + match_len) << "\n";
+                } else {
+                    cout << content << "\n";
+                }
+            } else {
+                cout << content << "\n";
+            }
+        }
+    };
+    
+    // Stream processing: read chunks and process complete lines immediately
     while ((n = read(c, buf, sizeof(buf))) > 0) {
-        write(1, buf, n);
+        for (ssize_t i = 0; i < n; ++i) {
+            if (buf[i] == '\n') {
+                // Complete line found - process it immediately
+                process_line(line_buffer);
+                line_buffer.clear();
+            } else {
+                line_buffer += buf[i];
+            }
+        }
     }
+    
+    // Process any remaining partial line
+    if (!line_buffer.empty()) {
+        process_line(line_buffer);
+    }
+    
     close(c);
     return 0;
 }
