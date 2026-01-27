@@ -154,11 +154,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (is_regex && content_pat.empty()) {
-        cerr << "-r needs -c\n";
-        return 1;
-    }
-
     if (!content_glob.empty() && !content_pat.empty()) {
         cerr << "Cannot use -g with -c\n";
         return 1;
@@ -166,6 +161,11 @@ int main(int argc, char** argv) {
 
     if (!content_glob.empty() && is_regex) {
         cerr << "Cannot use -g with -r\n";
+        return 1;
+    }
+
+    if (is_regex && content_pat.empty()) {
+        cerr << "-r needs -c\n";
         return 1;
     }
 
