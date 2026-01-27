@@ -94,19 +94,37 @@ int main(int argc, char** argv) {
                 mtime_days = num;
             } else if (arg == "-A") {
                 if (++i >= argc) { cerr << "Missing -A arg\n"; return 1; }
-                int val = stoi(argv[i]);
-                if (val < 0 || val > 255) { cerr << "-A must be 0-255\n"; return 1; }
-                after_ctx = static_cast<uint8_t>(val);
+                try {
+                    int val = stoi(argv[i]);
+                    if (val < 0 || val > 255) { cerr << "-A must be 0-255\n"; return 1; }
+                    after_ctx = static_cast<uint8_t>(val);
+                } catch (const invalid_argument&) {
+                    cerr << "-A requires a valid integer\n"; return 1;
+                } catch (const out_of_range&) {
+                    cerr << "-A value out of range\n"; return 1;
+                }
             } else if (arg == "-B") {
                 if (++i >= argc) { cerr << "Missing -B arg\n"; return 1; }
-                int val = stoi(argv[i]);
-                if (val < 0 || val > 255) { cerr << "-B must be 0-255\n"; return 1; }
-                before_ctx = static_cast<uint8_t>(val);
+                try {
+                    int val = stoi(argv[i]);
+                    if (val < 0 || val > 255) { cerr << "-B must be 0-255\n"; return 1; }
+                    before_ctx = static_cast<uint8_t>(val);
+                } catch (const invalid_argument&) {
+                    cerr << "-B requires a valid integer\n"; return 1;
+                } catch (const out_of_range&) {
+                    cerr << "-B value out of range\n"; return 1;
+                }
             } else if (arg == "-C") {
                 if (++i >= argc) { cerr << "Missing -C arg\n"; return 1; }
-                int val = stoi(argv[i]);
-                if (val < 0 || val > 255) { cerr << "-C must be 0-255\n"; return 1; }
-                before_ctx = after_ctx = static_cast<uint8_t>(val);
+                try {
+                    int val = stoi(argv[i]);
+                    if (val < 0 || val > 255) { cerr << "-C must be 0-255\n"; return 1; }
+                    before_ctx = after_ctx = static_cast<uint8_t>(val);
+                } catch (const invalid_argument&) {
+                    cerr << "-C requires a valid integer\n"; return 1;
+                } catch (const out_of_range&) {
+                    cerr << "-C value out of range\n"; return 1;
+                }
             } else if (arg == "-i") {
                 case_ins = true;
             } else if (arg == "-r") {
@@ -195,7 +213,9 @@ int main(int argc, char** argv) {
     write(c, &mtime_op, 1);
     if (mtime_op) write(c, &mtime_days, 4);
 
-    // Send context line parameters
+    // Send context line parameters (protocol extension for context lines feature)
+    // Note: Old daemons will ignore/misinterpret these bytes, but this is expected
+    // for new feature additions. Users should update both client and daemon together.
     write(c, &before_ctx, 1);
     write(c, &after_ctx, 1);
 
@@ -257,8 +277,16 @@ int main(int argc, char** argv) {
                 return;
             }
             
-            string path = line.substr(0, first_colon);
+            // Validate that the substring between first_colon and second_sep is a valid line number
             string lineno = line.substr(first_colon + 1, second_sep - first_colon - 1);
+            bool valid_lineno = !lineno.empty() && all_of(lineno.begin(), lineno.end(), ::isdigit);
+            if (!valid_lineno) {
+                // Not a valid line number, just print as-is
+                cout << line << "\n";
+                return;
+            }
+            
+            string path = line.substr(0, first_colon);
             string content = line.substr(second_sep + 1);
             
             // Color the path (bold) and line number (cyan)

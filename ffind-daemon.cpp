@@ -189,7 +189,11 @@ void handle_client(int fd) {
     int32_t mtime_days = 0;
     if (read(fd, &mtime_op, 1) == 1 && mtime_op) read(fd, &mtime_days, 4);
 
-    // Read context line parameters
+    // Read context line parameters (added in v1.1 for context lines feature)
+    // Note: For backward compatibility with older daemons, these bytes default to 0 if read fails.
+    // This protocol extension approach is acceptable for new features where both client and daemon
+    // are updated together. Old clients connecting to new daemons will work (daemon reads 0s).
+    // New clients connecting to old daemons may have issues - this is expected for feature updates.
     uint8_t before_ctx = 0, after_ctx = 0;
     if (read(fd, &before_ctx, 1) != 1) before_ctx = 0;
     if (read(fd, &after_ctx, 1) != 1) after_ctx = 0;
@@ -310,8 +314,9 @@ void handle_client(int fd) {
                     ++lineno;
                 }
                 
-                // Find all matching line indices
+                // Find all matching line indices and store in a set for O(1) lookup
                 vector<size_t> match_indices;
+                unordered_set<size_t> match_set;
                 for (size_t i = 0; i < all_lines.size(); ++i) {
                     bool match = false;
                     const string& content = all_lines[i].second;
@@ -324,6 +329,7 @@ void handle_client(int fd) {
                     }
                     if (match) {
                         match_indices.push_back(i);
+                        match_set.insert(i);
                     }
                 }
                 
@@ -351,8 +357,8 @@ void handle_client(int fd) {
                         }
                         
                         for (size_t i = ranges[r].first; i <= ranges[r].second; ++i) {
-                            // Check if this line is a match line
-                            bool is_match = find(match_indices.begin(), match_indices.end(), i) != match_indices.end();
+                            // Check if this line is a match line using O(1) lookup
+                            bool is_match = match_set.count(i) > 0;
                             char separator = is_match ? ':' : '-';
                             
                             string out = path + ":" + to_string(all_lines[i].first) + separator + all_lines[i].second + "\n";
