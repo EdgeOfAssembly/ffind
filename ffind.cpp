@@ -4,7 +4,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <fnmatch.h>
 #include <regex>
 
 using namespace std;
@@ -14,7 +13,6 @@ enum class ColorMode { NEVER, AUTO, ALWAYS };
 // ANSI color codes
 const char* RESET = "\033[0m";
 const char* BOLD = "\033[1m";
-const char* RED = "\033[31m";
 const char* CYAN = "\033[36m";
 const char* BOLD_RED = "\033[1;31m";
 
@@ -133,7 +131,6 @@ int main(int argc, char** argv) {
     if (!use_colors) {
         RESET = "";
         BOLD = "";
-        RED = "";
         CYAN = "";
         BOLD_RED = "";
     }
@@ -198,8 +195,9 @@ int main(int argc, char** argv) {
         if (case_ins) re_flags |= regex_constants::icase;
         try {
             re_matcher = make_unique<regex>(content_pat, re_flags);
-        } catch (...) {
-            // If regex fails, just output without highlighting
+        } catch (const regex_error& e) {
+            cerr << "Invalid regex pattern: " << e.what() << "\n";
+            return 1;
         }
     }
     
