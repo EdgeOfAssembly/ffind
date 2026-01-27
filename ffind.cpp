@@ -173,20 +173,8 @@ int main(int argc, char** argv) {
     write(c, &mtime_op, 1);
     if (mtime_op) write(c, &mtime_days, 4);
 
-    // Read and colorize output
+    // Read and colorize output incrementally
     bool has_content = !content_pat.empty();
-    string buffer;
-    char buf[8192];
-    ssize_t n;
-    
-    while ((n = read(c, buf, sizeof(buf))) > 0) {
-        buffer.append(buf, n);
-    }
-    close(c);
-    
-    // Process buffer line by line
-    istringstream stream(buffer);
-    string line;
     
     // Prepare regex for content matching if needed
     unique_ptr<regex> re_matcher;
@@ -201,8 +189,13 @@ int main(int argc, char** argv) {
         }
     }
     
-    while (getline(stream, line)) {
-        if (line.empty()) continue;
+    // Process output line by line as it arrives (streaming)
+    string line_buffer;
+    char buf[8192];
+    ssize_t n;
+    
+    auto process_line = [&](const string& line) {
+        if (line.empty()) return;
         
         if (!has_content) {
             // Simple path output - color with bold
@@ -213,14 +206,14 @@ int main(int argc, char** argv) {
             if (first_colon == string::npos) {
                 // Fallback: no colon found, just print
                 cout << line << "\n";
-                continue;
+                return;
             }
             
             size_t second_colon = line.find(':', first_colon + 1);
             if (second_colon == string::npos) {
                 // Fallback: only one colon, just print
                 cout << line << "\n";
-                continue;
+                return;
             }
             
             string path = line.substr(0, first_colon);
@@ -277,7 +270,26 @@ int main(int argc, char** argv) {
                 cout << content << "\n";
             }
         }
+    };
+    
+    // Stream processing: read chunks and process complete lines immediately
+    while ((n = read(c, buf, sizeof(buf))) > 0) {
+        for (ssize_t i = 0; i < n; ++i) {
+            if (buf[i] == '\n') {
+                // Complete line found - process it immediately
+                process_line(line_buffer);
+                line_buffer.clear();
+            } else {
+                line_buffer += buf[i];
+            }
+        }
     }
     
+    // Process any remaining partial line
+    if (!line_buffer.empty()) {
+        process_line(line_buffer);
+    }
+    
+    close(c);
     return 0;
 }
