@@ -1,0 +1,277 @@
+\doxysection{ffind-\/daemon.cpp File Reference}
+\hypertarget{ffind-daemon_8cpp}{}\label{ffind-daemon_8cpp}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+{\ttfamily \#include $<$bits/stdc++.\+h$>$}\newline
+{\ttfamily \#include $<$sys/stat.\+h$>$}\newline
+{\ttfamily \#include $<$sys/inotify.\+h$>$}\newline
+{\ttfamily \#include $<$fnmatch.\+h$>$}\newline
+{\ttfamily \#include $<$sys/socket.\+h$>$}\newline
+{\ttfamily \#include $<$sys/un.\+h$>$}\newline
+{\ttfamily \#include $<$signal.\+h$>$}\newline
+{\ttfamily \#include $<$errno.\+h$>$}\newline
+{\ttfamily \#include $<$unistd.\+h$>$}\newline
+{\ttfamily \#include $<$fcntl.\+h$>$}\newline
+{\ttfamily \#include $<$fstream$>$}\newline
+{\ttfamily \#include $<$regex$>$}\newline
+{\ttfamily \#include $<$string.\+h$>$}\newline
+{\ttfamily \#include $<$arpa/inet.\+h$>$}\newline
+Include dependency graph for ffind-\/daemon.cpp\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp__incl}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{structEntry}{Entry}}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \mbox{\hyperlink{ffind-daemon_8cpp_a369266c24eacffb87046522897a570d5}{\+\_\+\+GNU\+\_\+\+SOURCE}}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6}{sig\+\_\+handler}} (int)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e}{daemonize}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565}{update\+\_\+or\+\_\+add}} (const string \&full)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f}{remove\+\_\+path}} (const string \&full, bool recursive=false)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc}{add\+\_\+watch}} (const string \&dir)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b}{initial\+\_\+setup}} (const string \&r)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c}{process\+\_\+events}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd}{handle\+\_\+client}} (int fd)
+\item 
+int \mbox{\hyperlink{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}{main}} (int argc, char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}argv)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+vector$<$ \mbox{\hyperlink{structEntry}{Entry}} $>$ \mbox{\hyperlink{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf}{entries}}
+\item 
+mutex \mbox{\hyperlink{ffind-daemon_8cpp_a29ac681ec3efa9e30e1ab1ab251b47f9}{mtx}}
+\item 
+string \mbox{\hyperlink{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4}{root\+\_\+path}}
+\item 
+string \mbox{\hyperlink{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae}{sock\+\_\+path}}
+\item 
+volatile sig\+\_\+atomic\+\_\+t \mbox{\hyperlink{ffind-daemon_8cpp_af3270a6e782fe74a057a44a74d4b29f9}{running}} = 1
+\item 
+int \mbox{\hyperlink{ffind-daemon_8cpp_a683029b96d4f70080d7f5d69d5144cd5}{in\+\_\+fd}} = -\/1
+\item 
+unordered\+\_\+map$<$ int, string $>$ \mbox{\hyperlink{ffind-daemon_8cpp_ac2fc5f87ca9b708edcf7dbd5da05ba24}{wd\+\_\+to\+\_\+dir}}
+\end{DoxyCompactItemize}
+
+
+\label{doc-define-members}
+\Hypertarget{ffind-daemon_8cpp_doc-define-members}
+\doxysubsection{Macro Definition Documentation}
+\Hypertarget{ffind-daemon_8cpp_a369266c24eacffb87046522897a570d5}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!\_GNU\_SOURCE@{\_GNU\_SOURCE}}
+\index{\_GNU\_SOURCE@{\_GNU\_SOURCE}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{\_GNU\_SOURCE}{\_GNU\_SOURCE}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a369266c24eacffb87046522897a570d5} 
+\#define \+\_\+\+GNU\+\_\+\+SOURCE}
+
+
+
+\label{doc-func-members}
+\Hypertarget{ffind-daemon_8cpp_doc-func-members}
+\doxysubsection{Function Documentation}
+\Hypertarget{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!add\_watch@{add\_watch}}
+\index{add\_watch@{add\_watch}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{add\_watch()}{add\_watch()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc} 
+void add\+\_\+watch (\begin{DoxyParamCaption}\item[{const string \&}]{dir}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!daemonize@{daemonize}}
+\index{daemonize@{daemonize}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{daemonize()}{daemonize()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e} 
+void daemonize (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=227pt]{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!handle\_client@{handle\_client}}
+\index{handle\_client@{handle\_client}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{handle\_client()}{handle\_client()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd} 
+void handle\+\_\+client (\begin{DoxyParamCaption}\item[{int}]{fd}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=238pt]{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!initial\_setup@{initial\_setup}}
+\index{initial\_setup@{initial\_setup}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{initial\_setup()}{initial\_setup()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b} 
+void initial\+\_\+setup (\begin{DoxyParamCaption}\item[{const string \&}]{r}{}\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=261pt]{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=233pt]{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!main@{main}}
+\index{main@{main}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{main()}{main()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627} 
+int main (\begin{DoxyParamCaption}\item[{int}]{argc}{, }\item[{char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}}]{argv}{}\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!process\_events@{process\_events}}
+\index{process\_events@{process\_events}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{process\_events()}{process\_events()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c} 
+void process\+\_\+events (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=296pt]{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=249pt]{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!remove\_path@{remove\_path}}
+\index{remove\_path@{remove\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{remove\_path()}{remove\_path()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f} 
+void remove\+\_\+path (\begin{DoxyParamCaption}\item[{const string \&}]{full}{, }\item[{bool}]{recursive}{ = {\ttfamily false}}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!sig\_handler@{sig\_handler}}
+\index{sig\_handler@{sig\_handler}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{sig\_handler()}{sig\_handler()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6} 
+void sig\+\_\+handler (\begin{DoxyParamCaption}\item[{int}]{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=229pt]{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!update\_or\_add@{update\_or\_add}}
+\index{update\_or\_add@{update\_or\_add}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{update\_or\_add()}{update\_or\_add()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565} 
+void update\+\_\+or\+\_\+add (\begin{DoxyParamCaption}\item[{const string \&}]{full}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph}
+\end{center}
+\end{figure}
+
+
+\label{doc-var-members}
+\Hypertarget{ffind-daemon_8cpp_doc-var-members}
+\doxysubsection{Variable Documentation}
+\Hypertarget{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!entries@{entries}}
+\index{entries@{entries}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{entries}{entries}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf} 
+vector$<$\mbox{\hyperlink{structEntry}{Entry}}$>$ entries}
+
+\Hypertarget{ffind-daemon_8cpp_a683029b96d4f70080d7f5d69d5144cd5}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!in\_fd@{in\_fd}}
+\index{in\_fd@{in\_fd}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{in\_fd}{in\_fd}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a683029b96d4f70080d7f5d69d5144cd5} 
+int in\+\_\+fd = -\/1}
+
+\Hypertarget{ffind-daemon_8cpp_a29ac681ec3efa9e30e1ab1ab251b47f9}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!mtx@{mtx}}
+\index{mtx@{mtx}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{mtx}{mtx}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a29ac681ec3efa9e30e1ab1ab251b47f9} 
+mutex mtx}
+
+\Hypertarget{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!root\_path@{root\_path}}
+\index{root\_path@{root\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{root\_path}{root\_path}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4} 
+string root\+\_\+path}
+
+\Hypertarget{ffind-daemon_8cpp_af3270a6e782fe74a057a44a74d4b29f9}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!running@{running}}
+\index{running@{running}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{running}{running}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_af3270a6e782fe74a057a44a74d4b29f9} 
+volatile sig\+\_\+atomic\+\_\+t running = 1}
+
+\Hypertarget{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!sock\_path@{sock\_path}}
+\index{sock\_path@{sock\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{sock\_path}{sock\_path}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae} 
+string sock\+\_\+path}
+
+\Hypertarget{ffind-daemon_8cpp_ac2fc5f87ca9b708edcf7dbd5da05ba24}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!wd\_to\_dir@{wd\_to\_dir}}
+\index{wd\_to\_dir@{wd\_to\_dir}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{wd\_to\_dir}{wd\_to\_dir}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ac2fc5f87ca9b708edcf7dbd5da05ba24} 
+unordered\+\_\+map$<$int, string$>$ wd\+\_\+to\+\_\+dir}
+

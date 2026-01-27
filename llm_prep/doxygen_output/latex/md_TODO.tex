@@ -1,0 +1,40 @@
+\chapter{ffind TODO Summary -\/ January 2026 }
+\hypertarget{md_TODO}{}\label{md_TODO}\index{ffind TODO Summary -\/ January 2026@{ffind TODO Summary -\/ January 2026}}
+\label{md_TODO_autotoc_md0}%
+\Hypertarget{md_TODO_autotoc_md0}%
+\hypertarget{md_TODO_autotoc_md1}{}\doxysection{\texorpdfstring{Implemented (current version)}{Implemented (current version)}}\label{md_TODO_autotoc_md1}
+
+\begin{DoxyItemize}
+\item Daemon/client split (ffind-\/daemon + ffind)
+\item Foreground mode (--foreground)
+\item Real-\/time indexing with inotify
+\item Basename glob (-\/name or positional, case-\/sensitive default)
+\item Full-\/path relative glob (-\/path, case-\/insensitive with -\/i)
+\item Case-\/insensitive mode (-\/i) for name/path/content
+\item Content search (-\/c fixed string substring)
+\item Regex content search (-\/c + -\/r, ±i)
+\item Binary file skip (null-\/byte check)
+\item Type filter (-\/type f\texorpdfstring{$\vert$}{|}d)
+\item Size filter (-\/size +N/-\/\+N/N with units c/b/k/\+M/G, find-\/style)
+\item Mtime filter (-\/mtime +N/-\/\+N/N days, find-\/style)
+\item All filters combinable (AND logic)
+\item Legacy single-\/arg name glob support
+\end{DoxyItemize}\hypertarget{md_TODO_autotoc_md2}{}\doxysection{\texorpdfstring{Remaining / Not Implemented}{Remaining / Not Implemented}}\label{md_TODO_autotoc_md2}
+
+\begin{DoxyItemize}
+\item Color output (--color=auto/always/never)
+\item Context lines (-\/A/-\/\+B/-\/C for grep-\/like before/after/context)
+\item Content glob (fnmatch on each line instead of substring)
+\item PID file creation (/run/ffind.pid or similar) for service management
+\item Better directory rename handling (current\+: may need restart)
+\item Multiple root directories support
+\item Persistence (binary dump/load on shutdown/start for faster init)
+\item SQLite backend option (for huge trees, lower RAM)
+\end{DoxyItemize}\hypertarget{md_TODO_autotoc_md3}{}\doxysection{\texorpdfstring{Low Priority / Optional}{Low Priority / Optional}}\label{md_TODO_autotoc_md3}
+
+\begin{DoxyItemize}
+\item -\/perm mode filter
+\item Invert match (-\/v)
+\item Line numbers only (-\/l)
+\item Full ECMAScript regex extensions if needed 
+\end{DoxyItemize}
