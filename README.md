@@ -80,6 +80,18 @@ ffind -c "TODO.*fix" -r
 # Regex content search with case insensitivity
 ffind -c "error" -r -i
 
+# Context lines: show 3 lines after each match (like grep -A)
+ffind -c "error" -A 3
+
+# Context lines: show 2 lines before each match (like grep -B)
+ffind -c "TODO" -B 2
+
+# Context lines: show 5 lines before and after (like grep -C)
+ffind -c "FIXME" -C 5
+
+# Context with regex and case insensitive
+ffind -c "bug" -A 2 -B 1 -r -i
+
 # Find only files
 ffind -type f
 
@@ -130,6 +142,38 @@ ffind -c "TODO" --color=auto
 - `-N` - modified within last N days
 - `+N` - modified more than N days ago
 - `N` - modified exactly N days ago (rarely used)
+
+### Context lines
+
+Context lines work just like grep's `-A`, `-B`, and `-C` options, showing surrounding lines for better context when searching file contents. These flags require `-c` (content search).
+
+- `-A N` - Show N lines **after** each match
+- `-B N` - Show N lines **before** each match
+- `-C N` - Show N lines **before and after** each match (shorthand for `-A N -B N`)
+
+#### Output format
+
+Context lines use the same grep-style format:
+- **Match lines**: `path:lineno:content` (colon before content)
+- **Context lines**: `path:lineno-content` (dash before content)
+- **Group separator**: `--` appears between non-contiguous match groups
+
+When match contexts overlap, they are automatically merged into a single group without separators.
+
+Example:
+```bash
+# Show 2 lines after each TODO
+ffind -c "TODO" -A 2
+
+# Show 3 lines before each error
+ffind -c "error" -i -B 3
+
+# Show 5 lines of context around each FIXME
+ffind -c "FIXME" -C 5
+
+# Combine with regex and other filters
+ffind -c "bug|error" -r -A 3 -B 1 -name "*.cpp"
+```
 
 ### Color output
 

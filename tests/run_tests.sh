@@ -181,6 +181,43 @@ echo "This is a normal file" > "$TEMP_DIR/src/normal.txt"
 echo "#include <stdio.h>" > "$TEMP_DIR/include/header.h"
 echo "Documentation text TODO review" > "$TEMP_DIR/docs/guide.txt"
 
+# File for context line tests
+cat > "$TEMP_DIR/context.txt" << 'EOF'
+line 1
+line 2
+line 3
+MATCH line 4
+line 5
+line 6
+line 7
+MATCH line 8
+line 9
+line 10
+EOF
+
+# File for overlapping context tests
+cat > "$TEMP_DIR/overlap.txt" << 'EOF'
+before 1
+MATCH line 2
+between
+MATCH line 4
+after 1
+EOF
+
+# File for edge case tests (match at start)
+cat > "$TEMP_DIR/start.txt" << 'EOF'
+MATCH at start
+line 2
+line 3
+EOF
+
+# File for edge case tests (match at end)
+cat > "$TEMP_DIR/end.txt" << 'EOF'
+line 1
+line 2
+MATCH at end
+EOF
+
 # Binary file (with null bytes)
 printf '\x00\x01\x02\x03\x04' > "$TEMP_DIR/binary.bin"
 
@@ -268,6 +305,153 @@ echo ""
 echo "--- Case Insensitive Content Tests ---"
 run_test "Case insensitive content todo" "main.cpp" "$FFIND_CLIENT" -c "todo" -i
 run_test "Case insensitive regex error" "error.log" "$FFIND_CLIENT" -c "error" -r -i
+
+# Test 7.5: Context lines
+echo ""
+echo "--- Context Lines Tests ---"
+
+# Test -A (after context)
+output=$("$FFIND_CLIENT" -c "MATCH" -A 2 --color=never context.txt 2>&1 | grep "context.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "context.txt:4:MATCH line 4" && \
+   echo "$output" | grep -q "context.txt:5-line 5" && \
+   echo "$output" | grep -q "context.txt:6-line 6"; then
+    echo -e "${GREEN}✓${NC} PASS: -A shows 2 lines after match"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: -A shows 2 lines after match"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test -B (before context)
+output=$("$FFIND_CLIENT" -c "MATCH" -B 2 --color=never context.txt 2>&1 | grep "context.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "context.txt:2-line 2" && \
+   echo "$output" | grep -q "context.txt:3-line 3" && \
+   echo "$output" | grep -q "context.txt:4:MATCH line 4"; then
+    echo -e "${GREEN}✓${NC} PASS: -B shows 2 lines before match"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: -B shows 2 lines before match"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test -C (combined context)
+output=$("$FFIND_CLIENT" -c "MATCH" -C 1 --color=never context.txt 2>&1 | grep "context.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "context.txt:3-line 3" && \
+   echo "$output" | grep -q "context.txt:4:MATCH line 4" && \
+   echo "$output" | grep -q "context.txt:5-line 5"; then
+    echo -e "${GREEN}✓${NC} PASS: -C shows 1 line before and after"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: -C shows 1 line before and after"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test separator format (: for match, - for context)
+output=$("$FFIND_CLIENT" -c "MATCH" -A 1 --color=never context.txt 2>&1 | grep "context.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "context.txt:4:MATCH" && \
+   echo "$output" | grep -q "context.txt:5-line 5"; then
+    echo -e "${GREEN}✓${NC} PASS: Context lines use '-' separator, matches use ':'"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Separator format incorrect"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test -- separator between groups
+output=$("$FFIND_CLIENT" -c "MATCH" -A 1 --color=never context.txt 2>&1)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "^--$"; then
+    echo -e "${GREEN}✓${NC} PASS: '--' separator between non-contiguous groups"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Missing '--' separator"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test overlapping context (should merge)
+output=$("$FFIND_CLIENT" -c "MATCH" -A 2 -B 2 --color=never overlap.txt 2>&1)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+# Should have NO -- separator since contexts overlap
+if ! echo "$output" | grep -q "^--$"; then
+    echo -e "${GREEN}✓${NC} PASS: Overlapping contexts merge (no separator)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Overlapping contexts should merge"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test match at start of file
+output=$("$FFIND_CLIENT" -c "MATCH" -B 5 --color=never start.txt 2>&1 | grep "start.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "start.txt:1:MATCH at start"; then
+    echo -e "${GREEN}✓${NC} PASS: Context at file start (no before lines available)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Context at file start"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test match at end of file
+output=$("$FFIND_CLIENT" -c "MATCH" -A 5 --color=never end.txt 2>&1 | grep "end.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "end.txt:3:MATCH at end"; then
+    echo -e "${GREEN}✓${NC} PASS: Context at file end (no after lines available)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Context at file end"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test context with case insensitive
+output=$("$FFIND_CLIENT" -c "match" -i -B 1 --color=never context.txt 2>&1 | grep "context.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "context.txt:3-line 3" && \
+   echo "$output" | grep -q "context.txt:4:MATCH line 4"; then
+    echo -e "${GREEN}✓${NC} PASS: Context with -i case insensitive"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Context with -i case insensitive"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test context with regex
+output=$("$FFIND_CLIENT" -c "MATCH.*4" -r -A 1 --color=never context.txt 2>&1 | grep "context.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "context.txt:4:MATCH line 4" && \
+   echo "$output" | grep -q "context.txt:5-line 5"; then
+    echo -e "${GREEN}✓${NC} PASS: Context with -r regex"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Context with -r regex"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test error: -A without -c
+run_test_error "Error: -A without -c" "Context lines (-A/-B/-C) need -c" "$FFIND_CLIENT" -A 2
 
 # Test 8: Size filters
 echo ""
