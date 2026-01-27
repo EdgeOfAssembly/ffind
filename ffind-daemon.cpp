@@ -175,9 +175,9 @@ void handle_client(int fd) {
 
     uint8_t flags = 0;
     if (read(fd, &flags, 1) != 1) flags = 0;
-    bool case_ins = flags & 1;
-    bool is_regex = flags & 2;
-    bool content_glob = flags & 4;
+    bool case_ins = flags & 1;      // bit 0 (value 1)
+    bool is_regex = flags & 2;      // bit 1 (value 2)
+    bool content_glob = flags & 4;  // bit 2 (value 4)
 
     uint8_t type_filter = 0;
     if (read(fd, &type_filter, 1) != 1) type_filter = 0;

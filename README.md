@@ -189,7 +189,7 @@ Glob patterns support:
 - `[abc]` - matches any character in the set
 - `[a-z]` - matches any character in the range
 
-**Note**: `-c`, `-r`, and `-g` are mutually exclusive. Choose the method that best fits your search pattern.
+**Note**: `-g` is mutually exclusive with `-c` and `-r`. Use `-c` for fixed string search, `-c` with `-r` for regex search, or `-g` for glob pattern search.
 
 ### Context lines
 

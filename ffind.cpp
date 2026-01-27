@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
     uint8_t flags = 0;
     if (case_ins) flags |= 1;
     if (is_regex) flags |= 2;
-    if (!content_glob.empty()) flags |= 4; // bit 2 for content_glob
+    if (!content_glob.empty()) flags |= 4; // bit 2 (value 4) for content_glob
     write(c, &flags, 1);
 
     write(c, &type_filter, 1);
