@@ -15,9 +15,9 @@
 - Mtime filter (-mtime +N/-N/N days, find-style)
 - All filters combinable (AND logic)
 - Legacy single-arg name glob support
+- Color output (--color=auto/always/never)
 
 ## Remaining / Not Implemented
-- Color output (--color=auto/always/never)
 - Context lines (-A/-B/-C for grep-like before/after/context)
 - Content glob (fnmatch on each line instead of substring)
 - PID file creation (/run/ffind.pid or similar) for service management

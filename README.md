@@ -100,6 +100,15 @@ ffind -mtime +30
 
 # Combined filters (large log files)
 ffind -name "*.log" -size +10M -type f
+
+# Color output (force colors)
+ffind "*.cpp" --color=always
+
+# Color output (no colors, good for scripting)
+ffind -c "error" --color=never
+
+# Color output (auto-detect TTY, default behavior)
+ffind -c "TODO" --color=auto
 ```
 
 ### Size units
@@ -121,6 +130,31 @@ ffind -name "*.log" -size +10M -type f
 - `-N` - modified within last N days
 - `+N` - modified more than N days ago
 - `N` - modified exactly N days ago (rarely used)
+
+### Color output
+
+The `--color` option controls colored output for better readability:
+
+- `--color=auto` (default) - Automatically enables colors when output is to a terminal
+- `--color=always` - Forces colored output even when piped or redirected
+- `--color=never` - Disables all colored output (useful for scripts and piping)
+
+When colors are enabled:
+- **File paths** are displayed in bold
+- **Line numbers** (in content search) are shown in cyan
+- **Matched content** is highlighted in bold red
+
+Example:
+```bash
+# Search with colors in terminal (auto-detect)
+ffind -c "TODO" 
+
+# Force colors even when piping to less -R
+ffind -c "error" --color=always | less -R
+
+# Disable colors for scripting
+ffind -c "warning" --color=never > results.txt
+```
 
 ## License
 
