@@ -1,0 +1,71 @@
+.\" ffind.1 - man page for ffind
+.\" Author: EdgeOfAssembly <haxbox2000@gmail.com>
+.TH FFIND 1 "January 2026" "ffind" "User Commands"
+
+.SH NAME
+ffind \- ultra-fast indexed file search tool (name + content)
+
+.SH SYNOPSIS
+.B ffind
+[\fIoptions\fR] [\fIpattern\fR]
+
+.SH DESCRIPTION
+\fBffind\fR queries the running \fBffind-daemon\fR for fast searches combining filename/path globbing with optional content grep/regex.
+
+If no options are given and only one argument, it is treated as a basename glob.
+
+.SH OPTIONS
+.TP
+.BR \-name " \fIglob\fR"
+Basename glob (default "*").
+
+.TP
+.BR \-path " \fIglob\fR"
+Full relative path glob (from indexed root).
+
+.TP
+.BR \-type " f|d"
+Filter by type (file or directory).
+
+.TP
+.BR \-size " [+|-]\fIN\fR[cbkMG]"
+Size filter (find-style): + greater than, - less than, no sign exact. Units: c=bytes, b=512, k=KiB, M=MiB, G=GiB.
+
+.TP
+.BR \-mtime " [+|-]\fIN\fR"
+Modification time in days (find-style): + older than N days, - newer than N days, no sign exactly N days ago.
+
+.TP
+.BR \-c " \fIstring\fR"
+Search file contents for literal substring.
+
+.TP
+.BR \-r
+Use regex for content search (requires \-c).
+
+.TP
+.BR \-i
+Case-insensitive matching (name, path, and content).
+
+.SH EXAMPLES
+.TP
+Find all .cpp files
+.B ffind "*.cpp"
+
+.TP
+Find headers in include dirs
+.B ffind -path "include/*" "*.h"
+
+.TP
+Find large recent source files
+.B ffind -size +10M -mtime -30 "*.c" "*.cpp"
+
+.TP
+Case-insensitive regex content search
+.B ffind -c "TODO.*fix" -r -i
+
+.SH AUTHOR
+EdgeOfAssembly <haxbox2000@gmail.com>
+
+.SH SEE ALSO
+.BR ffind-daemon (8)

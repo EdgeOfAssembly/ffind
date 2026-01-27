@@ -1,0 +1,353 @@
+// ffind-daemon.cpp (latest full – with -path, -type, -size, -mtime, regex ±i, content fixed/regex)
+#define _GNU_SOURCE
+#include <bits/stdc++.h>
+#include <sys/stat.h>
+#include <sys/inotify.h>
+#include <fnmatch.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <signal.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <fstream>
+#include <regex>
+#include <string.h>
+#include <arpa/inet.h>
+
+using namespace std;
+using namespace std::filesystem;
+using namespace std::chrono_literals;
+
+struct Entry {
+    string path;
+    int64_t size = 0;
+    time_t mtime = 0;
+    bool is_dir = false;
+};
+
+vector<Entry> entries;
+mutex mtx;
+string root_path;
+string sock_path;
+volatile sig_atomic_t running = 1;
+int in_fd = -1;
+unordered_map<int, string> wd_to_dir;
+
+void sig_handler(int) { running = 0; }
+
+void daemonize() {
+    pid_t pid = fork();
+    if (pid < 0) exit(1);
+    if (pid > 0) exit(0);
+    umask(0);
+    if (setsid() < 0) exit(1);
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+}
+
+void update_or_add(const string& full) {
+    struct stat st {};
+    if (lstat(full.c_str(), &st) != 0) return;
+
+    bool is_dir = S_ISDIR(st.st_mode);
+    int64_t sz = is_dir ? 0 : st.st_size;
+
+    lock_guard<mutex> lk(mtx);
+    auto it = find_if(entries.begin(), entries.end(), [&](const Entry& e){ return e.path == full; });
+    if (it != entries.end()) {
+        it->size = sz;
+        it->mtime = st.st_mtime;
+        it->is_dir = is_dir;
+    } else {
+        entries.emplace_back(full, sz, st.st_mtime, is_dir);
+    }
+}
+
+void remove_path(const string& full, bool recursive = false) {
+    lock_guard<mutex> lk(mtx);
+    if (recursive) {
+        entries.erase(remove_if(entries.begin(), entries.end(), [&](const Entry& e){
+            return e.path == full || e.path.starts_with(full + "/");
+        }), entries.end());
+    } else {
+        entries.erase(remove_if(entries.begin(), entries.end(), [&](const Entry& e){ return e.path == full; }), entries.end());
+    }
+}
+
+void add_watch(const string& dir) {
+    int wd = inotify_add_watch(in_fd, dir.c_str(),
+        IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_MODIFY | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF);
+    if (wd > 0) wd_to_dir[wd] = dir;
+}
+
+void initial_setup(const string& r) {
+    root_path = canonical(r).string();
+    if (root_path.back() != '/') root_path += '/';
+
+    in_fd = inotify_init1(IN_NONBLOCK);
+    assert(in_fd > 0);
+
+    {
+        lock_guard<mutex> lk(mtx);
+        for (auto& e : recursive_directory_iterator(root_path, directory_options::skip_permission_denied)) {
+            try {
+                string p = e.path().string();
+                struct stat st {};
+                if (lstat(p.c_str(), &st) == 0) {
+                    bool is_dir = S_ISDIR(st.st_mode);
+                    entries.emplace_back(p, is_dir ? 0LL : st.st_size, st.st_mtime, is_dir);
+                }
+            } catch (...) {}
+        }
+    }
+
+    function<void(const string&)> rec_add = [&](const string& d) {
+        add_watch(d);
+        try {
+            for (auto& e : directory_iterator(d)) {
+                if (e.is_directory()) rec_add(e.path().string());
+            }
+        } catch (...) {}
+    };
+    rec_add(root_path);
+}
+
+void process_events() {
+    char buf[8192] __attribute__((aligned(8)));
+    while (running) {
+        ssize_t len = read(in_fd, buf, sizeof(buf));
+        if (len > 0) {
+            char* ptr = buf;
+            while (ptr < buf + len) {
+                auto* ev = (struct inotify_event*)ptr;
+                ptr += sizeof(struct inotify_event) + ev->len;
+
+                auto wdit = wd_to_dir.find(ev->wd);
+                if (wdit == wd_to_dir.end()) continue;
+                string dir = wdit->second;
+                string name = ev->len ? ev->name : "";
+                string full = dir;
+                if (!dir.ends_with("/")) full += "/";
+                full += name;
+
+                bool isd = ev->mask & IN_ISDIR;
+
+                if (ev->mask & IN_IGNORED) {
+                    wd_to_dir.erase(ev->wd);
+                    continue;
+                }
+                if (ev->mask & (IN_DELETE_SELF | IN_MOVE_SELF)) {
+                    wd_to_dir.erase(ev->wd);
+                    remove_path(dir, true);
+                    continue;
+                }
+                if (isd) {
+                    if (ev->mask & (IN_CREATE | IN_MOVED_TO)) add_watch(full);
+                    if (ev->mask & (IN_DELETE | IN_MOVED_FROM)) remove_path(full, true);
+                } else {
+                    if (ev->mask & (IN_CREATE | IN_MOVED_TO | IN_MODIFY | IN_CLOSE_WRITE)) update_or_add(full);
+                    if (ev->mask & (IN_DELETE | IN_MOVED_FROM)) remove_path(full);
+                }
+            }
+        } else if (len < 0 && errno != EAGAIN) break;
+        else this_thread::sleep_for(50ms);
+    }
+}
+
+void handle_client(int fd) {
+    uint32_t net_nlen, net_plen, net_clen;
+    if (read(fd, &net_nlen, 4) != 4) { close(fd); return; }
+    uint32_t name_len = ntohl(net_nlen);
+    string name_pat(name_len, '\0');
+    if (read(fd, name_pat.data(), name_len) != (ssize_t)name_len) { close(fd); return; }
+
+    if (read(fd, &net_plen, 4) != 4) { close(fd); return; }
+    uint32_t path_len = ntohl(net_plen);
+    string path_pat(path_len, '\0');
+    if (read(fd, path_pat.data(), path_len) != (ssize_t)path_len) { close(fd); return; }
+
+    if (read(fd, &net_clen, 4) != 4) { close(fd); return; }
+    uint32_t content_len = ntohl(net_clen);
+    string content_pat(content_len, '\0');
+    if (read(fd, content_pat.data(), content_len) != (ssize_t)content_len) { close(fd); return; }
+
+    uint8_t flags = 0;
+    if (read(fd, &flags, 1) != 1) flags = 0;
+    bool case_ins = flags & 1;
+    bool is_regex = flags & 2;
+
+    uint8_t type_filter = 0;
+    if (read(fd, &type_filter, 1) != 1) type_filter = 0;
+
+    uint8_t size_op = 0;
+    int64_t size_val = 0;
+    if (read(fd, &size_op, 1) == 1 && size_op) read(fd, &size_val, 8);
+
+    uint8_t mtime_op = 0;
+    int32_t mtime_days = 0;
+    if (read(fd, &mtime_op, 1) == 1 && mtime_op) read(fd, &mtime_days, 4);
+
+    bool has_content = !content_pat.empty();
+
+    unique_ptr<regex> re;
+    if (has_content && is_regex) {
+        regex_constants::syntax_option_type re_flags = regex_constants::ECMAScript;
+        if (case_ins) re_flags |= regex_constants::icase;
+        try {
+            re = make_unique<regex>(content_pat, re_flags);
+        } catch (const regex_error&) {
+            string err = "Invalid regex pattern\n";
+            write(fd, err.c_str(), err.size());
+            close(fd);
+            return;
+        }
+    }
+
+    int fnm_flags = case_ins ? FNM_CASEFOLD : 0;
+
+    lock_guard<mutex> lk(mtx);
+
+    vector<const Entry*> candidates;
+    for (const auto& e : entries) {
+        bool type_match = (type_filter == 0) ||
+                          (type_filter == 1 && !e.is_dir) ||
+                          (type_filter == 2 && e.is_dir);
+        if (!type_match) continue;
+        if (e.is_dir && has_content) continue;
+
+        if (size_op) {
+            bool match = false;
+            if (size_op == 1) match = e.size < size_val;
+            else if (size_op == 2) match = e.size == size_val;
+            else if (size_op == 3) match = e.size > size_val;
+            if (!match) continue;
+        }
+
+        if (mtime_op) {
+            time_t now = time(nullptr);
+            int32_t days_old = (now - e.mtime) / 86400;
+            bool match = false;
+            if (mtime_op == 1) match = days_old < mtime_days;
+            else if (mtime_op == 2) match = days_old == mtime_days;
+            else if (mtime_op == 3) match = days_old > mtime_days;
+            if (!match) continue;
+        }
+
+        string rel = e.path.substr(root_path.size());
+
+        size_t pos = e.path.rfind('/');
+        string_view base = (pos == string::npos) ? string_view(e.path) : string_view(e.path.data() + pos + 1);
+
+        bool name_match = fnmatch(name_pat.c_str(), base.data(), fnm_flags) == 0;
+        bool path_match = path_pat.empty() || fnmatch(path_pat.c_str(), rel.c_str(), fnm_flags) == 0;
+
+        if (name_match && path_match) {
+            if (!has_content) {
+                string line = e.path + "\n";
+                write(fd, line.c_str(), line.size());
+            } else {
+                candidates.push_back(&e);
+            }
+        }
+    }
+
+    if (has_content) {
+        for (const auto* ep : candidates) {
+            const string& path = ep->path;
+            ifstream ifs(path, ios::binary);
+            if (!ifs) continue;
+
+            streampos fsize = ifs.tellg();
+            ifs.seekg(0, ios::end);
+            fsize = ifs.tellg() - fsize;
+            ifs.seekg(0);
+
+            size_t check = min<size_t>(1024, max<streampos>(0, fsize));
+            vector<char> head(check);
+            bool binary = false;
+            if (check > 0) {
+                ifs.read(head.data(), check);
+                for (char c : head) if (c == '\0') { binary = true; break; }
+                ifs.seekg(0);
+            }
+            if (binary) continue;
+
+            string line;
+            size_t lineno = 1;
+            while (getline(ifs, line)) {
+                bool match = false;
+                if (is_regex) {
+                    match = regex_search(line, *re);
+                } else if (case_ins) {
+                    match = strcasestr(line.c_str(), content_pat.c_str()) != nullptr;
+                } else {
+                    match = line.find(content_pat) != string::npos;
+                }
+                if (match) {
+                    string out = path + ":" + to_string(lineno) + ":" + line + "\n";
+                    write(fd, out.c_str(), out.size());
+                }
+                ++lineno;
+            }
+        }
+    }
+
+    close(fd);
+}
+
+int main(int argc, char** argv) {
+    if (argc < 2 || argc > 3) {
+        cerr << "Usage: ffind-daemon [--foreground] /path/to/root\n";
+        return 1;
+    }
+
+    bool foreground = false;
+    string root;
+    if (argc == 3) {
+        if (string(argv[1]) != "--foreground") {
+            cerr << "Unknown option\n";
+            return 1;
+        }
+        foreground = true;
+        root = argv[2];
+    } else {
+        root = argv[1];
+    }
+
+    if (!foreground) daemonize();
+
+    signal(SIGINT, sig_handler);
+    signal(SIGTERM, sig_handler);
+
+    sock_path = "/run/user/" + to_string(getuid()) + "/ffind.sock";
+
+    initial_setup(root);
+
+    int srv = socket(AF_UNIX, SOCK_STREAM, 0);
+    sockaddr_un addr{};
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, sock_path.c_str(), sizeof(addr.sun_path)-1);
+    addr.sun_path[sizeof(addr.sun_path)-1] = '\0';
+    unlink(sock_path.c_str());
+    bind(srv, (sockaddr*)&addr, sizeof(addr));
+    listen(srv, 16);
+
+    thread events_th(process_events);
+    thread accept_th([&]{
+        while (running) {
+            int c = accept(srv, nullptr, nullptr);
+            if (c > 0) thread(handle_client, c).detach();
+        }
+    });
+
+    while (running) sleep(1);
+    running = 0;
+    events_th.join();
+    accept_th.join();
+    close(srv);
+    unlink(sock_path.c_str());
+    close(in_fd);
+    return 0;
+}

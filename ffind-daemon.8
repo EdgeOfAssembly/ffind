@@ -1,0 +1,29 @@
+.\" ffind-daemon.8 - man page for ffind-daemon
+.\" Author: EdgeOfAssembly <haxbox2000@gmail.com>
+.TH FFIND-DAEMON 8 "January 2026" "ffind" "User Commands"
+
+.SH NAME
+ffind-daemon \- fast file indexing daemon for ffind
+
+.SH SYNOPSIS
+.B ffind-daemon
+[\-\-foreground] \fI/path/to/root\fR
+
+.SH DESCRIPTION
+\fBffind-daemon\fR indexes a directory tree in real time using inotify and serves search requests over a Unix socket to the \fBffind\fR client. It runs in the background by default.
+
+.SH OPTIONS
+.TP
+.BR \-\-foreground
+Run in foreground (do not daemonize). Useful for debugging.
+
+.SH FILES
+.TP
+.I /run/user/$UID/ffind.sock
+Unix domain socket used for client communication.
+
+.SH AUTHOR
+EdgeOfAssembly <haxbox2000@gmail.com>
+
+.SH SEE ALSO
+.BR ffind (1)
