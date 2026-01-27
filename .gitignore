@@ -1,0 +1,18 @@
+# Build artifacts
+ffind
+ffind-daemon
+
+# Test artifacts
+tests/temp_test_*/
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Object files
+*.o
+*.so
+*.a
