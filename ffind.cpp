@@ -38,6 +38,8 @@ int main(int argc, char** argv) {
     uint8_t mtime_op = 0;
     int32_t mtime_days = 0;
     ColorMode color_mode = ColorMode::AUTO;
+    uint8_t before_ctx = 0;
+    uint8_t after_ctx = 0;
 
     bool has_dash = false;
     for (int i = 1; i < argc; ++i) if (argv[i][0] == '-') has_dash = true;
@@ -90,6 +92,39 @@ int main(int argc, char** argv) {
                 if (num < 0) { cerr << "-mtime positive\n"; return 1; }
                 mtime_op = sign == '+' ? 3 : sign == '-' ? 1 : 2;
                 mtime_days = num;
+            } else if (arg == "-A") {
+                if (++i >= argc) { cerr << "Missing -A arg\n"; return 1; }
+                try {
+                    int val = stoi(argv[i]);
+                    if (val < 0 || val > 255) { cerr << "-A must be 0-255\n"; return 1; }
+                    after_ctx = static_cast<uint8_t>(val);
+                } catch (const invalid_argument&) {
+                    cerr << "-A requires a valid integer\n"; return 1;
+                } catch (const out_of_range&) {
+                    cerr << "-A value out of range\n"; return 1;
+                }
+            } else if (arg == "-B") {
+                if (++i >= argc) { cerr << "Missing -B arg\n"; return 1; }
+                try {
+                    int val = stoi(argv[i]);
+                    if (val < 0 || val > 255) { cerr << "-B must be 0-255\n"; return 1; }
+                    before_ctx = static_cast<uint8_t>(val);
+                } catch (const invalid_argument&) {
+                    cerr << "-B requires a valid integer\n"; return 1;
+                } catch (const out_of_range&) {
+                    cerr << "-B value out of range\n"; return 1;
+                }
+            } else if (arg == "-C") {
+                if (++i >= argc) { cerr << "Missing -C arg\n"; return 1; }
+                try {
+                    int val = stoi(argv[i]);
+                    if (val < 0 || val > 255) { cerr << "-C must be 0-255\n"; return 1; }
+                    before_ctx = after_ctx = static_cast<uint8_t>(val);
+                } catch (const invalid_argument&) {
+                    cerr << "-C requires a valid integer\n"; return 1;
+                } catch (const out_of_range&) {
+                    cerr << "-C value out of range\n"; return 1;
+                }
             } else if (arg == "-i") {
                 case_ins = true;
             } else if (arg == "-r") {
@@ -116,6 +151,11 @@ int main(int argc, char** argv) {
 
     if (is_regex && content_pat.empty()) {
         cerr << "-r needs -c\n";
+        return 1;
+    }
+
+    if ((before_ctx > 0 || after_ctx > 0) && content_pat.empty()) {
+        cerr << "Context lines (-A/-B/-C) need -c\n";
         return 1;
     }
 
@@ -173,6 +213,12 @@ int main(int argc, char** argv) {
     write(c, &mtime_op, 1);
     if (mtime_op) write(c, &mtime_days, 4);
 
+    // Send context line parameters (protocol extension for context lines feature)
+    // Note: Old daemons will ignore/misinterpret these bytes, but this is expected
+    // for new feature additions. Users should update both client and daemon together.
+    write(c, &before_ctx, 1);
+    write(c, &after_ctx, 1);
+
     // Read and colorize output incrementally
     bool has_content = !content_pat.empty();
     
@@ -197,11 +243,17 @@ int main(int argc, char** argv) {
     auto process_line = [&](const string& line) {
         if (line.empty()) return;
         
+        // Check for separator line
+        if (line == "--") {
+            cout << "--\n";
+            return;
+        }
+        
         if (!has_content) {
             // Simple path output - color with bold
             cout << BOLD << line << RESET << "\n";
         } else {
-            // Content search: path:lineno:content format
+            // Content search: path:lineno:content or path:lineno-content format
             size_t first_colon = line.find(':');
             if (first_colon == string::npos) {
                 // Fallback: no colon found, just print
@@ -209,23 +261,40 @@ int main(int argc, char** argv) {
                 return;
             }
             
-            size_t second_colon = line.find(':', first_colon + 1);
-            if (second_colon == string::npos) {
-                // Fallback: only one colon, just print
+            size_t second_sep = line.find(':', first_colon + 1);
+            bool is_context_line = false;
+            if (second_sep == string::npos) {
+                // Try to find dash separator (for context lines)
+                second_sep = line.find('-', first_colon + 1);
+                if (second_sep != string::npos) {
+                    is_context_line = true;
+                }
+            }
+            
+            if (second_sep == string::npos) {
+                // Fallback: only one separator, just print
+                cout << line << "\n";
+                return;
+            }
+            
+            // Validate that the substring between first_colon and second_sep is a valid line number
+            string lineno = line.substr(first_colon + 1, second_sep - first_colon - 1);
+            bool valid_lineno = !lineno.empty() && all_of(lineno.begin(), lineno.end(), ::isdigit);
+            if (!valid_lineno) {
+                // Not a valid line number, just print as-is
                 cout << line << "\n";
                 return;
             }
             
             string path = line.substr(0, first_colon);
-            string lineno = line.substr(first_colon + 1, second_colon - first_colon - 1);
-            string content = line.substr(second_colon + 1);
+            string content = line.substr(second_sep + 1);
             
             // Color the path (bold) and line number (cyan)
             cout << BOLD << path << RESET << ":" 
-                 << CYAN << lineno << RESET << ":";
+                 << CYAN << lineno << RESET << (is_context_line ? "-" : ":");
             
-            // Highlight matching content
-            if (use_colors) {
+            // Highlight matching content only for match lines (not context lines)
+            if (use_colors && !is_context_line) {
                 bool found_match = false;
                 size_t match_start = 0;
                 size_t match_len = 0;

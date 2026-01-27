@@ -189,6 +189,15 @@ void handle_client(int fd) {
     int32_t mtime_days = 0;
     if (read(fd, &mtime_op, 1) == 1 && mtime_op) read(fd, &mtime_days, 4);
 
+    // Read context line parameters (added in v1.1 for context lines feature)
+    // Note: For backward compatibility with older daemons, these bytes default to 0 if read fails.
+    // This protocol extension approach is acceptable for new features where both client and daemon
+    // are updated together. Old clients connecting to new daemons will work (daemon reads 0s).
+    // New clients connecting to old daemons may have issues - this is expected for feature updates.
+    uint8_t before_ctx = 0, after_ctx = 0;
+    if (read(fd, &before_ctx, 1) != 1) before_ctx = 0;
+    if (read(fd, &after_ctx, 1) != 1) after_ctx = 0;
+
     bool has_content = !content_pat.empty();
 
     unique_ptr<regex> re;
@@ -274,22 +283,89 @@ void handle_client(int fd) {
             }
             if (binary) continue;
 
-            string line;
-            size_t lineno = 1;
-            while (getline(ifs, line)) {
-                bool match = false;
-                if (is_regex) {
-                    match = regex_search(line, *re);
-                } else if (case_ins) {
-                    match = strcasestr(line.c_str(), content_pat.c_str()) != nullptr;
-                } else {
-                    match = line.find(content_pat) != string::npos;
+            if (before_ctx == 0 && after_ctx == 0) {
+                // No context - original behavior
+                string line;
+                size_t lineno = 1;
+                while (getline(ifs, line)) {
+                    bool match = false;
+                    if (is_regex) {
+                        match = regex_search(line, *re);
+                    } else if (case_ins) {
+                        match = strcasestr(line.c_str(), content_pat.c_str()) != nullptr;
+                    } else {
+                        match = line.find(content_pat) != string::npos;
+                    }
+                    if (match) {
+                        string out = path + ":" + to_string(lineno) + ":" + line + "\n";
+                        write(fd, out.c_str(), out.size());
+                    }
+                    ++lineno;
                 }
-                if (match) {
-                    string out = path + ":" + to_string(lineno) + ":" + line + "\n";
-                    write(fd, out.c_str(), out.size());
+            } else {
+                // With context lines
+                vector<pair<size_t, string>> all_lines; // lineno, content
+                string line;
+                size_t lineno = 1;
+                
+                // Read all lines into memory
+                while (getline(ifs, line)) {
+                    all_lines.emplace_back(lineno, line);
+                    ++lineno;
                 }
-                ++lineno;
+                
+                // Find all matching line indices and store in a set for O(1) lookup
+                vector<size_t> match_indices;
+                unordered_set<size_t> match_set;
+                for (size_t i = 0; i < all_lines.size(); ++i) {
+                    bool match = false;
+                    const string& content = all_lines[i].second;
+                    if (is_regex) {
+                        match = regex_search(content, *re);
+                    } else if (case_ins) {
+                        match = strcasestr(content.c_str(), content_pat.c_str()) != nullptr;
+                    } else {
+                        match = content.find(content_pat) != string::npos;
+                    }
+                    if (match) {
+                        match_indices.push_back(i);
+                        match_set.insert(i);
+                    }
+                }
+                
+                // Process matches with context, merging overlapping ranges
+                if (!match_indices.empty()) {
+                    vector<pair<size_t, size_t>> ranges; // start, end (inclusive)
+                    
+                    for (size_t match_idx : match_indices) {
+                        size_t start = (match_idx >= before_ctx) ? match_idx - before_ctx : 0;
+                        size_t end = min(match_idx + after_ctx, all_lines.size() - 1);
+                        
+                        // Merge with previous range if overlapping
+                        if (!ranges.empty() && start <= ranges.back().second + 1) {
+                            ranges.back().second = max(ranges.back().second, end);
+                        } else {
+                            ranges.emplace_back(start, end);
+                        }
+                    }
+                    
+                    // Output ranges with separator between non-contiguous groups
+                    for (size_t r = 0; r < ranges.size(); ++r) {
+                        if (r > 0) {
+                            string sep = "--\n";
+                            write(fd, sep.c_str(), sep.size());
+                        }
+                        
+                        for (size_t i = ranges[r].first; i <= ranges[r].second; ++i) {
+                            // Check if this line is a match line using O(1) lookup
+                            bool is_match = match_set.count(i) > 0;
+                            char separator = is_match ? ':' : '-';
+                            
+                            string out = path + ":" + to_string(all_lines[i].first) + separator + all_lines[i].second + "\n";
+                            write(fd, out.c_str(), out.size());
+                        }
+                    }
+                }
             }
         }
     }
