@@ -9,6 +9,7 @@
 - Case-insensitive mode (-i) for name/path/content
 - Content search (-c fixed string substring)
 - Regex content search (-c + -r, ±i)
+- Content glob (-g fnmatch pattern on each line, ±i)
 - Binary file skip (null-byte check)
 - Type filter (-type f|d)
 - Size filter (-size +N/-N/N with units c/b/k/M/G, find-style)
@@ -19,7 +20,6 @@
 - Context lines (-A/-B/-C for grep-like before/after/context)
 
 ## Remaining / Not Implemented
-- Content glob (fnmatch on each line instead of substring)
 - PID file creation (/run/ffind.pid or similar) for service management
 - Better directory rename handling (current: may need restart)
 - Multiple root directories support
