@@ -295,6 +295,7 @@ void cleanup_stale_pending_moves() {
         if (chrono::duration_cast<chrono::seconds>(now - it->second.second).count() > 1) {
             // Stale move (moved out of watched tree) - treat as delete
             const string& path = it->second.first;
+            remove_path(path, true);  // Remove from entries
             if (foreground) {
                 cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory deleted: "
                      << COLOR_BOLD << path << COLOR_RESET << " (moved out of tree)\n";
