@@ -232,6 +232,9 @@ void sig_handler(int) {
 
 // Helper function to find which root a path belongs to
 // Returns the index of the most specific (longest matching) root
+// Note: This function is only called with paths from inotify events, which should
+// always be under one of the monitored roots. If no match is found (best_len == 0),
+// this indicates a bug and we assert to catch it early.
 size_t find_root_index(const string& path) {
     size_t best_idx = 0;
     size_t best_len = 0;
@@ -243,6 +246,11 @@ size_t find_root_index(const string& path) {
             best_len = root_paths[i].size();
         }
     }
+    
+    // Assert that we found a matching root - this should always be true for paths
+    // from inotify events. If this assertion fails, it indicates a logic error.
+    assert(best_len > 0 && "Path does not belong to any monitored root");
+    
     return best_idx;
 }
 
