@@ -36,10 +36,42 @@ volatile sig_atomic_t running = 1;
 int in_fd = -1;
 unordered_map<int, string> wd_to_dir;
 
+// Directory rename tracking
+unordered_map<uint32_t, pair<string, chrono::steady_clock::time_point>> pending_moves;
+mutex pending_moves_mtx;
+bool foreground = false;
+
 // ANSI color codes for stderr output
 const char* COLOR_RED = "\033[1;31m";
 const char* COLOR_YELLOW = "\033[1;33m";
+const char* COLOR_CYAN = "\033[36m";
+const char* COLOR_BOLD = "\033[1m";
 const char* COLOR_RESET = "\033[0m";
+
+// Check if DNOTIFY is available on this system
+bool check_dnotify_available() {
+    // Try to use fcntl with F_NOTIFY on a test file descriptor
+    // DNOTIFY requires DN_* constants which may not be defined on all systems
+    #ifndef F_NOTIFY
+    return false;
+    #else
+    // Create a temporary file descriptor to test
+    int test_fd = open("/tmp", O_RDONLY);
+    if (test_fd < 0) return false;
+    
+    // Try to set F_NOTIFY - if it fails with ENOSYS, DNOTIFY is not available
+    int result = fcntl(test_fd, F_NOTIFY, 0);
+    close(test_fd);
+    
+    // If errno is ENOSYS, kernel doesn't support DNOTIFY
+    if (result < 0 && errno == ENOSYS) {
+        return false;
+    }
+    
+    // DNOTIFY might be available (but we're using inotify anyway)
+    return true;
+    #endif
+}
 
 string get_pid_file_path() {
     uid_t uid = getuid();
@@ -229,10 +261,73 @@ void remove_path(const string& full, bool recursive = false) {
     }
 }
 
+void handle_directory_rename(const string& old_path, const string& new_path) {
+    lock_guard<mutex> lk(mtx);
+    int updated = 0;
+    
+    // Update all entry paths under the renamed directory
+    for (auto& e : entries) {
+        if (e.path == old_path || e.path.starts_with(old_path + "/")) {
+            e.path = new_path + e.path.substr(old_path.size());
+            updated++;
+        }
+    }
+    
+    // Update wd_to_dir mappings
+    for (auto& [wd, dir] : wd_to_dir) {
+        if (dir == old_path || dir.starts_with(old_path + "/")) {
+            dir = new_path + dir.substr(old_path.size());
+        }
+    }
+    
+    if (foreground) {
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory renamed: "
+             << COLOR_BOLD << old_path << COLOR_RESET << " -> "
+             << COLOR_BOLD << new_path << COLOR_RESET
+             << " (updated " << updated << " entries)\n";
+    }
+}
+
+void cleanup_stale_pending_moves() {
+    lock_guard<mutex> lk(pending_moves_mtx);
+    auto now = chrono::steady_clock::now();
+    for (auto it = pending_moves.begin(); it != pending_moves.end(); ) {
+        if (chrono::duration_cast<chrono::seconds>(now - it->second.second).count() > 1) {
+            // Stale move (moved out of watched tree) - treat as delete
+            const string& path = it->second.first;
+            if (foreground) {
+                cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory deleted: "
+                     << COLOR_BOLD << path << COLOR_RESET << " (moved out of tree)\n";
+            }
+            it = pending_moves.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
 void add_watch(const string& dir) {
     int wd = inotify_add_watch(in_fd, dir.c_str(),
         IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_MODIFY | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF);
     if (wd > 0) wd_to_dir[wd] = dir;
+}
+
+void add_directory_recursive(const string& dir) {
+    // Add the directory itself
+    update_or_add(dir);
+    add_watch(dir);
+    
+    // Recursively add all subdirectories and files
+    try {
+        for (auto& e : directory_iterator(dir)) {
+            string p = e.path().string();
+            if (e.is_directory()) {
+                add_directory_recursive(p);
+            } else {
+                update_or_add(p);
+            }
+        }
+    } catch (...) {}
 }
 
 void initial_setup(const string& r) {
@@ -270,6 +365,9 @@ void initial_setup(const string& r) {
 void process_events() {
     char buf[8192] __attribute__((aligned(8)));
     while (running) {
+        // Periodically clean up stale pending moves
+        cleanup_stale_pending_moves();
+        
         ssize_t len = read(in_fd, buf, sizeof(buf));
         if (len > 0) {
             char* ptr = buf;
@@ -291,14 +389,84 @@ void process_events() {
                     wd_to_dir.erase(ev->wd);
                     continue;
                 }
-                if (ev->mask & (IN_DELETE_SELF | IN_MOVE_SELF)) {
+                // Handle IN_DELETE_SELF (directory was deleted)
+                // Skip IN_MOVE_SELF as renames are handled via IN_MOVED_FROM/IN_MOVED_TO on parent
+                if (ev->mask & IN_DELETE_SELF) {
                     wd_to_dir.erase(ev->wd);
                     remove_path(dir, true);
+                    if (foreground) {
+                        int removed_count = 0;
+                        {
+                            lock_guard<mutex> lk(mtx);
+                            for (const auto& e : entries) {
+                                if (e.path == dir || e.path.starts_with(dir + "/")) {
+                                    removed_count++;
+                                }
+                            }
+                        }
+                        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory deleted: "
+                             << COLOR_BOLD << dir << COLOR_RESET 
+                             << " (watch removed, " << removed_count << " entries removed)\n";
+                    }
+                    continue;
+                }
+                // IN_MOVE_SELF is ignored - renames are handled at parent level
+                if (ev->mask & IN_MOVE_SELF) {
+                    // The directory was moved. If it's a rename within tree,
+                    // it's already handled by IN_MOVED_FROM/TO on parent.
+                    // If moved out of tree, the parent's IN_MOVED_FROM handles it.
+                    // Just update the wd_to_dir if needed, but don't delete.
                     continue;
                 }
                 if (isd) {
-                    if (ev->mask & (IN_CREATE | IN_MOVED_TO)) add_watch(full);
-                    if (ev->mask & (IN_DELETE | IN_MOVED_FROM)) remove_path(full, true);
+                    if (ev->mask & IN_CREATE) {
+                        add_directory_recursive(full);
+                        if (foreground) {
+                            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory created: "
+                                 << COLOR_BOLD << full << COLOR_RESET << " (watch added)\n";
+                        }
+                    }
+                    if (ev->mask & IN_MOVED_FROM) {
+                        // Track this move with its cookie
+                        lock_guard<mutex> lk(pending_moves_mtx);
+                        pending_moves[ev->cookie] = {full, chrono::steady_clock::now()};
+                        // Don't remove yet - wait to see if there's a matching MOVED_TO
+                    }
+                    if (ev->mask & IN_MOVED_TO) {
+                        // Check if there's a matching MOVED_FROM with same cookie
+                        bool found_match = false;
+                        string old_path;
+                        {
+                            lock_guard<mutex> lk(pending_moves_mtx);
+                            auto it = pending_moves.find(ev->cookie);
+                            if (it != pending_moves.end()) {
+                                old_path = it->second.first;
+                                pending_moves.erase(it);
+                                found_match = true;
+                            }
+                        }
+                        
+                        if (found_match) {
+                            // This is a rename within our watched tree
+                            handle_directory_rename(old_path, full);
+                            // Re-add watch for the new location
+                            add_watch(full);
+                        } else {
+                            // Moved into tree from outside
+                            add_directory_recursive(full);
+                            if (foreground) {
+                                cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory created: "
+                                     << COLOR_BOLD << full << COLOR_RESET << " (moved in, watch added)\n";
+                            }
+                        }
+                    }
+                    if (ev->mask & IN_DELETE) {
+                        remove_path(full, true);
+                        if (foreground) {
+                            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory deleted: "
+                                 << COLOR_BOLD << full << COLOR_RESET << " (watch removed)\n";
+                        }
+                    }
                 } else {
                     if (ev->mask & (IN_CREATE | IN_MOVED_TO | IN_MODIFY | IN_CLOSE_WRITE)) update_or_add(full);
                     if (ev->mask & (IN_DELETE | IN_MOVED_FROM)) remove_path(full);
@@ -541,18 +709,21 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    bool foreground = false;
+    bool fg = false;
     string root;
     if (argc == 3) {
         if (string(argv[1]) != "--foreground") {
             cerr << "Unknown option\n";
             return 1;
         }
-        foreground = true;
+        fg = true;
         root = argv[2];
     } else {
         root = argv[1];
     }
+    
+    // Set global foreground flag
+    foreground = fg;
 
     // Determine PID file path before daemonizing
     pid_file_path = get_pid_file_path();
@@ -567,6 +738,12 @@ int main(int argc, char** argv) {
     // This function handles race conditions atomically
     if (!check_and_create_pid_file(pid_file_path, foreground)) {
         return 1;
+    }
+    
+    // Check DNOTIFY availability and warn if not available in foreground mode
+    if (foreground && !check_dnotify_available()) {
+        cerr << COLOR_YELLOW << "Note: DNOTIFY not available, using inotify for directory monitoring" 
+             << COLOR_RESET << "\n";
     }
 
     signal(SIGINT, sig_handler);
