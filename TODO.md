@@ -19,10 +19,10 @@
 - Color output (--color=auto/always/never)
 - Context lines (-A/-B/-C for grep-like before/after/context)
 - Better directory rename handling (cookie-based inotify rename tracking with path updates)
+- Multiple root directories support
 
 ## Remaining / Not Implemented
 - PID file creation (/run/ffind.pid or similar) for service management
-- Multiple root directories support
 - Persistence (binary dump/load on shutdown/start for faster init)
 - SQLite backend option (for huge trees, lower RAM)
 
