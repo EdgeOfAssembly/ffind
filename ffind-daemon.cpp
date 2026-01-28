@@ -14,6 +14,8 @@
 #include <regex>
 #include <string.h>
 #include <arpa/inet.h>
+#include <poll.h>
+#include <sqlite3.h>
 
 using namespace std;
 using namespace std::filesystem;
@@ -49,6 +51,17 @@ const char* COLOR_CYAN = "\033[36m";
 const char* COLOR_BOLD = "\033[1m";
 const char* COLOR_RESET = "\033[0m";
 
+// SQLite persistence
+sqlite3* db = nullptr;
+string db_path;
+bool db_enabled = false;
+atomic<int> pending_changes{0};
+atomic<bool> db_dirty{false};
+chrono::steady_clock::time_point last_flush_time;
+const int FLUSH_INTERVAL_SEC = 30;
+const int FLUSH_THRESHOLD = 100;
+mutex db_mtx;
+
 // Check if DNOTIFY is available on this system
 bool check_dnotify_available() {
     // Try to use fcntl with F_NOTIFY on a test file descriptor
@@ -80,6 +93,472 @@ bool check_dnotify_available() {
     errno = saved_errno;
     return true;
     #endif
+}
+
+// ============================================================================
+// SQLite Database Functions
+// ============================================================================
+
+bool init_database(const string& path) {
+    int rc = sqlite3_open(path.c_str(), &db);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "ERROR: Cannot open database: " << sqlite3_errmsg(db) << COLOR_RESET << "\n";
+        }
+        sqlite3_close(db);
+        db = nullptr;
+        return false;
+    }
+    
+    // Enable WAL mode for better concurrency and crash recovery
+    char* err_msg = nullptr;
+    rc = sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not enable WAL mode: " << err_msg << COLOR_RESET << "\n";
+        }
+        sqlite3_free(err_msg);
+    }
+    
+    // Set synchronous to NORMAL for balance between speed and safety
+    rc = sqlite3_exec(db, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not set synchronous mode: " << err_msg << COLOR_RESET << "\n";
+        }
+        sqlite3_free(err_msg);
+    }
+    
+    // Create schema
+    const char* schema = R"(
+        CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+        
+        CREATE TABLE IF NOT EXISTS entries (
+            id INTEGER PRIMARY KEY,
+            path TEXT UNIQUE NOT NULL,
+            size INTEGER NOT NULL,
+            mtime INTEGER NOT NULL,
+            is_dir INTEGER NOT NULL,
+            root_index INTEGER NOT NULL
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_path ON entries(path);
+        
+        CREATE TABLE IF NOT EXISTS sync_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            last_full_sync INTEGER,
+            dirty INTEGER DEFAULT 0
+        );
+        
+        INSERT OR IGNORE INTO sync_state (id, last_full_sync, dirty) VALUES (1, 0, 0);
+    )";
+    
+    rc = sqlite3_exec(db, schema, nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "ERROR: Cannot create schema: " << err_msg << COLOR_RESET << "\n";
+        }
+        sqlite3_free(err_msg);
+        sqlite3_close(db);
+        db = nullptr;
+        return false;
+    }
+    
+    return true;
+}
+
+// Helper function to escape JSON string
+string json_escape(const string& str) {
+    string escaped;
+    escaped.reserve(str.size());
+    for (char c : str) {
+        switch (c) {
+            case '"':  escaped += "\\\""; break;
+            case '\\': escaped += "\\\\"; break;
+            case '\b': escaped += "\\b"; break;
+            case '\f': escaped += "\\f"; break;
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            case '\t': escaped += "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    // Control characters
+                    char buf[7];
+                    snprintf(buf, sizeof(buf), "\\u%04x", (unsigned char)c);
+                    escaped += buf;
+                } else {
+                    escaped += c;
+                }
+        }
+    }
+    return escaped;
+}
+
+// Helper function to unescape JSON string
+string json_unescape(const string& str) {
+    string unescaped;
+    unescaped.reserve(str.size());
+    for (size_t i = 0; i < str.size(); i++) {
+        if (str[i] == '\\' && i + 1 < str.size()) {
+            switch (str[i + 1]) {
+                case '"':  unescaped += '"'; i++; break;
+                case '\\': unescaped += '\\'; i++; break;
+                case 'b':  unescaped += '\b'; i++; break;
+                case 'f':  unescaped += '\f'; i++; break;
+                case 'n':  unescaped += '\n'; i++; break;
+                case 'r':  unescaped += '\r'; i++; break;
+                case 't':  unescaped += '\t'; i++; break;
+                case 'u':  // Unicode escape - simplified handling
+                    if (i + 5 < str.size()) {
+                        // Just copy the character as-is for now
+                        unescaped += str[i];
+                        unescaped += str[i + 1];
+                    }
+                    break;
+                default:
+                    unescaped += str[i + 1];
+                    i++;
+            }
+        } else {
+            unescaped += str[i];
+        }
+    }
+    return unescaped;
+}
+
+vector<string> load_roots_from_db() {
+    vector<string> roots;
+    if (!db) return roots;
+    
+    sqlite3_stmt* stmt;
+    const char* sql = "SELECT value FROM meta WHERE key = 'root_paths'";
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            const char* json_str = (const char*)sqlite3_column_text(stmt, 0);
+            if (json_str) {
+                // Parse JSON array with proper escape handling
+                string json(json_str);
+                size_t pos = 0;
+                while ((pos = json.find("\"", pos)) != string::npos) {
+                    size_t end = pos + 1;
+                    // Find closing quote, handling escaped quotes
+                    while (end < json.size()) {
+                        if (json[end] == '"' && (end == 0 || json[end - 1] != '\\')) {
+                            break;
+                        }
+                        end++;
+                    }
+                    if (end >= json.size()) break;
+                    
+                    string root = json.substr(pos + 1, end - pos - 1);
+                    if (!root.empty()) {
+                        roots.push_back(json_unescape(root));
+                    }
+                    pos = end + 1;
+                }
+            }
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    return roots;
+}
+
+void save_roots_to_db(const vector<string>& roots) {
+    if (!db) return;
+    
+    // Build JSON array with proper escaping
+    string json = "[";
+    for (size_t i = 0; i < roots.size(); i++) {
+        if (i > 0) json += ",";
+        json += "\"" + json_escape(roots[i]) + "\"";
+    }
+    json += "]";
+    
+    int rc;
+    char* errmsg = nullptr;
+    
+    // Start transaction for atomicity
+    rc = sqlite3_exec(db, "BEGIN IMMEDIATE;", nullptr, nullptr, &errmsg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to begin transaction for saving root paths: "
+                 << (errmsg ? errmsg : "unknown error") << "\n";
+        }
+        sqlite3_free(errmsg);
+        return;
+    }
+    
+    sqlite3_stmt* stmt;
+    const char* sql = "INSERT OR REPLACE INTO meta (key, value) VALUES ('root_paths', ?)";
+    
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to prepare statement for saving root paths: "
+                 << sqlite3_errmsg(db) << "\n";
+        }
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    rc = sqlite3_bind_text(stmt, 1, json.c_str(), -1, SQLITE_TRANSIENT);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to bind root paths JSON: " << sqlite3_errmsg(db) << "\n";
+        }
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to save root paths: " << sqlite3_errmsg(db) << "\n";
+        }
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    sqlite3_finalize(stmt);
+    
+    rc = sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errmsg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to commit transaction for saving root paths: "
+                 << (errmsg ? errmsg : "unknown error") << "\n";
+        }
+        sqlite3_free(errmsg);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+    }
+}
+
+void load_entries_from_db() {
+    if (!db) return;
+    
+    lock_guard<mutex> lk(mtx);
+    entries.clear();
+    
+    sqlite3_stmt* stmt;
+    const char* sql = "SELECT path, size, mtime, is_dir, root_index FROM entries";
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            Entry e;
+            e.path = (const char*)sqlite3_column_text(stmt, 0);
+            e.size = sqlite3_column_int64(stmt, 1);
+            e.mtime = sqlite3_column_int64(stmt, 2);
+            e.is_dir = sqlite3_column_int(stmt, 3) != 0;
+            e.root_index = sqlite3_column_int(stmt, 4);
+            entries.push_back(e);
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    if (foreground) {
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Loaded " << entries.size() 
+             << " entries from database\n";
+    }
+}
+
+void reconcile_db_with_filesystem() {
+    if (!db) return;
+    
+    // Build map of current entries from DB
+    unordered_map<string, Entry> db_entries;
+    {
+        lock_guard<mutex> lk(mtx);
+        for (const auto& e : entries) {
+            db_entries[e.path] = e;
+        }
+    }
+    
+    // Track statistics and changes
+    int added = 0, removed = 0, updated = 0;
+    vector<Entry> new_entries;
+    unordered_set<string> found_paths;
+    
+    // Walk filesystem and build new entry list
+    for (size_t root_idx = 0; root_idx < root_paths.size(); root_idx++) {
+        try {
+            for (auto& e : recursive_directory_iterator(root_paths[root_idx], 
+                                                       directory_options::skip_permission_denied)) {
+                string p = e.path().string();
+                found_paths.insert(p);
+                
+                struct stat st {};
+                if (lstat(p.c_str(), &st) != 0) continue;
+                
+                bool is_dir = S_ISDIR(st.st_mode);
+                int64_t sz = is_dir ? 0LL : st.st_size;
+                time_t mtime = st.st_mtime;
+                
+                auto it = db_entries.find(p);
+                if (it == db_entries.end()) {
+                    // File not in DB - add it
+                    Entry entry;
+                    entry.path = p;
+                    entry.size = sz;
+                    entry.mtime = mtime;
+                    entry.is_dir = is_dir;
+                    entry.root_index = root_idx;
+                    new_entries.push_back(entry);
+                    added++;
+                } else {
+                    // File exists - check if modified
+                    if (it->second.size != sz || it->second.mtime != mtime) {
+                        Entry entry = it->second;
+                        entry.size = sz;
+                        entry.mtime = mtime;
+                        entry.is_dir = is_dir;
+                        new_entries.push_back(entry);
+                        updated++;
+                    } else {
+                        // No change
+                        new_entries.push_back(it->second);
+                    }
+                }
+            }
+        } catch (...) {}
+    }
+    
+    // Count entries that were removed (in DB but not on filesystem)
+    for (const auto& [path, entry] : db_entries) {
+        if (found_paths.find(path) == found_paths.end()) {
+            removed++;
+        }
+    }
+    
+    // Replace entries with reconciled list
+    {
+        lock_guard<mutex> lk(mtx);
+        entries = move(new_entries);
+    }
+    
+    // Mark changes for flushing
+    int total_changes = added + removed + updated;
+    if (total_changes > 0) {
+        pending_changes += total_changes;
+        db_dirty = true;
+    }
+    
+    if (foreground && (added > 0 || removed > 0 || updated > 0)) {
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Reconciliation: " 
+             << added << " added, " << removed << " removed, " << updated << " updated\n";
+    }
+}
+
+void flush_changes_to_db() {
+    if (!db) return;
+    
+    lock_guard<mutex> lk(db_mtx);
+    
+    // Capture current pending changes before any operations
+    int changes_to_flush = pending_changes.load();
+    
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(db, "BEGIN IMMEDIATE;", nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not begin transaction: " << err_msg << COLOR_RESET << "\n";
+        }
+        sqlite3_free(err_msg);
+        return;
+    }
+    
+    // Clear existing entries
+    sqlite3_exec(db, "DELETE FROM entries;", nullptr, nullptr, nullptr);
+    
+    // Insert all current entries
+    sqlite3_stmt* stmt;
+    const char* sql = "INSERT INTO entries (path, size, mtime, is_dir, root_index) VALUES (?, ?, ?, ?, ?)";
+    
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not prepare insert statement: "
+                 << sqlite3_errmsg(db) << COLOR_RESET << "\n";
+        }
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    int insert_count = 0;
+    int error_count = 0;
+    {
+        lock_guard<mutex> entries_lk(mtx);
+        for (const auto& e : entries) {
+            sqlite3_bind_text(stmt, 1, e.path.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int64(stmt, 2, e.size);
+            sqlite3_bind_int64(stmt, 3, e.mtime);
+            sqlite3_bind_int(stmt, 4, e.is_dir ? 1 : 0);
+            sqlite3_bind_int(stmt, 5, e.root_index);
+            
+            rc = sqlite3_step(stmt);
+            if (rc == SQLITE_DONE) {
+                insert_count++;
+            } else {
+                error_count++;
+                if (foreground && error_count <= 5) {  // Limit error messages
+                    cerr << COLOR_YELLOW << "Warning: Failed to insert entry " << e.path 
+                         << ": " << sqlite3_errmsg(db) << COLOR_RESET << "\n";
+                }
+            }
+            sqlite3_reset(stmt);
+        }
+    }
+    sqlite3_finalize(stmt);
+    
+    if (error_count > 0 && foreground) {
+        cerr << COLOR_YELLOW << "Warning: " << error_count << " entries failed to insert" << COLOR_RESET << "\n";
+    }
+    
+    // Update sync state
+    sqlite3_exec(db, "UPDATE sync_state SET last_full_sync = strftime('%s', 'now'), dirty = 0 WHERE id = 1;",
+                 nullptr, nullptr, nullptr);
+    
+    rc = sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not commit transaction: " << err_msg << COLOR_RESET << "\n";
+        }
+        sqlite3_free(err_msg);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+    } else {
+        // Successfully committed - update counters
+        // Subtract the changes we flushed, but keep any new changes that came in during flush
+        int current = pending_changes.load();
+        pending_changes.fetch_sub(min(current, changes_to_flush));
+        db_dirty = (pending_changes.load() > 0);
+        last_flush_time = chrono::steady_clock::now();
+        
+        if (foreground) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Flushed " << insert_count 
+                 << " entries to database\n";
+        }
+    }
+}
+
+void maybe_flush_to_db() {
+    if (!db_enabled || !db) return;
+    
+    auto now = chrono::steady_clock::now();
+    auto elapsed = chrono::duration_cast<chrono::seconds>(now - last_flush_time).count();
+    
+    if (pending_changes >= FLUSH_THRESHOLD || elapsed >= FLUSH_INTERVAL_SEC) {
+        flush_changes_to_db();
+    }
 }
 
 string get_pid_file_path() {
@@ -227,7 +706,8 @@ void cleanup_pid_file() {
 
 void sig_handler(int) { 
     running = 0; 
-    cleanup_pid_file();
+    // Note: cleanup_pid_file() removed from signal handler because unlink() is not async-signal-safe
+    // PID file cleanup will happen in main() after signal handler sets running = 0
 }
 
 // Helper function to find which root a path belongs to
@@ -288,16 +768,30 @@ void update_or_add(const string& full, size_t root_index) {
         e.root_index = root_index;
         entries.push_back(e);
     }
+    
+    // Mark DB as dirty if persistence is enabled
+    if (db_enabled) {
+        pending_changes++;
+        db_dirty = true;
+    }
 }
 
 void remove_path(const string& full, bool recursive = false) {
     lock_guard<mutex> lk(mtx);
+    size_t count_before = entries.size();
     if (recursive) {
         entries.erase(remove_if(entries.begin(), entries.end(), [&](const Entry& e){
             return e.path == full || e.path.starts_with(full + "/");
         }), entries.end());
     } else {
         entries.erase(remove_if(entries.begin(), entries.end(), [&](const Entry& e){ return e.path == full; }), entries.end());
+    }
+    
+    // Mark DB as dirty if any entries were removed
+    size_t removed = count_before - entries.size();
+    if (db_enabled && removed > 0) {
+        pending_changes += removed;
+        db_dirty = true;
     }
 }
 
@@ -382,33 +876,48 @@ void add_directory_recursive(const string& dir, size_t root_index) {
     } catch (...) {}
 }
 
-void initial_setup(const vector<string>& roots) {
+void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
     // Initialize inotify first
     in_fd = inotify_init1(IN_NONBLOCK);
-    assert(in_fd > 0);
+    if (in_fd < 0) {
+        int err = errno;
+        cerr << COLOR_RED << "ERROR: inotify_init1 failed: " << strerror(err) 
+             << " (" << err << ")" << COLOR_RESET << "\n";
+        throw runtime_error("inotify_init1 failed");
+    }
     
     // Process each root directory (already canonicalized with trailing slashes)
     for (size_t root_idx = 0; root_idx < roots.size(); root_idx++) {
         root_paths.push_back(roots[root_idx]);
         
-        // Index this root
-        {
-            lock_guard<mutex> lk(mtx);
-            for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
-                try {
-                    string p = e.path().string();
-                    struct stat st {};
-                    if (lstat(p.c_str(), &st) == 0) {
-                        bool is_dir = S_ISDIR(st.st_mode);
-                        Entry entry;
-                        entry.path = p;
-                        entry.size = is_dir ? 0LL : st.st_size;
-                        entry.mtime = st.st_mtime;
-                        entry.is_dir = is_dir;
-                        entry.root_index = root_idx;
-                        entries.push_back(entry);
-                    }
-                } catch (...) {}
+        // Index this root only if not skipping
+        size_t initial_count = 0;
+        if (!skip_indexing) {
+            {
+                lock_guard<mutex> lk(mtx);
+                for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
+                    try {
+                        string p = e.path().string();
+                        struct stat st {};
+                        if (lstat(p.c_str(), &st) == 0) {
+                            bool is_dir = S_ISDIR(st.st_mode);
+                            Entry entry;
+                            entry.path = p;
+                            entry.size = is_dir ? 0LL : st.st_size;
+                            entry.mtime = st.st_mtime;
+                            entry.is_dir = is_dir;
+                            entry.root_index = root_idx;
+                            entries.push_back(entry);
+                            initial_count++;
+                        }
+                    } catch (...) {}
+                }
+            }
+            
+            // Mark entries as dirty if database is enabled
+            if (db_enabled && initial_count > 0) {
+                pending_changes += initial_count;
+                db_dirty = true;
             }
         }
         
@@ -428,6 +937,7 @@ void initial_setup(const vector<string>& roots) {
 void process_events() {
     char buf[8192] __attribute__((aligned(8)));
     auto last_cleanup = chrono::steady_clock::now();
+    
     while (running) {
         // Periodically clean up stale pending moves (once per second)
         auto now = chrono::steady_clock::now();
@@ -435,6 +945,22 @@ void process_events() {
             cleanup_stale_pending_moves();
             last_cleanup = now;
         }
+        
+        // Check if we should flush to database
+        maybe_flush_to_db();
+        
+        // Use poll with timeout for better signal responsiveness
+        struct pollfd pfd = {in_fd, POLLIN, 0};
+        int ret = poll(&pfd, 1, 100);  // 100ms timeout
+        
+        if (ret < 0) {
+            if (errno == EINTR) continue;  // Interrupted by signal, check running flag
+            break;
+        }
+        
+        if (ret == 0) continue;  // Timeout, check running flag
+        
+        if (!(pfd.revents & POLLIN)) continue;
         
         ssize_t len = read(in_fd, buf, sizeof(buf));
         if (len > 0) {
@@ -549,7 +1075,6 @@ void process_events() {
                 }
             }
         } else if (len < 0 && errno != EAGAIN) break;
-        else this_thread::sleep_for(50ms);
     }
 }
 
@@ -818,21 +1343,38 @@ vector<string> deduplicate_paths(const vector<string>& paths) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        cerr << "Usage: ffind-daemon [--foreground] /path/to/root [path2 path3 ...]\n";
+        cerr << "Usage: ffind-daemon [--foreground] [--db PATH] /path/to/root [path2 path3 ...]\n";
         return 1;
     }
 
     bool fg = false;
     int first_path_idx = 1;
+    string db_arg;
     
-    // Check for --foreground option
-    if (string(argv[1]) == "--foreground") {
-        fg = true;
-        first_path_idx = 2;
-        if (argc < 3) {
-            cerr << "Usage: ffind-daemon [--foreground] /path/to/root [path2 path3 ...]\n";
-            return 1;
+    // Parse command line options
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--foreground") {
+            fg = true;
+            first_path_idx = i + 1;
+        } else if (arg == "--db") {
+            if (i + 1 >= argc) {
+                cerr << "ERROR: --db requires a path argument\n";
+                return 1;
+            }
+            db_arg = argv[i + 1];
+            i++;  // Skip next arg (it's the db path)
+            first_path_idx = i + 1;
+        } else {
+            // First non-option argument - start of root paths
+            first_path_idx = i;
+            break;
         }
+    }
+    
+    if (first_path_idx >= argc) {
+        cerr << "Usage: ffind-daemon [--foreground] [--db PATH] /path/to/root [path2 path3 ...]\n";
+        return 1;
     }
     
     // Set global foreground flag
@@ -898,6 +1440,43 @@ int main(int argc, char** argv) {
         return 1;
     }
     
+    // Initialize database if --db was provided
+    vector<string> db_roots;  // Track if entries were loaded from DB
+    if (!db_arg.empty()) {
+        db_enabled = true;
+        db_path = db_arg;
+        
+        if (foreground) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Enabling SQLite persistence: " << db_path << "\n";
+        }
+        
+        if (!init_database(db_path)) {
+            cerr << COLOR_RED << "ERROR: Failed to initialize database" << COLOR_RESET << "\n";
+            cleanup_pid_file();
+            return 1;
+        }
+        
+        // Check root paths match
+        db_roots = load_roots_from_db();
+        if (!db_roots.empty() && db_roots != canonical_roots) {
+            if (foreground) {
+                cerr << COLOR_YELLOW << "[WARNING]" << COLOR_RESET 
+                     << " Root paths changed since last run. Full reconciliation required.\n";
+            }
+        }
+        
+        // Save current roots
+        save_roots_to_db(canonical_roots);
+        
+        // Load existing entries from DB if available
+        if (!db_roots.empty()) {
+            load_entries_from_db();
+        }
+        
+        // Initialize flush timer
+        last_flush_time = chrono::steady_clock::now();
+    }
+    
     // Check DNOTIFY availability and warn if not available in foreground mode
     if (foreground && !check_dnotify_available()) {
         cerr << COLOR_YELLOW << "Note: DNOTIFY not available, using inotify for directory monitoring" 
@@ -906,6 +1485,8 @@ int main(int argc, char** argv) {
 
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
+    signal(SIGQUIT, sig_handler);
+    signal(SIGHUP, sig_handler);
 
     sock_path = "/run/user/" + to_string(getuid()) + "/ffind.sock";
     
@@ -922,7 +1503,15 @@ int main(int argc, char** argv) {
         }
     }
 
-    initial_setup(canonical_roots);
+    // Initialize inotify and watches
+    // Skip filesystem indexing if entries were loaded from database
+    bool skip_indexing = (db_enabled && !db_roots.empty());
+    initial_setup(canonical_roots, skip_indexing);
+    
+    // Reconcile DB with filesystem if database is enabled
+    if (db_enabled) {
+        reconcile_db_with_filesystem();
+    }
 
     int srv = socket(AF_UNIX, SOCK_STREAM, 0);
     sockaddr_un addr{};
@@ -948,6 +1537,20 @@ int main(int argc, char** argv) {
     close(srv);
     unlink(sock_path.c_str());
     close(in_fd);
+    
+    // Graceful shutdown with database flush
+    if (db_enabled && db != nullptr) {
+        if (foreground) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Flushing " << pending_changes 
+                 << " changes to database...\n";
+        }
+        flush_changes_to_db();
+        sqlite3_close(db);
+        if (foreground) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Database closed.\n";
+        }
+    }
+    
     cleanup_pid_file();
     return 0;
 }

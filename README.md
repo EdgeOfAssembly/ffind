@@ -54,6 +54,39 @@ ffind-daemon --foreground /path/to/index
 
 The daemon creates a Unix socket at `/run/user/$UID/ffind.sock` for client communication.
 
+### SQLite Persistence (Optional)
+
+For faster startup on large directory trees, enable SQLite persistence:
+
+```bash
+# Enable persistence with --db flag
+ffind-daemon --db ~/.cache/ffind.db ~/projects
+
+# With foreground mode
+ffind-daemon --foreground --db ~/.cache/ffind.db ~/projects
+
+# Multiple roots with persistence
+ffind-daemon --db /var/cache/ffind/index.db /home/user/projects /var/log
+```
+
+**Benefits:**
+- **Fast startup**: Loads index from database instead of full filesystem scan
+- **Crash-safe**: Atomic writes with WAL mode ensure database consistency
+- **Automatic reconciliation**: Detects filesystem changes between runs
+- **Periodic sync**: Database updated every 30 seconds or after 100 changes
+
+**How it works:**
+1. On first run, creates SQLite database and indexes filesystem
+2. Changes are tracked in memory and periodically flushed to database
+3. On restart, loads entries from database and reconciles with actual filesystem
+4. Graceful shutdown ensures all pending changes are written
+
+**Notes:**
+- Database file is created if it doesn't exist
+- Database uses WAL (Write-Ahead Logging) mode for better performance and safety
+- Parent directories must exist for the database path
+- If root paths change, full reconciliation is triggered automatically
+
 ### Multiple Root Directories
 
 Monitor multiple directories simultaneously by specifying them as additional arguments:

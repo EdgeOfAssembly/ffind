@@ -7,7 +7,7 @@ TARGETS = ffind-daemon ffind
 all: $(TARGETS)
 
 ffind-daemon: ffind-daemon.cpp
-	$(CXX) $(CXXFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< -o $@ -lsqlite3
 
 ffind: ffind.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@
