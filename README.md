@@ -74,14 +74,15 @@ Fast daemon-based file finder with real-time inotify indexing.
 |---------|------|--------|----|---------| ------|
 | Real-time indexing | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Content search | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Regex support | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Glob patterns | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Regex support | ◑ | ❌ | ✅ | ✅ | ✅ |
+| Glob patterns | ✅ | ✅ | ❌ | ✅ | ✅ |
 | Context lines | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Multiple roots | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Multiple roots | ✅ | ❌ | ❌ | ❌ | ✅ |
 | Persistence | ❌ | ✅ | ❌ | ❌ | ✅ |
 | Speed (indexed) | Slow | Fast | Slow | Fast | **Instant** |
 
-**Note**: `find` and `ag`/`ripgrep` need to traverse the filesystem on every search. `locate` uses a pre-built index but doesn't update in real-time. `ffind` combines the best of both: real-time updates with instant search.
+**Legend**: ◑ = partial/limited support  
+**Note**: `find` has limited regex support (`-regex` for path matching). `find` and `ag`/`ripgrep` need to traverse the filesystem on every search. `locate` uses a pre-built index but doesn't update in real-time. `ffind` combines the best of both: real-time updates with instant search.
 
 ## Quick Start
 

@@ -21,14 +21,3 @@ start_pre() {
         return 1
     fi
 }
-
-stop() {
-    ebegin "Stopping ${name}"
-    if [ -f "${pidfile}" ]; then
-        kill $(cat ${pidfile}) 2>/dev/null
-        eend $?
-    else
-        ewarn "PID file not found"
-        eend 1
-    fi
-}

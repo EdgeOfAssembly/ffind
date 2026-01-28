@@ -92,11 +92,39 @@ Config parse_config_file(const string& config_path) {
         string key = line.substr(0, colon_pos);
         string value = line.substr(colon_pos + 1);
         
-        // Trim key and value
-        key.erase(0, key.find_first_not_of(" \t"));
-        key.erase(key.find_last_not_of(" \t") + 1);
-        value.erase(0, value.find_first_not_of(" \t"));
-        value.erase(value.find_last_not_of(" \t") + 1);
+        // Trim key and value - check for npos to avoid underflow
+        size_t key_start = key.find_first_not_of(" \t");
+        if (key_start != string::npos) {
+            key.erase(0, key_start);
+            size_t key_end = key.find_last_not_of(" \t");
+            if (key_end != string::npos) {
+                key.erase(key_end + 1);
+            }
+        } else {
+            key.clear();
+        }
+        
+        size_t val_start = value.find_first_not_of(" \t");
+        if (val_start != string::npos) {
+            value.erase(0, val_start);
+            size_t val_end = value.find_last_not_of(" \t");
+            if (val_end != string::npos) {
+                value.erase(val_end + 1);
+            }
+        } else {
+            value.clear();
+        }
+        
+        // Skip if key is empty after trimming
+        if (key.empty()) continue;
+        
+        // Strip surrounding quotes from value if present (simple handling)
+        if (value.length() >= 2) {
+            if ((value.front() == '"' && value.back() == '"') ||
+                (value.front() == '\'' && value.back() == '\'')) {
+                value = value.substr(1, value.length() - 2);
+            }
+        }
         
         // Parse known keys
         if (key == "foreground") {
@@ -1055,7 +1083,8 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
                             // Log progress every 10000 entries (in foreground mode)
                             if (foreground && initial_count % 10000 == 0) {
                                 cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
-                                     << " Indexed " << initial_count << " entries...\n";
+                                     << " Indexed " << initial_count << " entries in " 
+                                     << roots[root_idx] << "...\n";
                             }
                         }
                     } catch (...) {}
@@ -1512,7 +1541,6 @@ int main(int argc, char** argv) {
     }
 
     bool fg = cfg.foreground;  // Start with config value
-    bool fg_from_cli = false;  // Track if foreground was set from CLI
     int first_path_idx = 1;
     string db_arg = cfg.db_path;  // Start with config value
     
@@ -1527,7 +1555,6 @@ int main(int argc, char** argv) {
             return 0;
         } else if (arg == "--foreground") {
             fg = true;
-            fg_from_cli = true;
             first_path_idx = i + 1;
         } else if (arg == "--db") {
             if (i + 1 >= argc) {
