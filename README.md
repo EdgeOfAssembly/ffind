@@ -54,6 +54,28 @@ ffind-daemon --foreground /path/to/index
 
 The daemon creates a Unix socket at `/run/user/$UID/ffind.sock` for client communication.
 
+### Multiple Root Directories
+
+Monitor multiple directories simultaneously by specifying them as additional arguments:
+
+```bash
+# Monitor multiple directories
+ffind-daemon /home/user/projects /var/log /etc/config
+
+# With foreground mode
+ffind-daemon --foreground ~/code ~/documents ~/Downloads
+```
+
+When searching with multiple roots:
+- Search results include files from all monitored directories
+- Path globs (`-path`) are matched relative to each root's base directory
+- All filters and features work seamlessly across all roots
+
+**Notes:**
+- Overlapping roots (e.g., `/home` and `/home/user`) are detected and warned about
+- Duplicate paths are automatically deduplicated
+- Each root is indexed and monitored independently
+
 ### Search examples
 
 All features are fully implemented:
