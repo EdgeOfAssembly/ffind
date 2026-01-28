@@ -857,6 +857,30 @@ void cleanup_pid_file() {
     }
 }
 
+// Helper function to clean up resources on socket creation/setup errors
+void cleanup_on_socket_error(int srv_fd, bool unlink_socket, const string& sock_path) {
+    // Close socket file descriptor if valid
+    if (srv_fd >= 0) {
+        close(srv_fd);
+    }
+    
+    // Remove socket file if requested
+    if (unlink_socket) {
+        unlink(sock_path.c_str());
+    }
+    
+    // Close database connection if open
+    if (db_enabled && db != nullptr) {
+        sqlite3_close(db);
+    }
+    
+    // Close inotify file descriptor
+    close(in_fd);
+    
+    // Remove PID file
+    cleanup_pid_file();
+}
+
 void sig_handler(int) { 
     running = 0; 
     // Note: cleanup_pid_file() removed from signal handler because unlink() is not async-signal-safe
@@ -1740,12 +1764,7 @@ int main(int argc, char** argv) {
         cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
              << " Failed to create socket: " << strerror(errno) << "\n";
         
-        // Cleanup resources
-        if (db_enabled && db != nullptr) {
-            sqlite3_close(db);
-        }
-        close(in_fd);
-        cleanup_pid_file();
+        cleanup_on_socket_error(-1, false, sock_path);
         return 1;
     }
 
@@ -1771,13 +1790,7 @@ int main(int argc, char** argv) {
                  << "Run: mkdir -p " << dir << "\n";
         }
         
-        // Cleanup resources
-        close(srv);
-        if (db_enabled && db != nullptr) {
-            sqlite3_close(db);
-        }
-        close(in_fd);
-        cleanup_pid_file();
+        cleanup_on_socket_error(srv, false, sock_path);
         return 1;
     }
     
@@ -1785,14 +1798,7 @@ int main(int argc, char** argv) {
         cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
              << " Failed to listen on socket: " << strerror(errno) << "\n";
         
-        // Cleanup resources
-        close(srv);
-        unlink(sock_path.c_str());
-        if (db_enabled && db != nullptr) {
-            sqlite3_close(db);
-        }
-        close(in_fd);
-        cleanup_pid_file();
+        cleanup_on_socket_error(srv, true, sock_path);
         return 1;
     }
     
