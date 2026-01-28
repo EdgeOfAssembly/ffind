@@ -161,6 +161,7 @@ run_benchmark() {
     
     # Run the command 3 times and collect times
     local TIMES=()
+    local i
     for i in 1 2 3; do
         # Flush cache before run if requested
         if [ "$should_flush" = "yes" ]; then
@@ -168,7 +169,7 @@ run_benchmark() {
         fi
         
         local START=$(date +%s.%N)
-        eval "$cmd" > /tmp/bench_output_${i}.txt 2>&1 || true
+        eval "$cmd" > /tmp/bench_output_${i}_$$.txt 2>&1 || true
         local END=$(date +%s.%N)
         local ELAPSED=$(echo "$END - $START" | bc)
         TIMES+=($ELAPSED)
@@ -184,7 +185,10 @@ run_benchmark() {
     
     # Check for high variance (>20% of median)
     local VARIANCE_PCT=$(echo "scale=2; ($VARIANCE / $MEDIAN) * 100" | bc 2>/dev/null || echo "0")
-    local HIGH_VARIANCE=$(echo "$VARIANCE_PCT > 20" | bc 2>/dev/null || echo "0")
+    local HIGH_VARIANCE=0
+    if [ -n "$VARIANCE_PCT" ] && [ "$(echo "$VARIANCE_PCT > 20" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
+        HIGH_VARIANCE=1
+    fi
     
     # Output to stderr so it doesn't interfere with return value
     echo "    Run 1: ${TIMES[0]}s" >&2
@@ -207,19 +211,23 @@ verify_results() {
     local ffind_cmd="$2"
     local bench_name="$3"
     
-    # Run commands and compare output
-    eval "$find_cmd" 2>/dev/null | sort > /tmp/find_results.txt || true
-    eval "$ffind_cmd" 2>/dev/null | sort > /tmp/ffind_results.txt || true
+    # Create secure temporary files
+    local find_results=$(mktemp /tmp/ffind_bench_find.XXXXXX)
+    local ffind_results=$(mktemp /tmp/ffind_bench_ffind.XXXXXX)
     
-    if [ -s /tmp/find_results.txt ] && [ -s /tmp/ffind_results.txt ]; then
-        if ! diff -q /tmp/find_results.txt /tmp/ffind_results.txt > /dev/null 2>&1; then
+    # Run commands and compare output
+    eval "$find_cmd" 2>/dev/null | sort > "$find_results" || true
+    eval "$ffind_cmd" 2>/dev/null | sort > "$ffind_results" || true
+    
+    if [ -s "$find_results" ] && [ -s "$ffind_results" ]; then
+        if ! diff -q "$find_results" "$ffind_results" > /dev/null 2>&1; then
             echo "  ⚠️  WARNING: Results differ between find and ffind!"
-            echo "  First 10 differences:"
-            diff /tmp/find_results.txt /tmp/ffind_results.txt 2>/dev/null | head -20 || true
+            echo "  First 20 differences:"
+            diff "$find_results" "$ffind_results" 2>/dev/null | head -20 || true
         fi
     fi
     
-    rm -f /tmp/find_results.txt /tmp/ffind_results.txt
+    rm -f "$find_results" "$ffind_results"
 }
 
 # Benchmark 1: Find all .c files
@@ -354,7 +362,8 @@ if [ -n "$REMAINING_PID" ]; then
     kill -9 $REMAINING_PID 2>/dev/null || true
 fi
 rm -f /tmp/ffind-daemon.log
-rm -f /tmp/bench_output_*.txt
+rm -f /tmp/bench_output_*_$$.txt
+rm -f /tmp/ffind_bench_find.* /tmp/ffind_bench_ffind.*
 
 echo "========================================="
 echo "Benchmarking complete!"
