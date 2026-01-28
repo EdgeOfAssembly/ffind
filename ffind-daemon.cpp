@@ -21,6 +21,25 @@ using namespace std;
 using namespace std::filesystem;
 using namespace std::chrono_literals;
 
+const char* VERSION = "1.0";
+
+void show_usage() {
+    cout << "Usage: ffind-daemon [OPTIONS] DIR [DIR2 ...]\n\n";
+    cout << "Options:\n";
+    cout << "  --foreground       Run in foreground (don't daemonize)\n";
+    cout << "  --db PATH          Enable SQLite persistence\n";
+    cout << "  -h, --help         Show this help\n";
+    cout << "  -v, --version      Show version\n\n";
+    cout << "At least one directory is required.\n\n";
+    cout << "Examples:\n";
+    cout << "  ffind-daemon /home/user/projects\n";
+    cout << "  ffind-daemon --foreground --db ~/.cache/ffind.db ~/code ~/docs\n";
+}
+
+void show_version() {
+    cout << "ffind-daemon " << VERSION << "\n";
+}
+
 struct Entry {
     string path;
     int64_t size = 0;
@@ -1342,8 +1361,9 @@ vector<string> deduplicate_paths(const vector<string>& paths) {
 }
 
 int main(int argc, char** argv) {
+    // Handle no arguments - show usage and exit 1
     if (argc < 2) {
-        cerr << "Usage: ffind-daemon [--foreground] [--db PATH] /path/to/root [path2 path3 ...]\n";
+        show_usage();
         return 1;
     }
 
@@ -1354,7 +1374,13 @@ int main(int argc, char** argv) {
     // Parse command line options
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
-        if (arg == "--foreground") {
+        if (arg == "-h" || arg == "--help") {
+            show_usage();
+            return 0;
+        } else if (arg == "-v" || arg == "--version") {
+            show_version();
+            return 0;
+        } else if (arg == "--foreground") {
             fg = true;
             first_path_idx = i + 1;
         } else if (arg == "--db") {
@@ -1372,8 +1398,10 @@ int main(int argc, char** argv) {
         }
     }
     
+    // Enforce at least one directory argument
     if (first_path_idx >= argc) {
-        cerr << "Usage: ffind-daemon [--foreground] [--db PATH] /path/to/root [path2 path3 ...]\n";
+        cerr << "ERROR: At least one directory is required.\n\n";
+        show_usage();
         return 1;
     }
     
