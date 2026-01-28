@@ -21,6 +21,165 @@ using namespace std;
 using namespace std::filesystem;
 using namespace std::chrono_literals;
 
+const char* VERSION = "1.0";
+
+// ANSI color codes for stderr output
+const char* COLOR_RED = "\033[1;31m";
+const char* COLOR_YELLOW = "\033[1;33m";
+const char* COLOR_CYAN = "\033[36m";
+const char* COLOR_BOLD = "\033[1m";
+const char* COLOR_RESET = "\033[0m";
+
+void show_usage() {
+    cout << "Usage: ffind-daemon [OPTIONS] DIR [DIR2 ...]\n\n";
+    cout << "Options:\n";
+    cout << "  --foreground       Run in foreground (don't daemonize)\n";
+    cout << "  --db PATH          Enable SQLite persistence\n";
+    cout << "  -h, --help         Show this help\n";
+    cout << "  -v, --version      Show version\n\n";
+    cout << "At least one directory is required.\n\n";
+    cout << "Examples:\n";
+    cout << "  ffind-daemon /home/user/projects\n";
+    cout << "  ffind-daemon --foreground --db ~/.cache/ffind.db ~/code ~/docs\n";
+}
+
+void show_version() {
+    cout << "ffind-daemon " << VERSION << "\n";
+}
+
+// Simple YAML config parser for our limited use case
+// Parses key: value pairs (supports foreground and db options)
+struct Config {
+    bool foreground = false;
+    string db_path;
+    bool loaded = false;
+    string config_file_path;  // Track which file was loaded
+};
+
+Config parse_config_file(const string& config_path) {
+    Config cfg;
+    ifstream file(config_path);
+    if (!file.is_open()) {
+        return cfg;  // File doesn't exist, return empty config
+    }
+    
+    string line;
+    int line_num = 0;
+    while (getline(file, line)) {
+        line_num++;
+        // Remove comments
+        size_t comment_pos = line.find('#');
+        if (comment_pos != string::npos) {
+            line = line.substr(0, comment_pos);
+        }
+        
+        // Trim whitespace
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
+        
+        // Skip empty lines
+        if (line.empty()) continue;
+        
+        // Parse key: value
+        size_t colon_pos = line.find(':');
+        if (colon_pos == string::npos) {
+            cerr << COLOR_YELLOW << "[WARNING]" << COLOR_RESET 
+                 << " Invalid config line " << line_num << " in " << config_path 
+                 << ": missing colon\n";
+            continue;
+        }
+        
+        string key = line.substr(0, colon_pos);
+        string value = line.substr(colon_pos + 1);
+        
+        // Trim key and value - check for npos to avoid underflow
+        size_t key_start = key.find_first_not_of(" \t");
+        if (key_start != string::npos) {
+            key.erase(0, key_start);
+            size_t key_end = key.find_last_not_of(" \t");
+            if (key_end != string::npos) {
+                key.erase(key_end + 1);
+            }
+        } else {
+            key.clear();
+        }
+        
+        size_t val_start = value.find_first_not_of(" \t");
+        if (val_start != string::npos) {
+            value.erase(0, val_start);
+            size_t val_end = value.find_last_not_of(" \t");
+            if (val_end != string::npos) {
+                value.erase(val_end + 1);
+            }
+        } else {
+            value.clear();
+        }
+        
+        // Skip if key is empty after trimming
+        if (key.empty()) continue;
+        
+        // Strip surrounding quotes from value if present (simple handling)
+        if (value.length() >= 2) {
+            if ((value.front() == '"' && value.back() == '"') ||
+                (value.front() == '\'' && value.back() == '\'')) {
+                value = value.substr(1, value.length() - 2);
+            }
+        }
+        
+        // Parse known keys
+        if (key == "foreground") {
+            if (value == "true" || value == "yes" || value == "1") {
+                cfg.foreground = true;
+            } else if (value == "false" || value == "no" || value == "0") {
+                cfg.foreground = false;
+            } else {
+                cerr << COLOR_YELLOW << "[WARNING]" << COLOR_RESET 
+                     << " Invalid value for 'foreground' in " << config_path 
+                     << " (expected true/false)\n";
+            }
+        } else if (key == "db") {
+            cfg.db_path = value;
+        } else {
+            cerr << COLOR_YELLOW << "[WARNING]" << COLOR_RESET 
+                 << " Unknown config key '" << key << "' in " << config_path << "\n";
+        }
+    }
+    
+    cfg.loaded = true;
+    return cfg;
+}
+
+Config load_config() {
+    // Try XDG_CONFIG_HOME first, then ~/.config, then /etc
+    const char* xdg_config = getenv("XDG_CONFIG_HOME");
+    vector<string> config_paths;
+    
+    if (xdg_config && xdg_config[0] != '\0') {
+        config_paths.push_back(string(xdg_config) + "/ffind/config.yaml");
+    }
+    
+    const char* home = getenv("HOME");
+    if (home && home[0] != '\0') {
+        config_paths.push_back(string(home) + "/.config/ffind/config.yaml");
+    }
+    
+    config_paths.push_back("/etc/ffind/config.yaml");
+    
+    for (const auto& path : config_paths) {
+        if (access(path.c_str(), F_OK) == 0) {
+            // File exists, try to parse it
+            Config cfg = parse_config_file(path);
+            if (cfg.loaded) {
+                cfg.config_file_path = path;
+                return cfg;
+            }
+        }
+    }
+    
+    // No config found, return empty config
+    return Config();
+}
+
 struct Entry {
     string path;
     int64_t size = 0;
@@ -43,13 +202,6 @@ unordered_map<int, string> wd_to_dir;
 unordered_map<uint32_t, pair<string, chrono::steady_clock::time_point>> pending_moves;
 mutex pending_moves_mtx;
 bool foreground = false;
-
-// ANSI color codes for stderr output
-const char* COLOR_RED = "\033[1;31m";
-const char* COLOR_YELLOW = "\033[1;33m";
-const char* COLOR_CYAN = "\033[36m";
-const char* COLOR_BOLD = "\033[1m";
-const char* COLOR_RESET = "\033[0m";
 
 // SQLite persistence
 sqlite3* db = nullptr;
@@ -886,6 +1038,11 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
         throw runtime_error("inotify_init1 failed");
     }
     
+    // Track indexing statistics
+    auto start_time = chrono::steady_clock::now();
+    size_t total_files = 0;
+    size_t total_dirs = 0;
+    
     // Process each root directory (already canonicalized with trailing slashes)
     for (size_t root_idx = 0; root_idx < roots.size(); root_idx++) {
         root_paths.push_back(roots[root_idx]);
@@ -893,6 +1050,12 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
         // Index this root only if not skipping
         size_t initial_count = 0;
         if (!skip_indexing) {
+            // Log start of indexing for this root
+            if (foreground) {
+                cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                     << " Indexing " << roots[root_idx] << " ...\n";
+            }
+            
             {
                 lock_guard<mutex> lk(mtx);
                 for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
@@ -909,6 +1072,20 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
                             entry.root_index = root_idx;
                             entries.push_back(entry);
                             initial_count++;
+                            
+                            // Track file vs directory counts
+                            if (is_dir) {
+                                total_dirs++;
+                            } else {
+                                total_files++;
+                            }
+                            
+                            // Log progress every 10000 entries (in foreground mode)
+                            if (foreground && initial_count % 10000 == 0) {
+                                cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                                     << " Indexed " << initial_count << " entries in " 
+                                     << roots[root_idx] << "...\n";
+                            }
                         }
                     } catch (...) {}
                 }
@@ -931,6 +1108,18 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
             } catch (...) {}
         };
         rec_add(roots[root_idx]);
+    }
+    
+    // Log indexing complete
+    if (!skip_indexing && foreground) {
+        auto end_time = chrono::steady_clock::now();
+        auto elapsed = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
+        double elapsed_sec = elapsed.count() / 1000.0;
+        
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+             << " Indexing complete: " << total_files << " files, " 
+             << total_dirs << " directories (" << fixed << setprecision(1) 
+             << elapsed_sec << "s)\n";
     }
 }
 
@@ -1342,19 +1531,29 @@ vector<string> deduplicate_paths(const vector<string>& paths) {
 }
 
 int main(int argc, char** argv) {
+    // Load config file first
+    Config cfg = load_config();
+    
+    // Handle no arguments - show usage and exit 1
     if (argc < 2) {
-        cerr << "Usage: ffind-daemon [--foreground] [--db PATH] /path/to/root [path2 path3 ...]\n";
+        show_usage();
         return 1;
     }
 
-    bool fg = false;
+    bool fg = cfg.foreground;  // Start with config value
     int first_path_idx = 1;
-    string db_arg;
+    string db_arg = cfg.db_path;  // Start with config value
     
-    // Parse command line options
+    // Parse command line options (CLI overrides config)
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
-        if (arg == "--foreground") {
+        if (arg == "-h" || arg == "--help") {
+            show_usage();
+            return 0;
+        } else if (arg == "-v" || arg == "--version") {
+            show_version();
+            return 0;
+        } else if (arg == "--foreground") {
             fg = true;
             first_path_idx = i + 1;
         } else if (arg == "--db") {
@@ -1372,13 +1571,21 @@ int main(int argc, char** argv) {
         }
     }
     
+    // Enforce at least one directory argument
     if (first_path_idx >= argc) {
-        cerr << "Usage: ffind-daemon [--foreground] [--db PATH] /path/to/root [path2 path3 ...]\n";
+        cerr << "ERROR: At least one directory is required.\n\n";
+        show_usage();
         return 1;
     }
     
     // Set global foreground flag
     foreground = fg;
+    
+    // Log which config was loaded if in foreground mode
+    if (cfg.loaded && foreground) {
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+             << " Loaded config from " << cfg.config_file_path << "\n";
+    }
     
     // Collect all root paths
     vector<string> raw_roots;
