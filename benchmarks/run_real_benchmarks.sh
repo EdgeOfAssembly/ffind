@@ -77,15 +77,16 @@ while [ $WAIT_COUNT -lt 120 ]; do
     
     sleep 1
     WAIT_COUNT=$((WAIT_COUNT + 1))
-    
-    if [ $WAIT_COUNT -eq 120 ]; then
-        echo "ERROR: Daemon didn't become ready in 120 seconds"
-        echo "=== Last 50 lines of daemon log ==="
-        tail -50 /tmp/ffind-daemon.log
-        kill $DAEMON_PID 2>/dev/null || true
-        exit 1
-    fi
 done
+
+# Check if we timed out
+if [ $WAIT_COUNT -eq 120 ]; then
+    echo "ERROR: Daemon didn't become ready in 120 seconds"
+    echo "=== Last 50 lines of daemon log ==="
+    tail -50 /tmp/ffind-daemon.log
+    kill $DAEMON_PID 2>/dev/null || true
+    exit 1
+fi
 
 # Verify socket exists
 if [ ! -S "/run/user/$(id -u)/ffind.sock" ]; then

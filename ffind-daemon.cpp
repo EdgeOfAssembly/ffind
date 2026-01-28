@@ -1739,6 +1739,13 @@ int main(int argc, char** argv) {
     if (srv < 0) {
         cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
              << " Failed to create socket: " << strerror(errno) << "\n";
+        
+        // Cleanup resources
+        if (db_enabled && db != nullptr) {
+            sqlite3_close(db);
+        }
+        close(in_fd);
+        cleanup_pid_file();
         return 1;
     }
 
@@ -1760,19 +1767,32 @@ int main(int argc, char** argv) {
         struct stat st;
         if (stat(dir.c_str(), &st) != 0) {
             cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
-                 << " Directory " << dir << " does not exist\n";
-            cerr << "         Run: mkdir -p " << dir << "\n";
+                 << " Directory " << dir << " does not exist. "
+                 << "Run: mkdir -p " << dir << "\n";
         }
         
+        // Cleanup resources
         close(srv);
+        if (db_enabled && db != nullptr) {
+            sqlite3_close(db);
+        }
+        close(in_fd);
+        cleanup_pid_file();
         return 1;
     }
     
     if (listen(srv, 16) < 0) {
         cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
              << " Failed to listen on socket: " << strerror(errno) << "\n";
+        
+        // Cleanup resources
         close(srv);
         unlink(sock_path.c_str());
+        if (db_enabled && db != nullptr) {
+            sqlite3_close(db);
+        }
+        close(in_fd);
+        cleanup_pid_file();
         return 1;
     }
     
