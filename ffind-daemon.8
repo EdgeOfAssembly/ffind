@@ -7,20 +7,40 @@ ffind-daemon \- fast file indexing daemon for ffind
 
 .SH SYNOPSIS
 .B ffind-daemon
-[\-\-foreground] \fI/path/to/root\fR
+[\-\-foreground] [\-\-db \fIPATH\fR] \fI/path/to/root\fR [\fIpath2\fR \fIpath3\fR ...]
 
 .SH DESCRIPTION
-\fBffind-daemon\fR indexes a directory tree in real time using inotify and serves search requests over a Unix socket to the \fBffind\fR client. It runs in the background by default.
+\fBffind-daemon\fR indexes directory trees in real time using inotify and serves search requests over a Unix socket to the \fBffind\fR client. It runs in the background by default and supports monitoring multiple root directories simultaneously.
 
 .SH OPTIONS
 .TP
 .BR \-\-foreground
-Run in foreground (do not daemonize). Useful for debugging.
+Run in foreground (do not daemonize). Useful for debugging. Shows detailed logging of directory changes.
+.TP
+.BR \-\-db " " \fIPATH\fR
+Enable SQLite persistence. The index is periodically saved to and loaded from the specified database file. On startup, existing entries are loaded and reconciled with the filesystem. The database uses WAL mode for atomic updates and crash safety.
 
 .SH FILES
 .TP
 .I /run/user/$UID/ffind.sock
 Unix domain socket used for client communication.
+.TP
+.I /run/user/$UID/ffind-daemon.pid
+PID file created when daemon starts. Prevents multiple instances from running.
+
+.SH EXAMPLES
+.TP
+Start daemon on a single directory:
+.B ffind-daemon /home/user/projects
+.TP
+Run in foreground for debugging:
+.B ffind-daemon --foreground /home/user/projects
+.TP
+Enable persistence for faster restarts:
+.B ffind-daemon --db ~/.cache/ffind.db /home/user/projects
+.TP
+Monitor multiple directories with persistence:
+.B ffind-daemon --db /var/cache/ffind.db /home/user/projects /var/log
 
 .SH AUTHOR
 EdgeOfAssembly <haxbox2000@gmail.com>

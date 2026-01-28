@@ -20,11 +20,10 @@
 - Context lines (-A/-B/-C for grep-like before/after/context)
 - Better directory rename handling (cookie-based inotify rename tracking with path updates)
 - Multiple root directories support
+- PID file creation (/run/ffind.pid or similar) for service management
+- SQLite persistence (--db PATH) with atomic updates, crash recovery, and automatic reconciliation
 
 ## Remaining / Not Implemented
-- PID file creation (/run/ffind.pid or similar) for service management
-- Persistence (binary dump/load on shutdown/start for faster init)
-- SQLite backend option (for huge trees, lower RAM)
 
 ## Low Priority / Optional
 - -perm mode filter
