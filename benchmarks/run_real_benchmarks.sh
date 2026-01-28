@@ -155,9 +155,8 @@ echo ""
 
 # Function to run a benchmark and capture timing with statistics
 run_benchmark() {
-    local name="$1"
-    local cmd="$2"
-    local should_flush="$3"  # "yes" or "no"
+    local cmd="$1"
+    local should_flush="$2"  # "yes" or "no"
     
     # Run the command 3 times and collect times
     local TIMES=()
@@ -184,7 +183,11 @@ run_benchmark() {
     local VARIANCE=$(echo "$MAX - $MIN" | bc)
     
     # Check for high variance (>20% of median)
-    local VARIANCE_PCT=$(echo "scale=2; ($VARIANCE / $MEDIAN) * 100" | bc 2>/dev/null || echo "0")
+    local VARIANCE_PCT=0
+    if [ -n "$MEDIAN" ] && [ "$(echo "$MEDIAN > 0" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
+        VARIANCE_PCT=$(echo "scale=2; ($VARIANCE / $MEDIAN) * 100" | bc 2>/dev/null || echo "0")
+    fi
+    
     local HIGH_VARIANCE=0
     if [ -n "$VARIANCE_PCT" ] && [ "$(echo "$VARIANCE_PCT > 20" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
         HIGH_VARIANCE=1
@@ -209,7 +212,6 @@ run_benchmark() {
 verify_results() {
     local find_cmd="$1"
     local ffind_cmd="$2"
-    local bench_name="$3"
     
     # Create secure temporary files
     local find_results=$(mktemp /tmp/ffind_bench_find.XXXXXX)
@@ -230,42 +232,55 @@ verify_results() {
     rm -f "$find_results" "$ffind_results"
 }
 
+# Function to calculate speedup safely
+calculate_speedup() {
+    local time1="$1"
+    local time2="$2"
+    
+    # Check if time2 is zero or very close to zero
+    if [ "$(echo "$time2 > 0.0001" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
+        echo "scale=1; $time1 / $time2" | bc
+    else
+        echo "N/A (time too small)"
+    fi
+}
+
 # Benchmark 1: Find all .c files
 echo "=== Benchmark 1: Find all .c files ==="
 echo "  find (cold cache):"
-FIND_TIME=$(run_benchmark "find (*.c)" "find '$CORPUS_DIR' -name '*.c'" "yes")
+FIND_TIME=$(run_benchmark "find '$CORPUS_DIR' -name '*.c'" "yes")
 echo ""
 echo "  ffind (warm - data in RAM):"
-FFIND_TIME=$(run_benchmark "ffind (*.c)" "./ffind '*.c'" "no")
-SPEEDUP=$(echo "scale=1; $FIND_TIME / $FFIND_TIME" | bc)
+FFIND_TIME=$(run_benchmark "./ffind '*.c'" "no")
+SPEEDUP=$(calculate_speedup "$FIND_TIME" "$FFIND_TIME")
 echo ""
 echo "  Speedup: ${SPEEDUP}x faster"
-verify_results "find '$CORPUS_DIR' -name '*.c'" "./ffind '*.c'" "Benchmark 1"
+verify_results "find '$CORPUS_DIR' -name '*.c'" "./ffind '*.c'"
 echo ""
 
 # Benchmark 2: Find all .h files
 echo "=== Benchmark 2: Find all .h files ==="
 echo "  find (cold cache):"
-FIND_TIME=$(run_benchmark "find (*.h)" "find '$CORPUS_DIR' -name '*.h'" "yes")
+FIND_TIME=$(run_benchmark "find '$CORPUS_DIR' -name '*.h'" "yes")
 echo ""
 echo "  ffind (warm - data in RAM):"
-FFIND_TIME=$(run_benchmark "ffind (*.h)" "./ffind '*.h'" "no")
-SPEEDUP=$(echo "scale=1; $FIND_TIME / $FFIND_TIME" | bc)
+FFIND_TIME=$(run_benchmark "./ffind '*.h'" "no")
+SPEEDUP=$(calculate_speedup "$FIND_TIME" "$FFIND_TIME")
 echo ""
 echo "  Speedup: ${SPEEDUP}x faster"
-verify_results "find '$CORPUS_DIR' -name '*.h'" "./ffind '*.h'" "Benchmark 2"
+verify_results "find '$CORPUS_DIR' -name '*.h'" "./ffind '*.h'"
 echo ""
 
 # Benchmark 3: Find files by path pattern
 echo "=== Benchmark 3: Find files in include/* ==="
 echo "  find (cold cache):"
-FIND_TIME=$(run_benchmark "find (include/*)" "find '$CORPUS_DIR/include' -type f 2>/dev/null" "yes")
+FIND_TIME=$(run_benchmark "find '$CORPUS_DIR/include' -type f 2>/dev/null" "yes")
 echo ""
 echo "  ffind (warm - data in RAM):"
-FFIND_TIME=$(run_benchmark "ffind (include/*)" "./ffind -path 'include/*' -type f" "no")
+FFIND_TIME=$(run_benchmark "./ffind -path 'include/*' -type f" "no")
 echo ""
 if [ "$(echo "$FIND_TIME > 0" | bc)" -eq 1 ]; then
-    SPEEDUP=$(echo "scale=1; $FIND_TIME / $FFIND_TIME" | bc)
+    SPEEDUP=$(calculate_speedup "$FIND_TIME" "$FFIND_TIME")
     echo "  Speedup: ${SPEEDUP}x faster"
 else
     echo "  (path not found in corpus)"
@@ -275,11 +290,11 @@ echo ""
 # Benchmark 4: Find large files (>100KB)
 echo "=== Benchmark 4: Find files >100KB ==="
 echo "  find (cold cache):"
-FIND_TIME=$(run_benchmark "find (>100k)" "find '$CORPUS_DIR' -type f -size +100k" "yes")
+FIND_TIME=$(run_benchmark "find '$CORPUS_DIR' -type f -size +100k" "yes")
 echo ""
 echo "  ffind (warm - data in RAM):"
-FFIND_TIME=$(run_benchmark "ffind (>100k)" "./ffind -type f -size +100k" "no")
-SPEEDUP=$(echo "scale=1; $FIND_TIME / $FFIND_TIME" | bc)
+FFIND_TIME=$(run_benchmark "./ffind -type f -size +100k" "no")
+SPEEDUP=$(calculate_speedup "$FIND_TIME" "$FFIND_TIME")
 echo ""
 echo "  Speedup: ${SPEEDUP}x faster"
 echo ""
@@ -287,11 +302,11 @@ echo ""
 # Benchmark 5: Content search for "static"
 echo "=== Benchmark 5: Content search 'static' ==="
 echo "  grep -r (cold cache):"
-GREP_TIME=$(run_benchmark "grep -r (static)" "grep -r 'static' '$CORPUS_DIR'" "yes")
+GREP_TIME=$(run_benchmark "grep -r 'static' '$CORPUS_DIR'" "yes")
 echo ""
 echo "  ffind (warm - data in RAM):"
-FFIND_TIME=$(run_benchmark "ffind (static)" "./ffind -c 'static'" "no")
-SPEEDUP=$(echo "scale=1; $GREP_TIME / $FFIND_TIME" | bc)
+FFIND_TIME=$(run_benchmark "./ffind -c 'static'" "no")
+SPEEDUP=$(calculate_speedup "$GREP_TIME" "$FFIND_TIME")
 echo ""
 echo "  Speedup vs grep: ${SPEEDUP}x"
 echo ""
@@ -300,8 +315,8 @@ echo ""
 if command -v ag &> /dev/null; then
     echo "=== Benchmark 5b: ag search 'static' ==="
     echo "  ag (cold cache):"
-    AG_TIME=$(run_benchmark "ag (static)" "ag 'static' '$CORPUS_DIR'" "yes")
-    SPEEDUP=$(echo "scale=1; $AG_TIME / $FFIND_TIME" | bc)
+    AG_TIME=$(run_benchmark "ag 'static' '$CORPUS_DIR'" "yes")
+    SPEEDUP=$(calculate_speedup "$AG_TIME" "$FFIND_TIME")
     echo ""
     echo "  Speedup vs ag: ${SPEEDUP}x"
     echo ""
@@ -311,8 +326,8 @@ fi
 if command -v rg &> /dev/null; then
     echo "=== Benchmark 5c: ripgrep search 'static' ==="
     echo "  ripgrep (cold cache):"
-    RG_TIME=$(run_benchmark "rg (static)" "rg 'static' '$CORPUS_DIR'" "yes")
-    SPEEDUP=$(echo "scale=1; $RG_TIME / $FFIND_TIME" | bc)
+    RG_TIME=$(run_benchmark "rg 'static' '$CORPUS_DIR'" "yes")
+    SPEEDUP=$(calculate_speedup "$RG_TIME" "$FFIND_TIME")
     echo ""
     echo "  Speedup vs ripgrep: ${SPEEDUP}x"
     echo ""
@@ -321,11 +336,11 @@ fi
 # Benchmark 6: Regex content search
 echo "=== Benchmark 6: Regex search 'EXPORT_SYMBOL|MODULE_' ==="
 echo "  grep -rE (cold cache):"
-GREP_TIME=$(run_benchmark "grep -rE (regex)" "grep -rE 'EXPORT_SYMBOL|MODULE_' '$CORPUS_DIR'" "yes")
+GREP_TIME=$(run_benchmark "grep -rE 'EXPORT_SYMBOL|MODULE_' '$CORPUS_DIR'" "yes")
 echo ""
 echo "  ffind (warm - data in RAM):"
-FFIND_TIME=$(run_benchmark "ffind (regex)" "./ffind -c 'EXPORT_SYMBOL|MODULE_' -r" "no")
-SPEEDUP=$(echo "scale=1; $GREP_TIME / $FFIND_TIME" | bc)
+FFIND_TIME=$(run_benchmark "./ffind -c 'EXPORT_SYMBOL|MODULE_' -r" "no")
+SPEEDUP=$(calculate_speedup "$GREP_TIME" "$FFIND_TIME")
 echo ""
 echo "  Speedup vs grep: ${SPEEDUP}x"
 echo ""
@@ -333,8 +348,8 @@ echo ""
 if command -v rg &> /dev/null; then
     echo "=== Benchmark 6b: ripgrep regex search ==="
     echo "  ripgrep (cold cache):"
-    RG_TIME=$(run_benchmark "rg (regex)" "rg 'EXPORT_SYMBOL|MODULE_' '$CORPUS_DIR'" "yes")
-    SPEEDUP=$(echo "scale=1; $RG_TIME / $FFIND_TIME" | bc)
+    RG_TIME=$(run_benchmark "rg 'EXPORT_SYMBOL|MODULE_' '$CORPUS_DIR'" "yes")
+    SPEEDUP=$(calculate_speedup "$RG_TIME" "$FFIND_TIME")
     echo ""
     echo "  Speedup vs ripgrep: ${SPEEDUP}x"
     echo ""
@@ -343,11 +358,11 @@ fi
 # Benchmark 7: Simple file listing
 echo "=== Benchmark 7: List all files ==="
 echo "  find (cold cache):"
-FIND_TIME=$(run_benchmark "find (all files)" "find '$CORPUS_DIR' -type f" "yes")
+FIND_TIME=$(run_benchmark "find '$CORPUS_DIR' -type f" "yes")
 echo ""
 echo "  ffind (warm - data in RAM):"
-FFIND_TIME=$(run_benchmark "ffind (all files)" "./ffind -type f" "no")
-SPEEDUP=$(echo "scale=1; $FIND_TIME / $FFIND_TIME" | bc)
+FFIND_TIME=$(run_benchmark "./ffind -type f" "no")
+SPEEDUP=$(calculate_speedup "$FIND_TIME" "$FFIND_TIME")
 echo ""
 echo "  Speedup: ${SPEEDUP}x faster"
 echo ""
