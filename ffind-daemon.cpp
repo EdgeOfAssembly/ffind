@@ -30,11 +30,111 @@ vector<Entry> entries;
 mutex mtx;
 string root_path;
 string sock_path;
+string pid_file_path;
 volatile sig_atomic_t running = 1;
 int in_fd = -1;
 unordered_map<int, string> wd_to_dir;
 
-void sig_handler(int) { running = 0; }
+// ANSI color codes for stderr output
+const char* COLOR_RED = "\033[1;31m";
+const char* COLOR_YELLOW = "\033[1;33m";
+const char* COLOR_RESET = "\033[0m";
+
+string get_pid_file_path() {
+    uid_t uid = getuid();
+    if (uid == 0) {
+        // Running as root
+        return "/run/ffind-daemon.pid";
+    } else {
+        // Running as non-root user
+        return "/run/user/" + to_string(uid) + "/ffind-daemon.pid";
+    }
+}
+
+bool is_process_running(pid_t pid) {
+    // Use kill with signal 0 to check if process exists
+    // Returns 0 if process exists, -1 with errno=ESRCH if not
+    return kill(pid, 0) == 0;
+}
+
+bool check_existing_pid_file(const string& pid_path, bool foreground) {
+    // Check if PID file already exists
+    ifstream pid_in(pid_path);
+    if (pid_in.is_open()) {
+        pid_t existing_pid;
+        if (pid_in >> existing_pid) {
+            pid_in.close();
+            
+            // Check if process is still running
+            if (is_process_running(existing_pid)) {
+                // Process is running - error and exit
+                if (foreground) {
+                    cerr << COLOR_RED << "ERROR: Daemon already running (PID: " 
+                         << existing_pid << ")" << COLOR_RESET << "\n";
+                }
+                return false;
+            } else {
+                // Stale PID file - warn and remove
+                if (foreground) {
+                    cerr << COLOR_YELLOW << "Warning: Removing stale PID file (PID: " 
+                         << existing_pid << " not running)" << COLOR_RESET << "\n";
+                }
+                unlink(pid_path.c_str());
+            }
+        } else {
+            pid_in.close();
+            // Invalid PID file - warn and remove
+            if (foreground) {
+                cerr << COLOR_YELLOW << "Warning: Removing invalid PID file" << COLOR_RESET << "\n";
+            }
+            unlink(pid_path.c_str());
+        }
+    }
+    return true;
+}
+
+bool create_pid_file(const string& pid_path, bool foreground) {
+    // Try to create PID file with exclusive lock
+    // Use O_CREAT | O_EXCL to ensure atomicity
+    int fd = open(pid_path.c_str(), O_CREAT | O_EXCL | O_WRONLY, 0644);
+    if (fd < 0) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not create PID file: " 
+                 << strerror(errno) << COLOR_RESET << "\n";
+        }
+        // Don't fail - continue without PID file
+        return true;
+    }
+    
+    // Write our PID to the file
+    pid_t our_pid = getpid();
+    string pid_str = to_string(our_pid) + "\n";
+    ssize_t written = write(fd, pid_str.c_str(), pid_str.size());
+    close(fd);
+    
+    if (written < 0) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not write to PID file: " 
+                 << strerror(errno) << COLOR_RESET << "\n";
+        }
+        unlink(pid_path.c_str());
+        // Don't fail - continue without PID file
+        return true;
+    }
+    
+    return true;
+}
+
+void cleanup_pid_file() {
+    if (!pid_file_path.empty()) {
+        unlink(pid_file_path.c_str());
+    }
+}
+
+void sig_handler(int) { 
+    running = 0; 
+    cleanup_pid_file();
+}
 
 void daemonize() {
     pid_t pid = fork();
@@ -401,7 +501,19 @@ int main(int argc, char** argv) {
         root = argv[1];
     }
 
+    // Determine PID file path before daemonizing
+    pid_file_path = get_pid_file_path();
+    
+    // Check for existing daemon before daemonizing
+    // This must be done before fork() to show messages to the user
+    if (!check_existing_pid_file(pid_file_path, foreground)) {
+        return 1;
+    }
+
     if (!foreground) daemonize();
+
+    // Create PID file after daemonizing (so we get the correct PID)
+    create_pid_file(pid_file_path, foreground);
 
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
@@ -434,5 +546,6 @@ int main(int argc, char** argv) {
     close(srv);
     unlink(sock_path.c_str());
     close(in_fd);
+    cleanup_pid_file();
     return 0;
 }
