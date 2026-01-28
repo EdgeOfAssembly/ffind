@@ -96,16 +96,59 @@ $(function(){initNavTree('ffind_8cpp.html','',''); });
 <code>#include &lt;sys/un.h&gt;</code><br />
 <code>#include &lt;unistd.h&gt;</code><br />
 <code>#include &lt;arpa/inet.h&gt;</code><br />
+<code>#include &lt;regex&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for ffind.cpp:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="ffind_8cpp__incl.svg" width="559" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="ffind_8cpp__incl.svg" width="640" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 </div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-enum-members" class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a0e887cb85702e0dccbf34d7dbe40443f" id="r_a0e887cb85702e0dccbf34d7dbe40443f"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0e887cb85702e0dccbf34d7dbe40443f">ColorMode</a> { <a class="el" href="#a0e887cb85702e0dccbf34d7dbe40443fa443475558f0168dff92ecde26b98ae5a">NEVER</a>
+, <a class="el" href="#a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9">AUTO</a>
+, <a class="el" href="#a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962">ALWAYS</a>
+ }</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a3c04138a5bfe5d72780bb7e82a18e627" id="r_a3c04138a5bfe5d72780bb7e82a18e627"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3c04138a5bfe5d72780bb7e82a18e627">main</a> (int argc, char **argv)</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-var-members" class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a38539b87442fcd1eec6f7e5496fec18b" id="r_a38539b87442fcd1eec6f7e5496fec18b"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a38539b87442fcd1eec6f7e5496fec18b">RESET</a> = &quot;\033[0m&quot;</td></tr>
+<tr class="memitem:a2cfd223aea400a8315b4c70d6e6baa02" id="r_a2cfd223aea400a8315b4c70d6e6baa02"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2cfd223aea400a8315b4c70d6e6baa02">BOLD</a> = &quot;\033[1m&quot;</td></tr>
+<tr class="memitem:a334b1692c2c996d66cc8180490241abb" id="r_a334b1692c2c996d66cc8180490241abb"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a334b1692c2c996d66cc8180490241abb">CYAN</a> = &quot;\033[36m&quot;</td></tr>
+<tr class="memitem:a147e5f161524200d2e26b4a7156cadb4" id="r_a147e5f161524200d2e26b4a7156cadb4"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a147e5f161524200d2e26b4a7156cadb4">BOLD_RED</a> = &quot;\033[1;31m&quot;</td></tr>
 </table>
+<a name="doc-enum-members" id="doc-enum-members"></a><h2 id="header-doc-enum-members" class="groupheader">Enumeration Type Documentation</h2>
+<a id="a0e887cb85702e0dccbf34d7dbe40443f" name="a0e887cb85702e0dccbf34d7dbe40443f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0e887cb85702e0dccbf34d7dbe40443f">&#9670;&#160;</a></span>ColorMode</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#a0e887cb85702e0dccbf34d7dbe40443f">ColorMode</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel strong">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a0e887cb85702e0dccbf34d7dbe40443fa443475558f0168dff92ecde26b98ae5a" name="a0e887cb85702e0dccbf34d7dbe40443fa443475558f0168dff92ecde26b98ae5a"></a>NEVER&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9" name="a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9"></a>AUTO&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962" name="a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962"></a>ALWAYS&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+</div>
+</div>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
 <a id="a3c04138a5bfe5d72780bb7e82a18e627" name="a3c04138a5bfe5d72780bb7e82a18e627"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3c04138a5bfe5d72780bb7e82a18e627">&#9670;&#160;</a></span>main()</h2>
@@ -122,6 +165,63 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">char **</td>          <td class="paramname"><span class="paramname"><em>argv</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a name="doc-var-members" id="doc-var-members"></a><h2 id="header-doc-var-members" class="groupheader">Variable Documentation</h2>
+<a id="a2cfd223aea400a8315b4c70d6e6baa02" name="a2cfd223aea400a8315b4c70d6e6baa02"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2cfd223aea400a8315b4c70d6e6baa02">&#9670;&#160;</a></span>BOLD</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char* BOLD = &quot;\033[1m&quot;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a147e5f161524200d2e26b4a7156cadb4" name="a147e5f161524200d2e26b4a7156cadb4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a147e5f161524200d2e26b4a7156cadb4">&#9670;&#160;</a></span>BOLD_RED</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char* BOLD_RED = &quot;\033[1;31m&quot;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a334b1692c2c996d66cc8180490241abb" name="a334b1692c2c996d66cc8180490241abb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a334b1692c2c996d66cc8180490241abb">&#9670;&#160;</a></span>CYAN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char* CYAN = &quot;\033[36m&quot;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a38539b87442fcd1eec6f7e5496fec18b" name="a38539b87442fcd1eec6f7e5496fec18b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38539b87442fcd1eec6f7e5496fec18b">&#9670;&#160;</a></span>RESET</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char* RESET = &quot;\033[0m&quot;</td>
         </tr>
       </table>
 </div><div class="memdoc">

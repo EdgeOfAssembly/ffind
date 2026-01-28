@@ -14,8 +14,7 @@
 {\ttfamily \#include $<$regex$>$}\newline
 {\ttfamily \#include $<$string.\+h$>$}\newline
 {\ttfamily \#include $<$arpa/inet.\+h$>$}\newline
-Include dependency graph for ffind-\/daemon.cpp\+:
-\nopagebreak
+Include dependency graph for ffind-\/daemon.cpp\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -34,6 +33,14 @@ struct \mbox{\hyperlink{structEntry}{Entry}}
 \end{DoxyCompactItemize}
 \doxysubsubsection*{Functions}
 \begin{DoxyCompactItemize}
+\item 
+string \mbox{\hyperlink{ffind-daemon_8cpp_ac2acdbfe25fe356cd7052c036bce7072}{get\+\_\+pid\+\_\+file\+\_\+path}} ()
+\item 
+bool \mbox{\hyperlink{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07}{is\+\_\+process\+\_\+running}} (pid\+\_\+t pid)
+\item 
+bool \mbox{\hyperlink{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f}{check\+\_\+and\+\_\+create\+\_\+pid\+\_\+file}} (const string \&pid\+\_\+path, bool foreground)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8}{cleanup\+\_\+pid\+\_\+file}} ()
 \item 
 void \mbox{\hyperlink{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6}{sig\+\_\+handler}} (int)
 \item 
@@ -64,11 +71,21 @@ string \mbox{\hyperlink{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4}{roo
 \item 
 string \mbox{\hyperlink{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae}{sock\+\_\+path}}
 \item 
+string \mbox{\hyperlink{ffind-daemon_8cpp_a99a7b197fcb106a59ca82ee82455928c}{pid\+\_\+file\+\_\+path}}
+\item 
+char \mbox{\hyperlink{ffind-daemon_8cpp_a84af1c8099c312bc575fd6a8814e3908}{pid\+\_\+file\+\_\+path\+\_\+buf}} \mbox{[}256\mbox{]} = \{0\}
+\item 
 volatile sig\+\_\+atomic\+\_\+t \mbox{\hyperlink{ffind-daemon_8cpp_af3270a6e782fe74a057a44a74d4b29f9}{running}} = 1
 \item 
 int \mbox{\hyperlink{ffind-daemon_8cpp_a683029b96d4f70080d7f5d69d5144cd5}{in\+\_\+fd}} = -\/1
 \item 
 unordered\+\_\+map$<$ int, string $>$ \mbox{\hyperlink{ffind-daemon_8cpp_ac2fc5f87ca9b708edcf7dbd5da05ba24}{wd\+\_\+to\+\_\+dir}}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a53e54caf6eb975dec77f33e016bdb722}{COLOR\+\_\+\+RED}} = "{}\textbackslash{}033\mbox{[}1;31m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_aa90ffa37fb9eca85e39b9897569dab68}{COLOR\+\_\+\+YELLOW}} = "{}\textbackslash{}033\mbox{[}1;33m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a8a6d517e1ab192944bcbd1af463e7efd}{COLOR\+\_\+\+RESET}} = "{}\textbackslash{}033\mbox{[}0m"{}
 \end{DoxyCompactItemize}
 
 
@@ -92,12 +109,47 @@ unordered\+\_\+map$<$ int, string $>$ \mbox{\hyperlink{ffind-daemon_8cpp_ac2fc5f
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc} 
 void add\+\_\+watch (\begin{DoxyParamCaption}\item[{const string \&}]{dir}{}\end{DoxyParamCaption})}
 
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!check\_and\_create\_pid\_file@{check\_and\_create\_pid\_file}}
+\index{check\_and\_create\_pid\_file@{check\_and\_create\_pid\_file}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{check\_and\_create\_pid\_file()}{check\_and\_create\_pid\_file()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f} 
+bool check\+\_\+and\+\_\+create\+\_\+pid\+\_\+file (\begin{DoxyParamCaption}\item[{const string \&}]{pid\+\_\+path}{, }\item[{bool}]{foreground}{}\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f_cgraph}
+\end{center}
+\end{figure}
 Here is the caller graph for this function\+:
 \nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph}
+\includegraphics[width=301pt]{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!cleanup\_pid\_file@{cleanup\_pid\_file}}
+\index{cleanup\_pid\_file@{cleanup\_pid\_file}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{cleanup\_pid\_file()}{cleanup\_pid\_file()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8} 
+void cleanup\+\_\+pid\+\_\+file (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!daemonize@{daemonize}}
@@ -106,12 +158,25 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e} 
 void daemonize (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=227pt]{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_ac2acdbfe25fe356cd7052c036bce7072}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!get\_pid\_file\_path@{get\_pid\_file\_path}}
+\index{get\_pid\_file\_path@{get\_pid\_file\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{get\_pid\_file\_path()}{get\_pid\_file\_path()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ac2acdbfe25fe356cd7052c036bce7072} 
+string get\+\_\+pid\+\_\+file\+\_\+path (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
 Here is the caller graph for this function\+:
 \nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=227pt]{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph}
+\includegraphics[width=256pt]{ffind-daemon_8cpp_ac2acdbfe25fe356cd7052c036bce7072_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!handle\_client@{handle\_client}}
@@ -120,8 +185,7 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd} 
 void handle\+\_\+client (\begin{DoxyParamCaption}\item[{int}]{fd}{}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:
-\nopagebreak
+Here is the caller graph for this function\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -134,20 +198,32 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b} 
 void initial\+\_\+setup (\begin{DoxyParamCaption}\item[{const string \&}]{r}{}\end{DoxyParamCaption})}
 
-Here is the call graph for this function\+:
-\nopagebreak
+Here is the call graph for this function\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
 \includegraphics[width=261pt]{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph}
 \end{center}
 \end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=233pt]{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!is\_process\_running@{is\_process\_running}}
+\index{is\_process\_running@{is\_process\_running}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{is\_process\_running()}{is\_process\_running()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07} 
+bool is\+\_\+process\+\_\+running (\begin{DoxyParamCaption}\item[{pid\+\_\+t}]{pid}{}\end{DoxyParamCaption})}
+
 Here is the caller graph for this function\+:
 \nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=233pt]{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph}
+\includegraphics[width=350pt]{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!main@{main}}
@@ -170,16 +246,14 @@ Here is the call graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c} 
 void process\+\_\+events (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
-Here is the call graph for this function\+:
-\nopagebreak
+Here is the call graph for this function\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
 \includegraphics[width=296pt]{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph}
 \end{center}
 \end{figure}
-Here is the caller graph for this function\+:
-\nopagebreak
+Here is the caller graph for this function\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -192,8 +266,7 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f} 
 void remove\+\_\+path (\begin{DoxyParamCaption}\item[{const string \&}]{full}{, }\item[{bool}]{recursive}{ = {\ttfamily false}}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:
-\nopagebreak
+Here is the caller graph for this function\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -206,8 +279,15 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6} 
 void sig\+\_\+handler (\begin{DoxyParamCaption}\item[{int}]{}{}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:
+Here is the call graph for this function\+:
 \nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=283pt]{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -220,8 +300,7 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565} 
 void update\+\_\+or\+\_\+add (\begin{DoxyParamCaption}\item[{const string \&}]{full}{}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:
-\nopagebreak
+Here is the caller graph for this function\+:\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -233,6 +312,24 @@ Here is the caller graph for this function\+:
 \label{doc-var-members}
 \Hypertarget{ffind-daemon_8cpp_doc-var-members}
 \doxysubsection{Variable Documentation}
+\Hypertarget{ffind-daemon_8cpp_a53e54caf6eb975dec77f33e016bdb722}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!COLOR\_RED@{COLOR\_RED}}
+\index{COLOR\_RED@{COLOR\_RED}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{COLOR\_RED}{COLOR\_RED}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a53e54caf6eb975dec77f33e016bdb722} 
+const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+RED = "{}\textbackslash{}033\mbox{[}1;31m"{}}
+
+\Hypertarget{ffind-daemon_8cpp_a8a6d517e1ab192944bcbd1af463e7efd}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!COLOR\_RESET@{COLOR\_RESET}}
+\index{COLOR\_RESET@{COLOR\_RESET}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{COLOR\_RESET}{COLOR\_RESET}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a8a6d517e1ab192944bcbd1af463e7efd} 
+const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+RESET = "{}\textbackslash{}033\mbox{[}0m"{}}
+
+\Hypertarget{ffind-daemon_8cpp_aa90ffa37fb9eca85e39b9897569dab68}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!COLOR\_YELLOW@{COLOR\_YELLOW}}
+\index{COLOR\_YELLOW@{COLOR\_YELLOW}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{COLOR\_YELLOW}{COLOR\_YELLOW}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa90ffa37fb9eca85e39b9897569dab68} 
+const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+YELLOW = "{}\textbackslash{}033\mbox{[}1;33m"{}}
+
 \Hypertarget{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!entries@{entries}}
 \index{entries@{entries}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
 \doxysubsubsection{\texorpdfstring{entries}{entries}}
@@ -250,6 +347,18 @@ int in\+\_\+fd = -\/1}
 \doxysubsubsection{\texorpdfstring{mtx}{mtx}}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a29ac681ec3efa9e30e1ab1ab251b47f9} 
 mutex mtx}
+
+\Hypertarget{ffind-daemon_8cpp_a99a7b197fcb106a59ca82ee82455928c}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!pid\_file\_path@{pid\_file\_path}}
+\index{pid\_file\_path@{pid\_file\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{pid\_file\_path}{pid\_file\_path}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a99a7b197fcb106a59ca82ee82455928c} 
+string pid\+\_\+file\+\_\+path}
+
+\Hypertarget{ffind-daemon_8cpp_a84af1c8099c312bc575fd6a8814e3908}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!pid\_file\_path\_buf@{pid\_file\_path\_buf}}
+\index{pid\_file\_path\_buf@{pid\_file\_path\_buf}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{pid\_file\_path\_buf}{pid\_file\_path\_buf}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a84af1c8099c312bc575fd6a8814e3908} 
+char pid\+\_\+file\+\_\+path\+\_\+buf\mbox{[}256\mbox{]} = \{0\}}
 
 \Hypertarget{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!root\_path@{root\_path}}
 \index{root\_path@{root\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}

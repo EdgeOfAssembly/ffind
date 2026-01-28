@@ -91,8 +91,8 @@ $(function(){initNavTree('md_TODO.html','',''); });
   <div class="headertitle"><div class="title">ffind TODO Summary - January 2026 </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md0"></a></p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md1"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md31"></a></p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md32"></a>
 Implemented (current version)</h1>
 <ul>
 <li>Daemon/client split (ffind-daemon + ffind)</li>
@@ -103,26 +103,26 @@ Implemented (current version)</h1>
 <li>Case-insensitive mode (-i) for name/path/content</li>
 <li>Content search (-c fixed string substring)</li>
 <li>Regex content search (-c + -r, ±i)</li>
+<li>Content glob (-g fnmatch pattern on each line, ±i)</li>
 <li>Binary file skip (null-byte check)</li>
 <li>Type filter (-type f|d)</li>
 <li>Size filter (-size +N/-N/N with units c/b/k/M/G, find-style)</li>
 <li>Mtime filter (-mtime +N/-N/N days, find-style)</li>
 <li>All filters combinable (AND logic)</li>
 <li>Legacy single-arg name glob support</li>
-</ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md2"></a>
-Remaining / Not Implemented</h1>
-<ul>
 <li>Color output (&ndash;color=auto/always/never)</li>
 <li>Context lines (-A/-B/-C for grep-like before/after/context)</li>
-<li>Content glob (fnmatch on each line instead of substring)</li>
+</ul>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md33"></a>
+Remaining / Not Implemented</h1>
+<ul>
 <li>PID file creation (/run/ffind.pid or similar) for service management</li>
 <li>Better directory rename handling (current: may need restart)</li>
 <li>Multiple root directories support</li>
 <li>Persistence (binary dump/load on shutdown/start for faster init)</li>
 <li>SQLite backend option (for huge trees, lower RAM)</li>
 </ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md3"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md34"></a>
 Low Priority / Optional</h1>
 <ul>
 <li>-perm mode filter</li>

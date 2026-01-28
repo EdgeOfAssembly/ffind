@@ -1,6 +1,6 @@
 You are analyzing the "ffind-1.0" codebase.
 
-Primary languages: C++
+Primary languages: TeX, CSS, HTML, JavaScript, SVG, C++, Bourne Shell, Markdown, Text, make
 
 Guidelines:
 - Provide clear, concise explanations

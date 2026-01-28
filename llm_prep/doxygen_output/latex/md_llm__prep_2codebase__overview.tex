@@ -1,0 +1,78 @@
+\chapter{LLM-\/\+Ready Codebase Overview — 2026-\/01-\/27 }
+\hypertarget{md_llm__prep_2codebase__overview}{}\label{md_llm__prep_2codebase__overview}\index{LLM-\/Ready Codebase Overview — 2026-\/01-\/27@{LLM-\/Ready Codebase Overview — 2026-\/01-\/27}}
+\label{md_llm__prep_2codebase__overview_autotoc_md0}%
+\Hypertarget{md_llm__prep_2codebase__overview_autotoc_md0}%
+
+
+{\bfseries{Project\+:}} ffind-\/1.\+0\hypertarget{md_llm__prep_2codebase__overview_autotoc_md1}{}\doxysection{\texorpdfstring{Directory Structure}{Directory Structure}}\label{md_llm__prep_2codebase__overview_autotoc_md1}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{.}
+\DoxyCodeLine{├──\ llm\_prep}
+\DoxyCodeLine{│  \ ├──\ dot\_graphs\_doxygen}
+\DoxyCodeLine{│  \ ├──\ dot\_graphs\_pyreverse}
+\DoxyCodeLine{│  \ └──\ codebase\_structure.txt}
+\DoxyCodeLine{├──\ ffind.1}
+\DoxyCodeLine{├──\ ffind.cpp}
+\DoxyCodeLine{├──\ ffind-\/daemon.8}
+\DoxyCodeLine{├──\ ffind-\/daemon.cpp}
+\DoxyCodeLine{├──\ Makefile}
+\DoxyCodeLine{└──\ TODO.md}
+\DoxyCodeLine{}
+\DoxyCodeLine{4\ directories,\ 7\ files}
+
+\end{DoxyCode}
+\hypertarget{md_llm__prep_2codebase__overview_autotoc_md2}{}\doxysection{\texorpdfstring{Code Statistics}{Code Statistics}}\label{md_llm__prep_2codebase__overview_autotoc_md2}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{github.com/AlDanial/cloc\ v\ 2.00\ \ T=0.04\ s\ (113.9\ files/s,\ 12921.3\ lines/s)}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{Language\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ files\ \ \ \ \ \ \ \ \ \ blank\ \ \ \ \ \ \ \ comment\ \ \ \ \ \ \ \ \ \ \ code}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{C++\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 2\ \ \ \ \ \ \ \ \ \ \ \ \ 67\ \ \ \ \ \ \ \ \ \ \ \ \ \ 2\ \ \ \ \ \ \ \ \ \ \ \ 428}
+\DoxyCodeLine{Markdown\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 1\ \ \ \ \ \ \ \ \ \ \ \ \ \ 3\ \ \ \ \ \ \ \ \ \ \ \ \ \ 0\ \ \ \ \ \ \ \ \ \ \ \ \ 30}
+\DoxyCodeLine{make\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 1\ \ \ \ \ \ \ \ \ \ \ \ \ \ 7\ \ \ \ \ \ \ \ \ \ \ \ \ \ 1\ \ \ \ \ \ \ \ \ \ \ \ \ 16}
+\DoxyCodeLine{Text\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 1\ \ \ \ \ \ \ \ \ \ \ \ \ \ 1\ \ \ \ \ \ \ \ \ \ \ \ \ \ 0\ \ \ \ \ \ \ \ \ \ \ \ \ 12}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{SUM:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 5\ \ \ \ \ \ \ \ \ \ \ \ \ 78\ \ \ \ \ \ \ \ \ \ \ \ \ \ 3\ \ \ \ \ \ \ \ \ \ \ \ 486}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+
+\end{DoxyCode}
+\hypertarget{md_llm__prep_2codebase__overview_autotoc_md3}{}\doxysection{\texorpdfstring{Doxygen Documentation (C/\+C++)}{Doxygen Documentation (C/\+C++)}}\label{md_llm__prep_2codebase__overview_autotoc_md3}
+
+\begin{DoxyItemize}
+\item Browse\+: {\ttfamily llm\+\_\+prep/doxygen\+\_\+output/html/index.\+html}
+\item DOT graphs for LLM context\+:
+\begin{DoxyItemize}
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+\+\_\+incl.\+dot} (3 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+a168b2a4f368ef1066408f4976ec8431c\+\_\+cgraph.\+dot} (1 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+a168b2a4f368ef1066408f4976ec8431c\+\_\+icgraph.\+dot} (0 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+a205ebedc5089e1667f29c6e01c934afc\+\_\+icgraph.\+dot} (1 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+a3c04138a5bfe5d72780bb7e82a18e627\+\_\+cgraph.\+dot} (2 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+a59ef0737c0ccd8f244dee8a52d4c1e9b\+\_\+cgraph.\+dot} (0 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+a59ef0737c0ccd8f244dee8a52d4c1e9b\+\_\+icgraph.\+dot} (0 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+a869452f0c0952acd39230fcf0ef89c1e\+\_\+icgraph.\+dot} (0 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+aa29c4f34a63bacc7d3bcd55e101133fd\+\_\+icgraph.\+dot} (0 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+ab326a3e5e38794f3fd51fabbcb5f7ca6\+\_\+icgraph.\+dot} (0 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+ae0c07b995ce21a76ac28db67132a5565\+\_\+icgraph.\+dot} (0 KB)
+\item {\ttfamily ffind-\/daemon\+\_\+8cpp\+\_\+aef341a13753571130f788a38d2ce3b6f\+\_\+icgraph.\+dot} (0 KB)
+\item {\ttfamily ffind\+\_\+8cpp\+\_\+\+\_\+incl.\+dot} (1 KB)
+\item {\ttfamily graph\+\_\+legend.\+dot} (1 KB)
+\item {\ttfamily struct\+Entry\+\_\+\+\_\+coll\+\_\+\+\_\+graph.\+dot} (2 KB)
+\end{DoxyItemize}
+\end{DoxyItemize}\hypertarget{md_llm__prep_2codebase__overview_autotoc_md4}{}\doxysection{\texorpdfstring{Symbol Index}{Symbol Index}}\label{md_llm__prep_2codebase__overview_autotoc_md4}
+
+\begin{DoxyItemize}
+\item {\ttfamily llm\+\_\+prep/tags} -\/ ctags file for symbol navigation
+\end{DoxyItemize}\hypertarget{md_llm__prep_2codebase__overview_autotoc_md5}{}\doxysection{\texorpdfstring{LLM Context Files}{LLM Context Files}}\label{md_llm__prep_2codebase__overview_autotoc_md5}
+
+\begin{DoxyItemize}
+\item {\ttfamily \doxylink{llm__system__prompt_8md}{llm\+\_\+system\+\_\+prompt.\+md}} -\/ System prompt for LLM sessions
+\item {\ttfamily \doxylink{project__guidance_8md}{project\+\_\+guidance.\+md}} -\/ Best practices and guidelines
+\end{DoxyItemize}\hypertarget{md_llm__prep_2codebase__overview_autotoc_md6}{}\doxysection{\texorpdfstring{How to Use}{How to Use}}\label{md_llm__prep_2codebase__overview_autotoc_md6}
+
+\begin{DoxyEnumerate}
+\item Copy this file as initial context for your LLM
+\item Paste relevant DOT graphs for architecture questions
+\item Reference specific files when asking about code 
+\end{DoxyEnumerate}

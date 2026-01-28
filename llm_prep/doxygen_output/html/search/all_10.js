@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['sig_5fhandler_0',['sig_handler',['../ffind-daemon_8cpp.html#ab326a3e5e38794f3fd51fabbcb5f7ca6',1,'ffind-daemon.cpp']]],
-  ['size_1',['size',['../structEntry.html#a45376b4fa084dbfcce738372fa018aa9',1,'Entry']]],
-  ['sock_5fpath_2',['sock_path',['../ffind-daemon_8cpp.html#afe5d10e37309d04ff0710b9707b4e4ae',1,'ffind-daemon.cpp']]],
-  ['summary_20january_202026_3',['ffind TODO Summary - January 2026',['../md_TODO.html',1,'']]]
+  ['never_0',['NEVER',['../ffind_8cpp.html#a0e887cb85702e0dccbf34d7dbe40443fa443475558f0168dff92ecde26b98ae5a',1,'ffind.cpp']]],
+  ['not_20implemented_1',['Remaining / Not Implemented',['../md_TODO.html#autotoc_md33',1,'']]]
 ];

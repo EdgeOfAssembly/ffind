@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['update_5for_5fadd_0',['update_or_add',['../ffind-daemon_8cpp.html#ae0c07b995ce21a76ac28db67132a5565',1,'ffind-daemon.cpp']]]
+  ['remove_5fpath_0',['remove_path',['../ffind-daemon_8cpp.html#aef341a13753571130f788a38d2ce3b6f',1,'ffind-daemon.cpp']]]
 ];

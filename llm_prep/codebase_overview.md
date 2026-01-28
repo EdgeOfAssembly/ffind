@@ -1,4 +1,4 @@
-# LLM-Ready Codebase Overview — 2026-01-27
+# LLM-Ready Codebase Overview — 2026-01-28
 
 **Project:** ffind-1.0
 
@@ -8,31 +8,215 @@
 .
 ├── llm_prep
 │   ├── dot_graphs_doxygen
+│   │   ├── ffind_8cpp__incl.dot
+│   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.dot
+│   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.dot
+│   │   ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.dot
+│   │   ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.dot
+│   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.dot
+│   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.dot
+│   │   ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.dot
+│   │   ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.dot
+│   │   ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.dot
+│   │   ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.dot
+│   │   ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.dot
+│   │   ├── ffind-daemon_8cpp__incl.dot
+│   │   ├── graph_legend.dot
+│   │   └── structEntry__coll__graph.dot
 │   ├── dot_graphs_pyreverse
-│   └── codebase_structure.txt
+│   ├── doxygen_output
+│   │   ├── html
+│   │   │   ├── search
+│   │   │   ├── annotated_dup.js
+│   │   │   ├── annotated.html
+│   │   │   ├── classes.html
+│   │   │   ├── clipboard.js
+│   │   │   ├── cookie.js
+│   │   │   ├── doxygen_crawl.html
+│   │   │   ├── doxygen.css
+│   │   │   ├── doxygen.svg
+│   │   │   ├── dynsections.js
+│   │   │   ├── ffind_8cpp.html
+│   │   │   ├── ffind_8cpp__incl.dot
+│   │   │   ├── ffind_8cpp__incl.map
+│   │   │   ├── ffind_8cpp__incl.md5
+│   │   │   ├── ffind_8cpp__incl.svg
+│   │   │   ├── ffind_8cpp.js
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.map
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.map
+│   │   │   ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.map
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.dot
+│   │   │   ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.map
+│   │   │   ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.md5
+│   │   │   ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.svg
+│   │   │   ├── ffind-daemon_8cpp.html
+│   │   │   ├── ffind-daemon_8cpp__incl.dot
+│   │   │   ├── ffind-daemon_8cpp__incl.map
+│   │   │   ├── ffind-daemon_8cpp__incl.md5
+│   │   │   ├── ffind-daemon_8cpp__incl.svg
+│   │   │   ├── ffind-daemon_8cpp.js
+│   │   │   ├── files_dup.js
+│   │   │   ├── files.html
+│   │   │   ├── functions.html
+│   │   │   ├── functions_vars.html
+│   │   │   ├── globals_defs.html
+│   │   │   ├── globals_func.html
+│   │   │   ├── globals.html
+│   │   │   ├── globals_vars.html
+│   │   │   ├── graph_legend.dot
+│   │   │   ├── graph_legend.html
+│   │   │   ├── graph_legend.md5
+│   │   │   ├── graph_legend.svg
+│   │   │   ├── index.html
+│   │   │   ├── jquery.js
+│   │   │   ├── md_TODO.html
+│   │   │   ├── menudata.js
+│   │   │   ├── menu.js
+│   │   │   ├── navtree.css
+│   │   │   ├── navtreedata.js
+│   │   │   ├── navtreeindex0.js
+│   │   │   ├── navtree.js
+│   │   │   ├── pages.html
+│   │   │   ├── structEntry__coll__graph.dot
+│   │   │   ├── structEntry__coll__graph.map
+│   │   │   ├── structEntry__coll__graph.md5
+│   │   │   ├── structEntry__coll__graph.svg
+│   │   │   ├── structEntry.html
+│   │   │   ├── structEntry.js
+│   │   │   ├── structEntry-members.html
+│   │   │   ├── tabs.css
+│   │   │   └── TODO_8md.html
+│   │   └── latex
+│   │       ├── annotated.tex
+│   │       ├── doxygen.sty
+│   │       ├── etoc_doxygen.sty
+│   │       ├── ffind_8cpp__incl.dot
+│   │       ├── ffind_8cpp__incl.md5
+│   │       ├── ffind_8cpp__incl.pdf
+│   │       ├── ffind_8cpp.tex
+│   │       ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.dot
+│   │       ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.md5
+│   │       ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.pdf
+│   │       ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.dot
+│   │       ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.md5
+│   │       ├── ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.pdf
+│   │       ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.dot
+│   │       ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.md5
+│   │       ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.pdf
+│   │       ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.dot
+│   │       ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.md5
+│   │       ├── ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.pdf
+│   │       ├── ffind-daemon_8cpp__incl.dot
+│   │       ├── ffind-daemon_8cpp__incl.md5
+│   │       ├── ffind-daemon_8cpp__incl.pdf
+│   │       ├── ffind-daemon_8cpp.tex
+│   │       ├── files.tex
+│   │       ├── Makefile
+│   │       ├── md_TODO.tex
+│   │       ├── refman.tex
+│   │       ├── structEntry__coll__graph.dot
+│   │       ├── structEntry__coll__graph.md5
+│   │       ├── structEntry__coll__graph.pdf
+│   │       ├── structEntry.tex
+│   │       └── TODO_8md.tex
+│   ├── codebase_overview.md
+│   ├── codebase_stats.txt
+│   ├── codebase_structure.txt
+│   ├── llm_system_prompt.md
+│   ├── project_guidance.md
+│   └── tags
+├── tests
+│   └── run_tests.sh
+├── Doxyfile
 ├── ffind.1
 ├── ffind.cpp
 ├── ffind-daemon.8
 ├── ffind-daemon.cpp
+├── LICENSE
 ├── Makefile
+├── README.md
 └── TODO.md
 
-4 directories, 7 files
+9 directories, 180 files
 ```
 
 ## Code Statistics
 
 ```text
-github.com/AlDanial/cloc v 2.00  T=0.04 s (113.9 files/s, 12921.3 lines/s)
+github.com/AlDanial/cloc v 2.00  T=0.35 s (337.9 files/s, 46144.1 lines/s)
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-C++                              2             67              2            428
-Markdown                         1              3              0             30
-make                             1              7              1             16
-Text                             1              1              0             12
+TeX                             10            116            174           3379
+CSS                              4            491             66           2642
+HTML                            19             81             90           2453
+JavaScript                      57            195            231           2233
+SVG                             16              0            168           1172
+C++                              2            115             74            802
+Bourne Shell                     1            109            103            629
+Markdown                         5            107              0            291
+Text                             1              1              0            190
+make                             2             11              1             54
 -------------------------------------------------------------------------------
-SUM:                             5             78              3            486
+SUM:                           117           1226            907          13845
 -------------------------------------------------------------------------------
 ```
 
@@ -41,17 +225,23 @@ SUM:                             5             78              3            486
 - Browse: `llm_prep/doxygen_output/html/index.html`
 - DOT graphs for LLM context:
   - `ffind-daemon_8cpp__incl.dot` (3 KB)
+  - `ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8_icgraph.dot` (1 KB)
   - `ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph.dot` (1 KB)
   - `ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph.dot` (0 KB)
   - `ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph.dot` (1 KB)
-  - `ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.dot` (2 KB)
+  - `ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07_icgraph.dot` (0 KB)
+  - `ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.dot` (4 KB)
   - `ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph.dot` (0 KB)
   - `ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph.dot` (0 KB)
   - `ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph.dot` (0 KB)
   - `ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph.dot` (0 KB)
+  - `ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_cgraph.dot` (0 KB)
   - `ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph.dot` (0 KB)
+  - `ffind-daemon_8cpp_ac2acdbfe25fe356cd7052c036bce7072_icgraph.dot` (0 KB)
   - `ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph.dot` (0 KB)
   - `ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph.dot` (0 KB)
+  - `ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f_cgraph.dot` (0 KB)
+  - `ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f_icgraph.dot` (0 KB)
   - `ffind_8cpp__incl.dot` (1 KB)
   - `graph_legend.dot` (1 KB)
   - `structEntry__coll__graph.dot` (2 KB)

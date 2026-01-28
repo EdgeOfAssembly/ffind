@@ -5,6 +5,7 @@
 {\ttfamily \#include $<$sys/un.\+h$>$}\newline
 {\ttfamily \#include $<$unistd.\+h$>$}\newline
 {\ttfamily \#include $<$arpa/inet.\+h$>$}\newline
+{\ttfamily \#include $<$regex$>$}\newline
 Include dependency graph for ffind.\+cpp\+:
 \nopagebreak
 \begin{figure}[H]
@@ -13,11 +14,55 @@ Include dependency graph for ffind.\+cpp\+:
 \includegraphics[width=350pt]{ffind_8cpp__incl}
 \end{center}
 \end{figure}
+\doxysubsubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum class \mbox{\hyperlink{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443f}{Color\+Mode}} \{ \mbox{\hyperlink{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443fa443475558f0168dff92ecde26b98ae5a}{NEVER}}
+, \mbox{\hyperlink{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9}{AUTO}}
+, \mbox{\hyperlink{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962}{ALWAYS}}
+ \}
+\end{DoxyCompactItemize}
 \doxysubsubsection*{Functions}
 \begin{DoxyCompactItemize}
 \item 
 int \mbox{\hyperlink{ffind_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}{main}} (int argc, char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}argv)
 \end{DoxyCompactItemize}
+\doxysubsubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind_8cpp_a38539b87442fcd1eec6f7e5496fec18b}{RESET}} = "{}\textbackslash{}033\mbox{[}0m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind_8cpp_a2cfd223aea400a8315b4c70d6e6baa02}{BOLD}} = "{}\textbackslash{}033\mbox{[}1m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind_8cpp_a334b1692c2c996d66cc8180490241abb}{CYAN}} = "{}\textbackslash{}033\mbox{[}36m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind_8cpp_a147e5f161524200d2e26b4a7156cadb4}{BOLD\+\_\+\+RED}} = "{}\textbackslash{}033\mbox{[}1;31m"{}
+\end{DoxyCompactItemize}
+
+
+\label{doc-enum-members}
+\Hypertarget{ffind_8cpp_doc-enum-members}
+\doxysubsection{Enumeration Type Documentation}
+\Hypertarget{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443f}\index{ffind.cpp@{ffind.cpp}!ColorMode@{ColorMode}}
+\index{ColorMode@{ColorMode}!ffind.cpp@{ffind.cpp}}
+\doxysubsubsection{\texorpdfstring{ColorMode}{ColorMode}}
+{\footnotesize\ttfamily \label{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443f} 
+enum class \mbox{\hyperlink{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443f}{Color\+Mode}}\hspace{0.3cm}{\ttfamily [strong]}}
+
+\begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NEVER@{NEVER}!ffind.cpp@{ffind.cpp}}\index{ffind.cpp@{ffind.cpp}!NEVER@{NEVER}}}\Hypertarget{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443fa443475558f0168dff92ecde26b98ae5a}\label{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443fa443475558f0168dff92ecde26b98ae5a} 
+NEVER&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{AUTO@{AUTO}!ffind.cpp@{ffind.cpp}}\index{ffind.cpp@{ffind.cpp}!AUTO@{AUTO}}}\Hypertarget{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9}\label{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9} 
+AUTO&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{ALWAYS@{ALWAYS}!ffind.cpp@{ffind.cpp}}\index{ffind.cpp@{ffind.cpp}!ALWAYS@{ALWAYS}}}\Hypertarget{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962}\label{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962} 
+ALWAYS&\\
+\hline
+
+\end{DoxyEnumFields}
 
 
 \label{doc-func-members}
@@ -28,4 +73,33 @@ int \mbox{\hyperlink{ffind_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}{main}} (int a
 \doxysubsubsection{\texorpdfstring{main()}{main()}}
 {\footnotesize\ttfamily \label{ffind_8cpp_a3c04138a5bfe5d72780bb7e82a18e627} 
 int main (\begin{DoxyParamCaption}\item[{int}]{argc}{, }\item[{char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}}]{argv}{}\end{DoxyParamCaption})}
+
+
+
+\label{doc-var-members}
+\Hypertarget{ffind_8cpp_doc-var-members}
+\doxysubsection{Variable Documentation}
+\Hypertarget{ffind_8cpp_a2cfd223aea400a8315b4c70d6e6baa02}\index{ffind.cpp@{ffind.cpp}!BOLD@{BOLD}}
+\index{BOLD@{BOLD}!ffind.cpp@{ffind.cpp}}
+\doxysubsubsection{\texorpdfstring{BOLD}{BOLD}}
+{\footnotesize\ttfamily \label{ffind_8cpp_a2cfd223aea400a8315b4c70d6e6baa02} 
+const char\texorpdfstring{$\ast$}{*} BOLD = "{}\textbackslash{}033\mbox{[}1m"{}}
+
+\Hypertarget{ffind_8cpp_a147e5f161524200d2e26b4a7156cadb4}\index{ffind.cpp@{ffind.cpp}!BOLD\_RED@{BOLD\_RED}}
+\index{BOLD\_RED@{BOLD\_RED}!ffind.cpp@{ffind.cpp}}
+\doxysubsubsection{\texorpdfstring{BOLD\_RED}{BOLD\_RED}}
+{\footnotesize\ttfamily \label{ffind_8cpp_a147e5f161524200d2e26b4a7156cadb4} 
+const char\texorpdfstring{$\ast$}{*} BOLD\+\_\+\+RED = "{}\textbackslash{}033\mbox{[}1;31m"{}}
+
+\Hypertarget{ffind_8cpp_a334b1692c2c996d66cc8180490241abb}\index{ffind.cpp@{ffind.cpp}!CYAN@{CYAN}}
+\index{CYAN@{CYAN}!ffind.cpp@{ffind.cpp}}
+\doxysubsubsection{\texorpdfstring{CYAN}{CYAN}}
+{\footnotesize\ttfamily \label{ffind_8cpp_a334b1692c2c996d66cc8180490241abb} 
+const char\texorpdfstring{$\ast$}{*} CYAN = "{}\textbackslash{}033\mbox{[}36m"{}}
+
+\Hypertarget{ffind_8cpp_a38539b87442fcd1eec6f7e5496fec18b}\index{ffind.cpp@{ffind.cpp}!RESET@{RESET}}
+\index{RESET@{RESET}!ffind.cpp@{ffind.cpp}}
+\doxysubsubsection{\texorpdfstring{RESET}{RESET}}
+{\footnotesize\ttfamily \label{ffind_8cpp_a38539b87442fcd1eec6f7e5496fec18b} 
+const char\texorpdfstring{$\ast$}{*} RESET = "{}\textbackslash{}033\mbox{[}0m"{}}
 

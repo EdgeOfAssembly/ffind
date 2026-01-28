@@ -25,10 +25,48 @@
 var NAVTREE =
 [
   [ "ffind-1.0", "index.html", [
+    [ "LLM-Ready Codebase Overview — 2026-01-27", "md_llm__prep_2codebase__overview.html", [
+      [ "Directory Structure", "md_llm__prep_2codebase__overview.html#autotoc_md1", null ],
+      [ "Code Statistics", "md_llm__prep_2codebase__overview.html#autotoc_md2", null ],
+      [ "Doxygen Documentation (C/C++)", "md_llm__prep_2codebase__overview.html#autotoc_md3", null ],
+      [ "Symbol Index", "md_llm__prep_2codebase__overview.html#autotoc_md4", null ],
+      [ "LLM Context Files", "md_llm__prep_2codebase__overview.html#autotoc_md5", null ],
+      [ "How to Use", "md_llm__prep_2codebase__overview.html#autotoc_md6", null ]
+    ] ],
+    [ "llm_system_prompt", "md_llm__prep_2llm__system__prompt.html", null ],
+    [ "Project Guidance for ffind-1.0", "md_llm__prep_2project__guidance.html", [
+      [ "C/C++ Best Practices", "md_llm__prep_2project__guidance.html#autotoc_md8", null ],
+      [ "General Guidelines", "md_llm__prep_2project__guidance.html#autotoc_md9", null ]
+    ] ],
+    [ "ffind", "md_README.html", [
+      [ "What is ffind?", "md_README.html#autotoc_md11", null ],
+      [ "Why use ffind?", "md_README.html#autotoc_md12", null ],
+      [ "Requirements", "md_README.html#autotoc_md13", null ],
+      [ "Build", "md_README.html#autotoc_md14", null ],
+      [ "Install", "md_README.html#autotoc_md15", null ],
+      [ "Usage", "md_README.html#autotoc_md16", [
+        [ "Start the daemon", "md_README.html#autotoc_md17", null ],
+        [ "Search examples", "md_README.html#autotoc_md18", null ],
+        [ "Size units", "md_README.html#autotoc_md19", null ],
+        [ "Size operators", "md_README.html#autotoc_md20", null ],
+        [ "Time operators", "md_README.html#autotoc_md21", null ],
+        [ "Content search methods", "md_README.html#autotoc_md22", [
+          [ "Fixed string search (<span class=\"tt\">-c</span>)", "md_README.html#autotoc_md23", null ],
+          [ "Regex search (<span class=\"tt\">-c</span> + <span class=\"tt\">-r</span>)", "md_README.html#autotoc_md24", null ],
+          [ "Glob search (<span class=\"tt\">-g</span>)", "md_README.html#autotoc_md25", null ]
+        ] ],
+        [ "Context lines", "md_README.html#autotoc_md26", [
+          [ "Output format", "md_README.html#autotoc_md27", null ]
+        ] ],
+        [ "Color output", "md_README.html#autotoc_md28", null ]
+      ] ],
+      [ "License", "md_README.html#autotoc_md29", null ],
+      [ "Author", "md_README.html#autotoc_md30", null ]
+    ] ],
     [ "ffind TODO Summary - January 2026", "md_TODO.html", [
-      [ "Implemented (current version)", "md_TODO.html#autotoc_md1", null ],
-      [ "Remaining / Not Implemented", "md_TODO.html#autotoc_md2", null ],
-      [ "Low Priority / Optional", "md_TODO.html#autotoc_md3", null ]
+      [ "Implemented (current version)", "md_TODO.html#autotoc_md32", null ],
+      [ "Remaining / Not Implemented", "md_TODO.html#autotoc_md33", null ],
+      [ "Low Priority / Optional", "md_TODO.html#autotoc_md34", null ]
     ] ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
@@ -44,6 +82,7 @@ var NAVTREE =
         [ "All", "globals.html", null ],
         [ "Functions", "globals_func.html", null ],
         [ "Variables", "globals_vars.html", null ],
+        [ "Enumerations", "globals_enum.html", null ],
         [ "Macros", "globals_defs.html", null ]
       ] ]
     ] ]

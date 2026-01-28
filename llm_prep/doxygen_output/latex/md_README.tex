@@ -1,0 +1,263 @@
+\chapter{ffind }
+\hypertarget{md_README}{}\label{md_README}\index{ffind@{ffind}}
+\label{md_README_autotoc_md10}%
+\Hypertarget{md_README_autotoc_md10}%
+
+
+Fast daemon-\/based file finder with real-\/time inotify indexing.\hypertarget{md_README_autotoc_md11}{}\doxysection{\texorpdfstring{What is ffind?}{What is ffind?}}\label{md_README_autotoc_md11}
+{\ttfamily ffind} is an ultra-\/fast file search tool that combines the power of {\ttfamily find} and {\ttfamily grep}. It consists of a daemon that maintains an in-\/memory index of your filesystem using Linux inotify for real-\/time updates, and a client that performs instant searches against this index.\hypertarget{md_README_autotoc_md12}{}\doxysection{\texorpdfstring{Why use ffind?}{Why use ffind?}}\label{md_README_autotoc_md12}
+
+\begin{DoxyItemize}
+\item {\bfseries{Instant searches}}\+: No more waiting for recursive directory traversal -\/ the index is always in memory
+\item {\bfseries{Real-\/time indexing}}\+: The daemon watches your filesystem and updates the index automatically as files are created, modified, or deleted
+\item {\bfseries{Powerful filters}}\+: Search by name, path, content, size, modification time, and file type with glob patterns or regex
+\item {\bfseries{Content search}}\+: Search inside files with fixed-\/string or regex patterns
+\item {\bfseries{Combined filters}}\+: Mix multiple criteria for precise results
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md13}{}\doxysection{\texorpdfstring{Requirements}{Requirements}}\label{md_README_autotoc_md13}
+
+\begin{DoxyItemize}
+\item Linux (uses inotify for filesystem monitoring)
+\item g++ with C++20 support
+\item pthread library
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md14}{}\doxysection{\texorpdfstring{Build}{Build}}\label{md_README_autotoc_md14}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{make}
+
+\end{DoxyCode}
+
+
+This produces two executables\+:
+\begin{DoxyItemize}
+\item {\ttfamily ffind-\/daemon} -\/ the indexing daemon
+\item {\ttfamily ffind} -\/ the search client
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md15}{}\doxysection{\texorpdfstring{Install}{Install}}\label{md_README_autotoc_md15}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ make\ install}
+
+\end{DoxyCode}
+
+
+This installs the binaries to {\ttfamily /usr/local/bin/} and man pages to {\ttfamily /usr/local/share/man/}.\hypertarget{md_README_autotoc_md16}{}\doxysection{\texorpdfstring{Usage}{Usage}}\label{md_README_autotoc_md16}
+\hypertarget{md_README_autotoc_md17}{}\doxysubsection{\texorpdfstring{Start the daemon}{Start the daemon}}\label{md_README_autotoc_md17}
+The daemon needs to be running before you can search. It will index the specified directory tree\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Run\ in\ background\ (daemonize)}
+\DoxyCodeLine{ffind-\/daemon\ /path/to/index}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Run\ in\ foreground\ (useful\ for\ debugging)}
+\DoxyCodeLine{ffind-\/daemon\ -\/-\/foreground\ /path/to/index}
+
+\end{DoxyCode}
+
+
+The daemon creates a Unix socket at {\ttfamily /run/user/\$UID/ffind.\+sock} for client communication.\hypertarget{md_README_autotoc_md18}{}\doxysubsection{\texorpdfstring{Search examples}{Search examples}}\label{md_README_autotoc_md18}
+All features are fully implemented\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Basic\ glob\ search\ (searches\ file\ names)}
+\DoxyCodeLine{ffind\ "{}*.cpp"{}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Explicit\ name\ search}
+\DoxyCodeLine{ffind\ -\/name\ "{}*.h"{}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Path\ glob\ search\ with\ type\ filter}
+\DoxyCodeLine{ffind\ -\/path\ "{}src/*"{}\ -\/type\ f}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Case-\/insensitive\ name\ search}
+\DoxyCodeLine{ffind\ -\/name\ "{}readme*"{}\ -\/i}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Content\ search\ (fixed\ string)}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Content\ search\ with\ regex}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO.*fix"{}\ -\/r}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Regex\ content\ search\ with\ case\ insensitivity}
+\DoxyCodeLine{ffind\ -\/c\ "{}error"{}\ -\/r\ -\/i}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Content\ glob\ (fnmatch\ patterns\ on\ lines)}
+\DoxyCodeLine{ffind\ -\/g\ "{}TODO*"{}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Content\ glob:\ lines\ containing\ "{}error"{}\ (case\ insensitive)}
+\DoxyCodeLine{ffind\ -\/g\ "{}*error*"{}\ -\/i}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Content\ glob:\ function\ calls\ in\ C\ files}
+\DoxyCodeLine{ffind\ -\/g\ "{}func\_*(*)"{}\ -\/name\ "{}*.c"{}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Content\ glob:\ lines\ starting\ with\ digit,\ with\ 2\ lines\ of\ context}
+\DoxyCodeLine{ffind\ -\/g\ "{}[0-\/9]*"{}\ -\/A\ 2}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Context\ lines:\ show\ 3\ lines\ after\ each\ match\ (like\ grep\ -\/A)}
+\DoxyCodeLine{ffind\ -\/c\ "{}error"{}\ -\/A\ 3}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Context\ lines:\ show\ 2\ lines\ before\ each\ match\ (like\ grep\ -\/B)}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}\ -\/B\ 2}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Context\ lines:\ show\ 5\ lines\ before\ and\ after\ (like\ grep\ -\/C)}
+\DoxyCodeLine{ffind\ -\/c\ "{}FIXME"{}\ -\/C\ 5}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Context\ with\ regex\ and\ case\ insensitive}
+\DoxyCodeLine{ffind\ -\/c\ "{}bug"{}\ -\/A\ 2\ -\/B\ 1\ -\/r\ -\/i}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Find\ only\ files}
+\DoxyCodeLine{ffind\ -\/type\ f}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Find\ only\ directories}
+\DoxyCodeLine{ffind\ -\/type\ d}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Size\ filters\ (larger\ than\ 1MB)}
+\DoxyCodeLine{ffind\ -\/size\ +1M}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Size\ filters\ (smaller\ than\ 100KB)}
+\DoxyCodeLine{ffind\ -\/size\ -\/100k}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Modification\ time\ (modified\ within\ last\ 7\ days)}
+\DoxyCodeLine{ffind\ -\/mtime\ -\/7}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Modification\ time\ (older\ than\ 30\ days)}
+\DoxyCodeLine{ffind\ -\/mtime\ +30}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Combined\ filters\ (large\ log\ files)}
+\DoxyCodeLine{ffind\ -\/name\ "{}*.log"{}\ -\/size\ +10M\ -\/type\ f}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Color\ output\ (force\ colors)}
+\DoxyCodeLine{ffind\ "{}*.cpp"{}\ -\/-\/color=always}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Color\ output\ (no\ colors,\ good\ for\ scripting)}
+\DoxyCodeLine{ffind\ -\/c\ "{}error"{}\ -\/-\/color=never}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Color\ output\ (auto-\/detect\ TTY,\ default\ behavior)}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}\ -\/-\/color=auto}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md19}{}\doxysubsection{\texorpdfstring{Size units}{Size units}}\label{md_README_autotoc_md19}
+
+\begin{DoxyItemize}
+\item {\ttfamily c} -\/ bytes (default if no unit specified)
+\item {\ttfamily b} -\/ 512-\/byte blocks
+\item {\ttfamily k} -\/ kilobytes (1024 bytes)
+\item {\ttfamily M} -\/ megabytes (1024\texorpdfstring{$\ast$}{*}1024 bytes)
+\item {\ttfamily G} -\/ gigabytes (1024\texorpdfstring{$\ast$}{*}1024\texorpdfstring{$\ast$}{*}1024 bytes)
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md20}{}\doxysubsection{\texorpdfstring{Size operators}{Size operators}}\label{md_README_autotoc_md20}
+
+\begin{DoxyItemize}
+\item {\ttfamily +SIZE} -\/ greater than SIZE
+\item {\ttfamily -\/SIZE} -\/ less than SIZE
+\item {\ttfamily SIZE} -\/ exactly SIZE (rarely used)
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md21}{}\doxysubsection{\texorpdfstring{Time operators}{Time operators}}\label{md_README_autotoc_md21}
+
+\begin{DoxyItemize}
+\item {\ttfamily -\/N} -\/ modified within last N days
+\item {\ttfamily +N} -\/ modified more than N days ago
+\item {\ttfamily N} -\/ modified exactly N days ago (rarely used)
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md22}{}\doxysubsection{\texorpdfstring{Content search methods}{Content search methods}}\label{md_README_autotoc_md22}
+ffind provides three ways to search file contents, each suited for different use cases\+:\hypertarget{md_README_autotoc_md23}{}\doxysubsubsection{\texorpdfstring{Fixed string search ({\ttfamily -\/c})}{Fixed string search ({\ttfamily -\/c})}}\label{md_README_autotoc_md23}
+Fast substring matching -\/ searches for exact text within lines\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}\ \ \ \ \ \ \ \ \ \ \ \#\ Find\ lines\ containing\ "{}TODO"{}}
+\DoxyCodeLine{ffind\ -\/c\ "{}error"{}\ -\/i\ \ \ \ \ \ \ \#\ Case-\/insensitive\ search}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md24}{}\doxysubsubsection{\texorpdfstring{Regex search ({\ttfamily -\/c} + {\ttfamily -\/r})}{Regex search ({\ttfamily -\/c} + {\ttfamily -\/r})}}\label{md_README_autotoc_md24}
+Powerful pattern matching using ECMAScript regular expressions\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO.*fix"{}\ -\/r\ \ \ \ \ \ \ \ \ \ \ \#\ Match\ TODO\ followed\ by\ fix}
+\DoxyCodeLine{ffind\ -\/c\ "{}bug|error"{}\ -\/r\ -\/i\ \ \ \ \ \ \ \ \#\ Match\ bug\ OR\ error\ (case-\/insensitive)}
+\DoxyCodeLine{ffind\ -\/c\ "{}\string^[0-\/9]+"{}\ -\/r\ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Lines\ starting\ with\ digits}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md25}{}\doxysubsubsection{\texorpdfstring{Glob search ({\ttfamily -\/g})}{Glob search ({\ttfamily -\/g})}}\label{md_README_autotoc_md25}
+Shell-\/style wildcard patterns for intuitive matching\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{ffind\ -\/g\ "{}TODO*"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Lines\ starting\ with\ TODO}
+\DoxyCodeLine{ffind\ -\/g\ "{}*error*"{}\ -\/i\ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Lines\ containing\ error\ (case-\/insensitive)}
+\DoxyCodeLine{ffind\ -\/g\ "{}func\_*(*)"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Function\ call\ patterns}
+\DoxyCodeLine{ffind\ -\/g\ "{}[0-\/9]*"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Lines\ starting\ with\ a\ digit}
+
+\end{DoxyCode}
+
+
+Glob patterns support\+:
+\begin{DoxyItemize}
+\item {\ttfamily \texorpdfstring{$\ast$}{*}} -\/ matches any sequence of characters
+\item {\ttfamily ?} -\/ matches exactly one character
+\item {\ttfamily \mbox{[}abc\mbox{]}} -\/ matches any character in the set
+\item {\ttfamily \mbox{[}a-\/z\mbox{]}} -\/ matches any character in the range
+\end{DoxyItemize}
+
+{\bfseries{Note}}\+: {\ttfamily -\/g} is mutually exclusive with {\ttfamily -\/c} and {\ttfamily -\/r}. Use {\ttfamily -\/c} for fixed string search, {\ttfamily -\/c} with {\ttfamily -\/r} for regex search, or {\ttfamily -\/g} for glob pattern search.\hypertarget{md_README_autotoc_md26}{}\doxysubsection{\texorpdfstring{Context lines}{Context lines}}\label{md_README_autotoc_md26}
+Context lines work just like grep\textquotesingle{}s {\ttfamily -\/A}, {\ttfamily -\/B}, and {\ttfamily -\/C} options, showing surrounding lines for better context when searching file contents. These flags require {\ttfamily -\/c} or {\ttfamily -\/g} (content search).
+
+
+\begin{DoxyItemize}
+\item {\ttfamily -\/A N} -\/ Show N lines {\bfseries{after}} each match
+\item {\ttfamily -\/B N} -\/ Show N lines {\bfseries{before}} each match
+\item {\ttfamily -\/C N} -\/ Show N lines {\bfseries{before and after}} each match (shorthand for {\ttfamily -\/A N -\/B N})
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md27}{}\doxysubsubsection{\texorpdfstring{Output format}{Output format}}\label{md_README_autotoc_md27}
+Context lines use the same grep-\/style format\+:
+\begin{DoxyItemize}
+\item {\bfseries{Match lines}}\+: {\ttfamily path\+:lineno\+:content} (colon before content)
+\item {\bfseries{Context lines}}\+: {\ttfamily path\+:lineno-\/content} (dash before content)
+\item {\bfseries{Group separator}}\+: {\ttfamily -\/-\/} appears between non-\/contiguous match groups
+\end{DoxyItemize}
+
+When match contexts overlap, they are automatically merged into a single group without separators.
+
+Example\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Show\ 2\ lines\ after\ each\ TODO}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}\ -\/A\ 2}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Show\ 3\ lines\ before\ each\ error}
+\DoxyCodeLine{ffind\ -\/c\ "{}error"{}\ -\/i\ -\/B\ 3}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Show\ 5\ lines\ of\ context\ around\ each\ FIXME}
+\DoxyCodeLine{ffind\ -\/c\ "{}FIXME"{}\ -\/C\ 5}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Combine\ with\ regex\ and\ other\ filters}
+\DoxyCodeLine{ffind\ -\/c\ "{}bug|error"{}\ -\/r\ -\/A\ 3\ -\/B\ 1\ -\/name\ "{}*.cpp"{}}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md28}{}\doxysubsection{\texorpdfstring{Color output}{Color output}}\label{md_README_autotoc_md28}
+The {\ttfamily -\/-\/color} option controls colored output for better readability\+:
+
+
+\begin{DoxyItemize}
+\item {\ttfamily -\/-\/color=auto} (default) -\/ Automatically enables colors when output is to a terminal
+\item {\ttfamily -\/-\/color=always} -\/ Forces colored output even when piped or redirected
+\item {\ttfamily -\/-\/color=never} -\/ Disables all colored output (useful for scripts and piping)
+\end{DoxyItemize}
+
+When colors are enabled\+:
+\begin{DoxyItemize}
+\item {\bfseries{File paths}} are displayed in bold
+\item {\bfseries{Line numbers}} (in content search) are shown in cyan
+\item {\bfseries{Matched content}} is highlighted in bold red
+\end{DoxyItemize}
+
+Example\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Search\ with\ colors\ in\ terminal\ (auto-\/detect)}
+\DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}\ }
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Force\ colors\ even\ when\ piping\ to\ less\ -\/R}
+\DoxyCodeLine{ffind\ -\/c\ "{}error"{}\ -\/-\/color=always\ |\ less\ -\/R}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Disable\ colors\ for\ scripting}
+\DoxyCodeLine{ffind\ -\/c\ "{}warning"{}\ -\/-\/color=never\ >\ results.txt}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md29}{}\doxysection{\texorpdfstring{License}{License}}\label{md_README_autotoc_md29}
+Dual-\/licensed under GPLv3 and Commercial license.
+
+This program is free software\+: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See the LICENSE file for details.
+
+{\bfseries{Commercial licenses}} are available for proprietary use, embedded systems, and enterprise deployments. Contact Edge\+Of\+Assembly for commercial licensing inquiries.\hypertarget{md_README_autotoc_md30}{}\doxysection{\texorpdfstring{Author}{Author}}\label{md_README_autotoc_md30}
+{\bfseries{Edge\+Of\+Assembly}} -\/ \href{https://github.com/EdgeOfAssembly}{\texttt{Git\+Hub}}
+
+For commercial licensing inquiries\+: \href{mailto:haxbox2000@gmail.com}{\texttt{haxbox2000@gmail.\+com}} 

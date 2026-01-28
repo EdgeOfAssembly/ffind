@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['main_0',['main',['../ffind-daemon_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627',1,'main(int argc, char **argv):&#160;ffind-daemon.cpp'],['../ffind_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627',1,'main(int argc, char **argv):&#160;ffind.cpp']]],
-  ['mtime_1',['mtime',['../structEntry.html#a7c953b65196958fa8e9530c2eaabd0ca',1,'Entry']]],
-  ['mtx_2',['mtx',['../ffind-daemon_8cpp.html#a29ac681ec3efa9e30e1ab1ab251b47f9',1,'ffind-daemon.cpp']]]
+  ['handle_5fclient_0',['handle_client',['../ffind-daemon_8cpp.html#aa29c4f34a63bacc7d3bcd55e101133fd',1,'ffind-daemon.cpp']]],
+  ['how_20to_20use_1',['How to Use',['../md_llm__prep_2codebase__overview.html#autotoc_md6',1,'']]]
 ];

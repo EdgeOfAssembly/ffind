@@ -1,6 +1,10 @@
 var searchData=
 [
-  ['path_0',['path',['../structEntry.html#ab9a48aa7387d27c826433ce35f6ba823',1,'Entry']]],
-  ['priority_20optional_1',['Low Priority / Optional',['../md_TODO.html#autotoc_md3',1,'']]],
-  ['process_5fevents_2',['process_events',['../ffind-daemon_8cpp.html#a168b2a4f368ef1066408f4976ec8431c',1,'ffind-daemon.cpp']]]
+  ['license_0',['License',['../md_README.html#autotoc_md29',1,'']]],
+  ['lines_1',['Context lines',['../md_README.html#autotoc_md26',1,'']]],
+  ['llm_20context_20files_2',['LLM Context Files',['../md_llm__prep_2codebase__overview.html#autotoc_md5',1,'']]],
+  ['llm_20ready_20codebase_20overview_20—_202026_2001_2027_3',['LLM-Ready Codebase Overview — 2026-01-27',['../md_llm__prep_2codebase__overview.html',1,'']]],
+  ['llm_5fsystem_5fprompt_4',['llm_system_prompt',['../md_llm__prep_2llm__system__prompt.html',1,'']]],
+  ['llm_5fsystem_5fprompt_2emd_5',['llm_system_prompt.md',['../llm__system__prompt_8md.html',1,'']]],
+  ['low_20priority_20optional_6',['Low Priority / Optional',['../md_TODO.html#autotoc_md34',1,'']]]
 ];

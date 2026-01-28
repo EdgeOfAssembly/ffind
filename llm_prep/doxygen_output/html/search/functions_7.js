@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['sig_5fhandler_0',['sig_handler',['../ffind-daemon_8cpp.html#ab326a3e5e38794f3fd51fabbcb5f7ca6',1,'ffind-daemon.cpp']]]
+  ['process_5fevents_0',['process_events',['../ffind-daemon_8cpp.html#a168b2a4f368ef1066408f4976ec8431c',1,'ffind-daemon.cpp']]]
 ];
