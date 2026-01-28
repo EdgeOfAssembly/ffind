@@ -18,10 +18,10 @@
 - Legacy single-arg name glob support
 - Color output (--color=auto/always/never)
 - Context lines (-A/-B/-C for grep-like before/after/context)
+- Better directory rename handling (cookie-based inotify rename tracking with path updates)
 
 ## Remaining / Not Implemented
 - PID file creation (/run/ffind.pid or similar) for service management
-- Better directory rename handling (current: may need restart)
 - Multiple root directories support
 - Persistence (binary dump/load on shutdown/start for faster init)
 - SQLite backend option (for huge trees, lower RAM)
