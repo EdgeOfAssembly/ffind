@@ -275,7 +275,7 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 OUTPUT=$("$FFIND_CLIENT" "newfile.txt" 2>&1 || true)
 COUNT=$(echo "$OUTPUT" | grep -c "newfile.txt" 2>/dev/null || echo "0")
 COUNT=$(echo "$COUNT" | tr -d '\n' | tr -d ' ')
-if [ "$COUNT" -le 1 ]; then  # Should find 0 or 1 (from root2)
+if [ "$COUNT" -eq 0 ]; then  # Should find 0 (deleted from root1, root2 has newfile2.txt)
     echo -e "${GREEN}✓${NC} PASS: Deleted file from root1 handled correctly"
     PASSED_TESTS=$((PASSED_TESTS + 1))
 else
@@ -346,11 +346,12 @@ run_test_error "Error: Path is file not directory" "not a directory" "$FFIND_DAE
 
 # Test: Same path twice - should deduplicate
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-"$FFIND_DAEMON" --foreground "$ROOT1" "$ROOT1" > /tmp/dup_test_output.txt 2>&1 &
+DUP_OUTPUT="$TEMP_BASE/dup_test_output.txt"
+"$FFIND_DAEMON" --foreground "$ROOT1" "$ROOT1" > "$DUP_OUTPUT" 2>&1 &
 DAEMON_PID=$!
 sleep 2
 # Check if daemon started and warning was shown
-if ps -p "$DAEMON_PID" > /dev/null 2>&1 && grep -q "Duplicate path ignored" /tmp/dup_test_output.txt; then
+if ps -p "$DAEMON_PID" > /dev/null 2>&1 && grep -q "Duplicate path ignored" "$DUP_OUTPUT"; then
     echo -e "${GREEN}✓${NC} PASS: Duplicate paths handled (daemon started)"
     PASSED_TESTS=$((PASSED_TESTS + 1))
     kill "$DAEMON_PID" 2>/dev/null || true
@@ -374,10 +375,11 @@ echo "test" > "$TEMP_BASE/parent/test1.txt"
 echo "test" > "$TEMP_BASE/parent/child/test2.txt"
 
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-"$FFIND_DAEMON" --foreground "$TEMP_BASE/parent" "$TEMP_BASE/parent/child" > /tmp/overlap_output.txt 2>&1 &
+OVERLAP_OUTPUT="$TEMP_BASE/overlap_output.txt"
+"$FFIND_DAEMON" --foreground "$TEMP_BASE/parent" "$TEMP_BASE/parent/child" > "$OVERLAP_OUTPUT" 2>&1 &
 DAEMON_PID=$!
 sleep 2
-if grep -q "Overlapping roots" /tmp/overlap_output.txt && ps -p "$DAEMON_PID" > /dev/null 2>&1; then
+if grep -q "Overlapping roots" "$OVERLAP_OUTPUT" && ps -p "$DAEMON_PID" > /dev/null 2>&1; then
     echo -e "${GREEN}✓${NC} PASS: Overlapping roots warning shown"
     PASSED_TESTS=$((PASSED_TESTS + 1))
     kill "$DAEMON_PID" 2>/dev/null || true

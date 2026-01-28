@@ -231,13 +231,19 @@ void sig_handler(int) {
 }
 
 // Helper function to find which root a path belongs to
+// Returns the index of the most specific (longest matching) root
 size_t find_root_index(const string& path) {
+    size_t best_idx = 0;
+    size_t best_len = 0;
+    
     for (size_t i = 0; i < root_paths.size(); i++) {
-        if (path == root_paths[i] || path.starts_with(root_paths[i])) {
-            return i;
+        if ((path == root_paths[i] || path.starts_with(root_paths[i])) && 
+            root_paths[i].size() > best_len) {
+            best_idx = i;
+            best_len = root_paths[i].size();
         }
     }
-    return 0; // Default to first root if not found
+    return best_idx;
 }
 
 void daemonize() {
@@ -373,16 +379,14 @@ void initial_setup(const vector<string>& roots) {
     in_fd = inotify_init1(IN_NONBLOCK);
     assert(in_fd > 0);
     
-    // Process each root directory
+    // Process each root directory (already canonicalized with trailing slashes)
     for (size_t root_idx = 0; root_idx < roots.size(); root_idx++) {
-        string rp = canonical(roots[root_idx]).string();
-        if (rp.back() != '/') rp += '/';
-        root_paths.push_back(rp);
+        root_paths.push_back(roots[root_idx]);
         
         // Index this root
         {
             lock_guard<mutex> lk(mtx);
-            for (auto& e : recursive_directory_iterator(rp, directory_options::skip_permission_denied)) {
+            for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
                 try {
                     string p = e.path().string();
                     struct stat st {};
@@ -409,7 +413,7 @@ void initial_setup(const vector<string>& roots) {
                 }
             } catch (...) {}
         };
-        rec_add(rp);
+        rec_add(roots[root_idx]);
     }
 }
 
@@ -862,10 +866,14 @@ int main(int argc, char** argv) {
     // Deduplicate paths
     canonical_roots = deduplicate_paths(canonical_roots);
     
-    // Check for overlaps and warn
-    if (foreground) {
-        check_overlap_and_warn(canonical_roots);
+    // Ensure at least one root remains after deduplication
+    if (canonical_roots.empty()) {
+        cerr << COLOR_RED << "ERROR: No valid root directories after deduplication" << COLOR_RESET << "\n";
+        return 1;
     }
+    
+    // Check for overlaps and warn (always check, not just in foreground)
+    check_overlap_and_warn(canonical_roots);
     
     // Determine PID file path before daemonizing
     pid_file_path = get_pid_file_path();
