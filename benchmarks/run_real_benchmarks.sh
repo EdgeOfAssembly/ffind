@@ -3,6 +3,15 @@ set -e
 
 # Benchmark script for ffind performance testing
 # This script runs real benchmarks against actual source code
+#
+# Setup Instructions:
+# 1. Copy a large source tree to /tmp/test-corpus, for example:
+#    cp -r /usr/src/linux-headers-* /tmp/test-corpus
+#    OR download GCC source (if network available):
+#    cd /tmp && wget http://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar.xz
+#    tar -xf gcc-9.5.0.tar.xz && mv gcc-9.5.0 test-corpus
+# 2. Build ffind: make
+# 3. Run this script: ./benchmarks/run_real_benchmarks.sh
 
 CORPUS_DIR="/tmp/test-corpus"
 FFIND_DIR="/home/runner/work/ffind/ffind"
