@@ -198,6 +198,7 @@ char pid_file_path_buf[256] = {0};  // Fixed buffer for signal-safe cleanup
 char sock_path_buf[256] = {0};  // Fixed buffer for signal-safe cleanup
 volatile sig_atomic_t running = 1;
 atomic<int> srv_fd{-1};  // Atomic socket fd for signal-safe access
+atomic<bool> shutdown_started{false};  // Global atomic to prevent multiple shutdown messages
 int in_fd = -1;
 unordered_map<int, string> wd_to_dir;
 
@@ -910,11 +911,8 @@ void crash_handler(int sig) {
         unlink(pid_file_path_buf);
     }
     
-    // Close database (best effort - might be corrupted)
+    // Note: Do NOT close database here - sqlite3_close() is not async-signal-safe
     // WAL mode will handle recovery on next startup
-    if (db != nullptr) {
-        sqlite3_close(db);
-    }
     
     // Restore default handler and re-raise for core dump
     signal(sig, SIG_DFL);
@@ -922,8 +920,7 @@ void crash_handler(int sig) {
 }
 
 void sig_handler(int sig) { 
-    // Only print once
-    static atomic<bool> shutdown_started{false};
+    // Only print once using global atomic
     if (shutdown_started.exchange(true) == false) {
         const char msg[] = "\n[INFO] Shutdown signal received, stopping gracefully...\n";
         write(STDERR_FILENO, msg, sizeof(msg)-1);
@@ -938,8 +935,7 @@ void sig_handler(int sig) {
         close(fd);
     }
     
-    // Note: cleanup_pid_file() removed from signal handler because unlink() is not async-signal-safe
-    // PID file cleanup will happen in main() after signal handler sets running = 0
+    // Note: PID file cleanup will happen in main() after signal handler sets running = 0
 }
 
 // Helper function to find which root a path belongs to
@@ -1864,7 +1860,6 @@ int main(int argc, char** argv) {
     }
 
     int srv = socket(AF_UNIX, SOCK_STREAM, 0);
-    srv_fd.store(srv);  // Store globally IMMEDIATELY after creation
     if (srv < 0) {
         cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
              << " Failed to create socket: " << strerror(errno) << "\n";
@@ -1872,6 +1867,7 @@ int main(int argc, char** argv) {
         cleanup_on_socket_error(-1, false, sock_path);
         return 1;
     }
+    srv_fd.store(srv);  // Store globally AFTER validating socket creation succeeded
 
     sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
@@ -1919,11 +1915,11 @@ int main(int argc, char** argv) {
             if (c > 0) {
                 thread(handle_client, c).detach();
             } else if (c < 0) {
-                // If socket was closed or shutdown, exit gracefully
-                if (errno == EBADF || errno == EINVAL || !running) {
-                    break;  // Socket closed, exit thread
+                // If socket was closed (EBADF) or shutdown (EINVAL), exit gracefully
+                if (errno == EBADF || errno == EINVAL) {
+                    break;  // Socket closed by signal handler, exit thread
                 }
-                // Other errors - continue or break depending on running flag
+                // For other errors, check running flag and continue or break
                 if (!running) break;
             }
         }
