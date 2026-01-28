@@ -59,24 +59,41 @@ echo "Starting ffind-daemon and indexing corpus..."
 DAEMON_PID=$!
 echo "Daemon PID: $DAEMON_PID"
 
-# Wait for daemon to be ready
-sleep 2
-
-# Wait for indexing to complete by checking if socket is ready
+# Wait for "Daemon ready" message
 WAIT_COUNT=0
-while [ ! -S "/run/user/$(id -u)/ffind.sock" ] && [ $WAIT_COUNT -lt 30 ]; do
+while [ $WAIT_COUNT -lt 120 ]; do
+    if grep -q "Daemon ready" /tmp/ffind-daemon.log 2>/dev/null; then
+        echo "Daemon is ready!"
+        sleep 2  # Extra safety margin
+        break
+    fi
+    
+    if ! ps -p $DAEMON_PID > /dev/null; then
+        echo "ERROR: Daemon process died"
+        echo "=== Daemon log ==="
+        cat /tmp/ffind-daemon.log
+        exit 1
+    fi
+    
     sleep 1
     WAIT_COUNT=$((WAIT_COUNT + 1))
 done
 
-if [ ! -S "/run/user/$(id -u)/ffind.sock" ]; then
-    echo "ERROR: ffind-daemon socket not ready"
+# Check if we timed out
+if [ $WAIT_COUNT -eq 120 ]; then
+    echo "ERROR: Daemon didn't become ready in 120 seconds"
+    echo "=== Last 50 lines of daemon log ==="
+    tail -50 /tmp/ffind-daemon.log
     kill $DAEMON_PID 2>/dev/null || true
     exit 1
 fi
 
-# Additional wait for indexing to complete
-sleep 3
+# Verify socket exists
+if [ ! -S "/run/user/$(id -u)/ffind.sock" ]; then
+    echo "ERROR: Socket file not found even though daemon reported ready"
+    ls -la /run/user/$(id -u)/
+    exit 1
+fi
 
 echo "Indexing complete. Starting benchmarks..."
 echo ""
