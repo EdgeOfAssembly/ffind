@@ -143,10 +143,11 @@ Comprehensive benchmarks after RE2 optimization, performed on Linux kernel heade
 
 **Major Improvements with RE2 (vs std::regex baseline from PR #12):**
 
-1. **Content search performance**: Now **0.9-1.4x** vs grep (was 0.5x / 2x slower) ✅
-2. **Simple regex searches**: Now **1.3-2.2x faster** than grep (was 0.1x / 10x slower) ✅
-3. **Combined searches**: **Up to 10.4x faster** than find+grep ✅
-4. **File metadata**: Maintained **2-6x speedup** over find ✅
+1. **Content search "static"**: Now **0.94x** vs grep (was 0.5x / 2x slower) - significant improvement ✅
+2. **Regex "EXPORT_SYMBOL|MODULE_"**: Now **0.67x** vs grep (was 0.1x / 10x slower) - major improvement ✅
+3. **New regex patterns tested**: Many are now **1.3-2.2x faster** than grep ✅
+4. **Combined searches**: **Up to 10.4x faster** than find+grep ✅
+5. **File metadata**: Maintained **2-6x speedup** over find ✅
 
 **Areas for further optimization:**
 - Complex alternation patterns (0.67-0.68x)

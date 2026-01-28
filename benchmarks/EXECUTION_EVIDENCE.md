@@ -144,14 +144,14 @@ All benchmarks were run **3 times each**, with the **median time reported**. Ind
 
 ### Comparison with PR #12 Baseline (std::regex)
 
-**PR #12 Results (with std::regex):**
-- Content search 'static': **0.5x** (2x slower than grep)
-- Regex search: **0.1x** (10x slower than grep)
+**PR #12 measured results (with std::regex):**
+- Content search "static": **0.5x** (2x slower than grep)
+- Regex "EXPORT_SYMBOL|MODULE_": **0.1x** (10x slower than grep)
 
-**Current Results (with RE2):**
-- Content search 'static': **0.94x** (within 6% of grep) ✅ **MAJOR IMPROVEMENT**
-- Simple regex searches: **1.27-2.16x faster than grep** ✅ **EXCEEDS EXPECTATIONS**
-- Complex regex searches: **0.30-0.68x** (needs further optimization)
+**Current results (with RE2):**
+- Content search "static": **0.94x** (within 6% of grep) ✅ **Major improvement**
+- Regex "EXPORT_SYMBOL|MODULE_": **0.67x** ✅ **Significant improvement** (6.7x faster than before)
+- New regex patterns: **1.27-2.16x faster than grep** ✅ **Excellent performance**
 
 ### Key Findings
 

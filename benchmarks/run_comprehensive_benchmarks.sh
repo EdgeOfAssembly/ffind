@@ -11,7 +11,7 @@ set -e
 # 3. Run this script: ./benchmarks/run_comprehensive_benchmarks.sh
 
 CORPUS_DIR="/tmp/test-corpus"
-FFIND_DIR="/home/runner/work/ffind/ffind"
+FFIND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT_FILE="/tmp/benchmark_results_comprehensive.txt"
 
 # Check if test corpus exists
@@ -43,8 +43,14 @@ echo "=== System Specifications ===" | tee -a "$OUTPUT_FILE"
 CPU_MODEL=$(cat /proc/cpuinfo | grep "model name" | head -1 | cut -d: -f2 | xargs)
 CPU_CORES=$(nproc)
 RAM_TOTAL=$(free -h | grep "Mem:" | awk '{print $2}')
-DISK_TYPE="SSD"
-OS_VERSION=$(lsb_release -d | cut -f2)
+# Try to detect disk type, default to "Unknown"
+if [ -b /dev/sda ]; then
+    DISK_TYPE=$(lsblk -d -o name,rota | grep sda | awk '{if ($2 == "0") print "SSD"; else print "HDD"}')
+else
+    DISK_TYPE="Unknown"
+fi
+[ -z "$DISK_TYPE" ] && DISK_TYPE="Unknown"
+OS_VERSION=$(lsb_release -d 2>/dev/null | cut -f2 || echo "Unknown")
 KERNEL_VERSION=$(uname -r)
 echo "CPU: $CPU_MODEL ($CPU_CORES cores allocated)" | tee -a "$OUTPUT_FILE"
 echo "RAM: $RAM_TOTAL" | tee -a "$OUTPUT_FILE"
@@ -484,9 +490,6 @@ echo "=========================================" | tee -a "$OUTPUT_FILE"
 echo "" | tee -a "$OUTPUT_FILE"
 echo "Full results saved to: $OUTPUT_FILE" | tee -a "$OUTPUT_FILE"
 echo "" | tee -a "$OUTPUT_FILE"
-
-# Make the file executable
-chmod +x "$0"
 
 echo "To reproduce these benchmarks:"
 echo "  1. Set up test corpus: cp -r /usr/src/linux-headers-* /tmp/test-corpus"
