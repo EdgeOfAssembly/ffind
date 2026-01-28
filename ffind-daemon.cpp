@@ -55,20 +55,28 @@ bool check_dnotify_available() {
     #ifndef F_NOTIFY
     return false;
     #else
+    int saved_errno = errno;
+    
     // Create a temporary file descriptor to test
     int test_fd = open("/tmp", O_RDONLY);
-    if (test_fd < 0) return false;
+    if (test_fd < 0) {
+        errno = saved_errno;
+        return false;
+    }
     
     // Try to set F_NOTIFY - if it fails with ENOSYS, DNOTIFY is not available
     int result = fcntl(test_fd, F_NOTIFY, 0);
+    int fcntl_errno = errno;
     close(test_fd);
     
     // If errno is ENOSYS, kernel doesn't support DNOTIFY
-    if (result < 0 && errno == ENOSYS) {
+    if (result < 0 && fcntl_errno == ENOSYS) {
+        errno = saved_errno;
         return false;
     }
     
     // DNOTIFY might be available (but we're using inotify anyway)
+    errno = saved_errno;
     return true;
     #endif
 }
@@ -295,6 +303,17 @@ void cleanup_stale_pending_moves() {
         if (chrono::duration_cast<chrono::seconds>(now - it->second.second).count() > 1) {
             // Stale move (moved out of watched tree) - treat as delete
             const string& path = it->second.first;
+            
+            // Remove watch descriptors for the moved-out directory tree
+            for (auto wd_it = wd_to_dir.begin(); wd_it != wd_to_dir.end(); ) {
+                if (wd_it->second == path || wd_it->second.starts_with(path + "/")) {
+                    inotify_rm_watch(in_fd, wd_it->first);
+                    wd_it = wd_to_dir.erase(wd_it);
+                } else {
+                    ++wd_it;
+                }
+            }
+            
             remove_path(path, true);  // Remove from entries
             if (foreground) {
                 cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory deleted: "
@@ -365,9 +384,14 @@ void initial_setup(const string& r) {
 
 void process_events() {
     char buf[8192] __attribute__((aligned(8)));
+    auto last_cleanup = chrono::steady_clock::now();
     while (running) {
-        // Periodically clean up stale pending moves
-        cleanup_stale_pending_moves();
+        // Periodically clean up stale pending moves (once per second)
+        auto now = chrono::steady_clock::now();
+        if (chrono::duration_cast<chrono::seconds>(now - last_cleanup).count() >= 1) {
+            cleanup_stale_pending_moves();
+            last_cleanup = now;
+        }
         
         ssize_t len = read(in_fd, buf, sizeof(buf));
         if (len > 0) {
@@ -394,17 +418,17 @@ void process_events() {
                 // Skip IN_MOVE_SELF as renames are handled via IN_MOVED_FROM/IN_MOVED_TO on parent
                 if (ev->mask & IN_DELETE_SELF) {
                     wd_to_dir.erase(ev->wd);
-                    remove_path(dir, true);
+                    int removed_count = 0;
                     if (foreground) {
-                        int removed_count = 0;
-                        {
-                            lock_guard<mutex> lk(mtx);
-                            for (const auto& e : entries) {
-                                if (e.path == dir || e.path.starts_with(dir + "/")) {
-                                    removed_count++;
-                                }
+                        lock_guard<mutex> lk(mtx);
+                        for (const auto& e : entries) {
+                            if (e.path == dir || e.path.starts_with(dir + "/")) {
+                                removed_count++;
                             }
                         }
+                    }
+                    remove_path(dir, true);
+                    if (foreground) {
                         cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory deleted: "
                              << COLOR_BOLD << dir << COLOR_RESET 
                              << " (watch removed, " << removed_count << " entries removed)\n";
@@ -428,10 +452,13 @@ void process_events() {
                         }
                     }
                     if (ev->mask & IN_MOVED_FROM) {
-                        // Track this move with its cookie
+                        // Track this move with its cookie so a later IN_MOVED_TO with the same
+                        // cookie can be recognized as a rename within the watched tree.
                         lock_guard<mutex> lk(pending_moves_mtx);
                         pending_moves[ev->cookie] = {full, chrono::steady_clock::now()};
-                        // Don't remove yet - wait to see if there's a matching MOVED_TO
+                        // The entry stays in pending_moves until either a matching IN_MOVED_TO
+                        // arrives in this same event-processing thread or cleanup_stale_pending_moves()
+                        // removes it after the ~1s stale timeout.
                     }
                     if (ev->mask & IN_MOVED_TO) {
                         // Check if there's a matching MOVED_FROM with same cookie
@@ -450,8 +477,8 @@ void process_events() {
                         if (found_match) {
                             // This is a rename within our watched tree
                             handle_directory_rename(old_path, full);
-                            // Re-add watch for the new location
-                            add_watch(full);
+                            // Inotify watch descriptors automatically follow directory renames;
+                            // no need to re-add a watch for the new path here.
                         } else {
                             // Moved into tree from outside
                             add_directory_recursive(full);
