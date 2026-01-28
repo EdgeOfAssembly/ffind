@@ -1,0 +1,21 @@
+# Configuration for ffind-daemon
+# See ffind-daemon(8) for more information
+
+# Roots to index (space-separated)
+# At least one root directory is required
+FFIND_ROOTS="/home /var/www"
+
+# Optional: Additional options for ffind-daemon
+# Examples:
+#   Enable SQLite persistence:
+#     FFIND_OPTS="--db /var/cache/ffind/index.db"
+#   Run in foreground (for debugging):
+#     FFIND_OPTS="--foreground"
+#   Both persistence and foreground:
+#     FFIND_OPTS="--db /var/cache/ffind/index.db --foreground"
+FFIND_OPTS=""
+
+# Note: If you enable --db, ensure the parent directory exists
+# and is writable by the user running the daemon:
+#   sudo mkdir -p /var/cache/ffind
+#   sudo chown root:root /var/cache/ffind

@@ -1,0 +1,34 @@
+#!/sbin/openrc-run
+# Copyright 2026 EdgeOfAssembly
+# Distributed under GPLv3
+
+name="ffind-daemon"
+description="Fast file finder daemon with real-time indexing"
+
+command="/usr/local/bin/ffind-daemon"
+command_args="${FFIND_ROOTS} ${FFIND_OPTS}"
+command_background="true"
+pidfile="/run/ffind-daemon.pid"
+
+depend() {
+    need localmount
+    after bootmisc
+}
+
+start_pre() {
+    if [ -z "${FFIND_ROOTS}" ]; then
+        eerror "FFIND_ROOTS not set in /etc/conf.d/ffind-daemon"
+        return 1
+    fi
+}
+
+stop() {
+    ebegin "Stopping ${name}"
+    if [ -f "${pidfile}" ]; then
+        kill $(cat ${pidfile}) 2>/dev/null
+        eend $?
+    else
+        ewarn "PID file not found"
+        eend 1
+    fi
+}

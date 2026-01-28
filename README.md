@@ -318,6 +318,55 @@ In foreground mode (`--foreground`), directory changes are logged to stderr with
 
 The implementation uses modern inotify (not DNOTIFY) for reliable filesystem event monitoring.
 
+## Service Management
+
+### Gentoo (OpenRC)
+
+For Gentoo systems using OpenRC, you can run ffind-daemon as a system service:
+
+1. Copy the init script:
+   ```bash
+   sudo cp ffind-daemon.openrc /etc/init.d/ffind-daemon
+   sudo chmod +x /etc/init.d/ffind-daemon
+   ```
+
+2. Copy and configure the service settings:
+   ```bash
+   sudo cp etc-conf.d-ffind-daemon.example /etc/conf.d/ffind-daemon
+   sudo nano /etc/conf.d/ffind-daemon
+   ```
+   
+   Edit `FFIND_ROOTS` to specify which directories to index:
+   ```bash
+   FFIND_ROOTS="/home /var/www"
+   ```
+   
+   Optionally enable SQLite persistence:
+   ```bash
+   FFIND_OPTS="--db /var/cache/ffind/index.db"
+   ```
+
+3. Start the service:
+   ```bash
+   sudo rc-service ffind-daemon start
+   ```
+
+4. Enable at boot (optional):
+   ```bash
+   sudo rc-update add ffind-daemon default
+   ```
+
+5. Check service status:
+   ```bash
+   sudo rc-service ffind-daemon status
+   ```
+
+**Note**: If using `--db` option, ensure the parent directory exists and is writable:
+```bash
+sudo mkdir -p /var/cache/ffind
+sudo chown root:root /var/cache/ffind
+```
+
 ## License
 
 Dual-licensed under GPLv3 and Commercial license.
