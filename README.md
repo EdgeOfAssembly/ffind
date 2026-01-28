@@ -248,6 +248,21 @@ ffind -c "error" --color=always | less -R
 ffind -c "warning" --color=never > results.txt
 ```
 
+## Directory Monitoring
+
+The daemon handles directory renames gracefully using inotify with cookie-based rename tracking - no restart needed. When a directory is renamed within the watched tree:
+
+- All file paths are automatically updated to reflect the new location
+- Internal watch descriptors are updated
+- Files remain searchable at their new paths immediately
+
+In foreground mode (`--foreground`), directory changes are logged to stderr with color-coded INFO messages:
+- Directory created/deleted events
+- Directory rename events with old and new paths
+- Number of entries updated during renames
+
+The implementation uses modern inotify (not DNOTIFY) for reliable filesystem event monitoring.
+
 ## License
 
 Dual-licensed under GPLv3 and Commercial license.

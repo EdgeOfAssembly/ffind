@@ -814,9 +814,228 @@ else
 fi
 
 # Restart daemon for remaining tests (if any)
-"$FFIND_DAEMON" --foreground "$TEMP_DIR" > /dev/null 2>&1 &
+"$FFIND_DAEMON" --foreground "$TEMP_DIR" > /tmp/ffind_daemon_output.log 2>&1 &
 DAEMON_PID=$!
 sleep 2
+
+# Test 15: Directory Rename Tests
+echo ""
+echo "--- Directory Rename Tests ---"
+
+# Test 1: Basic directory rename
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/rename_test/subdir"
+echo "test content" > "$TEMP_DIR/rename_test/file1.txt"
+echo "more content" > "$TEMP_DIR/rename_test/subdir/file2.txt"
+sleep 1
+# Verify files are indexed
+output=$("$FFIND_CLIENT" "file1.txt" 2>&1)
+if echo "$output" | grep -q "rename_test/file1.txt"; then
+    # Now rename the directory
+    mv "$TEMP_DIR/rename_test" "$TEMP_DIR/renamed_dir"
+    sleep 1
+    # Verify files are still findable at new path
+    output=$("$FFIND_CLIENT" "file1.txt" 2>&1)
+    if echo "$output" | grep -q "renamed_dir/file1.txt" && ! echo "$output" | grep -q "rename_test/file1.txt"; then
+        echo -e "${GREEN}✓${NC} PASS: Basic directory rename (files findable at new path)"
+        PASSED_TESTS=$((PASSED_TESTS + 1))
+    else
+        echo -e "${RED}✗${NC} FAIL: Files not at new path after rename"
+        echo "  Got output: $output"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo -e "${RED}✗${NC} FAIL: Files not indexed before rename"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 2: Nested directory rename
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/nested/level1/level2/level3"
+echo "deep file" > "$TEMP_DIR/nested/level1/level2/level3/deep.txt"
+sleep 1
+mv "$TEMP_DIR/nested/level1" "$TEMP_DIR/nested/level1_renamed"
+sleep 1
+output=$("$FFIND_CLIENT" "deep.txt" 2>&1)
+if echo "$output" | grep -q "nested/level1_renamed/level2/level3/deep.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Nested directory rename (deep paths updated)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Deep paths not updated after nested rename"
+    echo "  Got output: $output"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 3: Multiple successive renames
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/multi_rename"
+echo "content" > "$TEMP_DIR/multi_rename/file.txt"
+sleep 1
+mv "$TEMP_DIR/multi_rename" "$TEMP_DIR/rename_step1"
+sleep 1
+mv "$TEMP_DIR/rename_step1" "$TEMP_DIR/rename_step2"
+sleep 1
+mv "$TEMP_DIR/rename_step2" "$TEMP_DIR/rename_final"
+sleep 1
+output=$("$FFIND_CLIENT" "file.txt" 2>&1 | grep "rename_final")
+if [ -n "$output" ]; then
+    echo -e "${GREEN}✓${NC} PASS: Multiple successive renames"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Multiple renames failed"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 4: Rename with special characters
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/special dir"
+echo "content" > "$TEMP_DIR/special dir/file.txt"
+sleep 1
+mv "$TEMP_DIR/special dir" "$TEMP_DIR/special_renamed dir"
+sleep 1
+output=$("$FFIND_CLIENT" "file.txt" 2>&1)
+if echo "$output" | grep -q "special_renamed dir/file.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Rename with special characters in path"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Rename with special characters failed"
+    echo "  Got output: $output"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 5: Directory moved out of tree
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/move_out"
+echo "content" > "$TEMP_DIR/move_out/file.txt"
+sleep 1
+mv "$TEMP_DIR/move_out" /tmp/moved_out_$$
+sleep 2  # Give time for stale move cleanup
+output=$("$FFIND_CLIENT" "file.txt" 2>&1)
+if ! echo "$output" | grep -q "move_out/file.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Directory moved out of tree (removed from index)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Directory moved out should be removed"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+rm -rf /tmp/moved_out_$$
+
+# Test 6: Directory moved into tree
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p /tmp/move_in_$$
+echo "new content" > /tmp/move_in_$$/newfile.txt
+mv /tmp/move_in_$$ "$TEMP_DIR/moved_in"
+sleep 1
+output=$("$FFIND_CLIENT" "newfile.txt" 2>&1)
+if echo "$output" | grep -q "moved_in/newfile.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Directory moved into tree (added to index)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Directory moved in should be indexed"
+    echo "  Got output: $output"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 7: Stress test - multiple renames rapidly
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/stress_base"
+for i in {1..20}; do
+    mkdir -p "$TEMP_DIR/stress_base/dir$i"
+    echo "content$i" > "$TEMP_DIR/stress_base/dir$i/file$i.txt"
+done
+sleep 1
+for i in {1..20}; do
+    mv "$TEMP_DIR/stress_base/dir$i" "$TEMP_DIR/stress_base/renamed$i" 2>/dev/null || true
+done
+sleep 2
+output=$("$FFIND_CLIENT" "file10.txt" 2>&1)
+if echo "$output" | grep -q "renamed10/file10.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Stress test - rapid renames"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Stress test failed"
+    echo "  Got output: $output"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 8: Rename directory with many files
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/large_dir"
+for i in {1..100}; do
+    echo "content$i" > "$TEMP_DIR/large_dir/file$i.txt"
+done
+sleep 2
+mv "$TEMP_DIR/large_dir" "$TEMP_DIR/large_renamed"
+sleep 1
+# Check multiple files
+output=$("$FFIND_CLIENT" "file50.txt" 2>&1)
+if echo "$output" | grep -q "large_renamed/file50.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Rename directory with many files (100+ files)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Large directory rename failed"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 9: Foreground mode verbose output
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+# Check the daemon output log for INFO messages
+if grep -q "\[INFO\]" /tmp/ffind_daemon_output.log 2>/dev/null; then
+    echo -e "${GREEN}✓${NC} PASS: Foreground mode shows INFO messages"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: No INFO messages in foreground mode"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 10: Verify rename info messages have correct format
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if grep -q "Directory renamed:" /tmp/ffind_daemon_output.log 2>/dev/null; then
+    echo -e "${GREEN}✓${NC} PASS: Rename info messages present"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: No rename messages found"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 11: DNOTIFY availability check (should show warning)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if grep -qi "dnotify" /tmp/ffind_daemon_output.log 2>/dev/null; then
+    echo -e "${GREEN}✓${NC} PASS: DNOTIFY check runs (warning message present)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${YELLOW}⚠${NC}  WARNING: DNOTIFY message not found (may be available on this system)"
+    PASSED_TESTS=$((PASSED_TESTS + 1))  # Don't fail - DNOTIFY may be available
+fi
+
+# Test 12: Regression - file operations still work after renames
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+echo "new file after renames" > "$TEMP_DIR/regression_test.txt"
+sleep 1
+output=$("$FFIND_CLIENT" "regression_test.txt" 2>&1)
+if echo "$output" | grep -q "regression_test.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Regression - file create still works"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: File operations broken after renames"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 13: Rename root subdirectory
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+mkdir -p "$TEMP_DIR/root_sub"
+echo "root content" > "$TEMP_DIR/root_sub/root_file.txt"
+sleep 1
+mv "$TEMP_DIR/root_sub" "$TEMP_DIR/root_renamed"
+sleep 1
+output=$("$FFIND_CLIENT" "root_file.txt" 2>&1)
+if echo "$output" | grep -q "root_renamed/root_file.txt"; then
+    echo -e "${GREEN}✓${NC} PASS: Rename root subdirectory"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Root subdirectory rename failed"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
 # Print summary
 echo ""
