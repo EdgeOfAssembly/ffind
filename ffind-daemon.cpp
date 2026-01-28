@@ -703,6 +703,7 @@ void initial_setup(const vector<string>& roots) {
         root_paths.push_back(roots[root_idx]);
         
         // Index this root
+        size_t initial_count = 0;
         {
             lock_guard<mutex> lk(mtx);
             for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
@@ -718,9 +719,16 @@ void initial_setup(const vector<string>& roots) {
                         entry.is_dir = is_dir;
                         entry.root_index = root_idx;
                         entries.push_back(entry);
+                        initial_count++;
                     }
                 } catch (...) {}
             }
+        }
+        
+        // Mark entries as dirty if database is enabled
+        if (db_enabled && initial_count > 0) {
+            pending_changes += initial_count;
+            db_dirty = true;
         }
         
         // Add watches for this root
