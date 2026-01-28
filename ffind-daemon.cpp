@@ -195,7 +195,10 @@ vector<string> root_paths;  // Multiple roots support
 string sock_path;
 string pid_file_path;
 char pid_file_path_buf[256] = {0};  // Fixed buffer for signal-safe cleanup
+char sock_path_buf[256] = {0};  // Fixed buffer for signal-safe cleanup
 volatile sig_atomic_t running = 1;
+atomic<int> srv_fd{-1};  // Atomic socket fd for signal-safe access
+atomic<bool> shutdown_started{false};  // Global to avoid static initialization guard in signal handler
 int in_fd = -1;
 unordered_map<int, string> wd_to_dir;
 
@@ -881,10 +884,85 @@ void cleanup_on_socket_error(int srv_fd, bool unlink_socket, const string& sock_
     cleanup_pid_file();
 }
 
-void sig_handler(int) { 
+void crash_handler(int sig) {
+    // Use async-signal-safe functions only
+    const char* msg = nullptr;
+    size_t len = 0;
+    switch(sig) {
+        case SIGSEGV:
+            msg = "\n[CRASH] Segmentation fault - attempting emergency cleanup...\n";
+            len = sizeof("\n[CRASH] Segmentation fault - attempting emergency cleanup...\n") - 1;
+            break;
+        case SIGABRT:
+            msg = "\n[CRASH] Abort signal - attempting emergency cleanup...\n";
+            len = sizeof("\n[CRASH] Abort signal - attempting emergency cleanup...\n") - 1;
+            break;
+        case SIGBUS:
+            msg = "\n[CRASH] Bus error - attempting emergency cleanup...\n";
+            len = sizeof("\n[CRASH] Bus error - attempting emergency cleanup...\n") - 1;
+            break;
+        default:
+            msg = "\n[CRASH] Fatal signal - attempting emergency cleanup...\n";
+            len = sizeof("\n[CRASH] Fatal signal - attempting emergency cleanup...\n") - 1;
+            break;
+    }
+    if (msg != nullptr && len > 0) {
+        write(STDERR_FILENO, msg, len);
+    }
+    
+    // NOTE: We use atomic operations here as best-effort cleanup.
+    // While C++ std::atomic is not guaranteed async-signal-safe by the standard,
+    // lock-free atomic operations typically compile to single instructions.
+    // In a crash scenario, we accept this for best-effort cleanup.
+    
+    // Close socket (best effort)
+    int fd = srv_fd.exchange(-1);
+    if (fd >= 0) {
+        close(fd);
+    }
+    
+    // Remove socket file (best effort)
+    if (sock_path_buf[0] != '\0') {
+        unlink(sock_path_buf);
+    }
+    
+    // Remove PID file (best effort)
+    if (pid_file_path_buf[0] != '\0') {
+        unlink(pid_file_path_buf);
+    }
+    
+    // Note: Do NOT close database here - sqlite3_close() is not async-signal-safe
+    // WAL mode will handle recovery on next startup
+    
+    // Restore default handler and re-raise for core dump
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
+void sig_handler(int sig) {
+    (void)sig;  // Unused parameter
+    
+    // NOTE: We use C++ std::atomic operations here. While not guaranteed
+    // async-signal-safe by POSIX/C++ standards, lock-free atomic operations
+    // on modern platforms typically compile to single instructions and work
+    // reliably in practice. This is a documented implementation choice.
+    
+    // Only print once using global atomic
+    if (shutdown_started.exchange(true) == false) {
+        const char msg[] = "\n[INFO] Shutdown signal received, stopping gracefully...\n";
+        write(STDERR_FILENO, msg, sizeof(msg)-1);
+    }
+    
     running = 0; 
-    // Note: cleanup_pid_file() removed from signal handler because unlink() is not async-signal-safe
-    // PID file cleanup will happen in main() after signal handler sets running = 0
+    
+    // Close socket to unblock accept()
+    int fd = srv_fd.exchange(-1);  // Atomically get and set to -1
+    if (fd >= 0) {
+        shutdown(fd, SHUT_RDWR);  // Unblock accept() immediately
+        close(fd);
+    }
+    
+    // Note: PID file cleanup will happen in main() after signal handler sets running = 0
 }
 
 // Helper function to find which root a path belongs to
@@ -1758,8 +1836,17 @@ int main(int argc, char** argv) {
     signal(SIGTERM, sig_handler);
     signal(SIGQUIT, sig_handler);
     signal(SIGHUP, sig_handler);
+    
+    // Install crash handlers for emergency cleanup
+    signal(SIGSEGV, crash_handler);  // Segmentation fault
+    signal(SIGABRT, crash_handler);  // abort() called
+    signal(SIGBUS, crash_handler);   // Bus error
 
     sock_path = "/run/user/" + to_string(getuid()) + "/ffind.sock";
+    
+    // Copy socket path to signal-safe buffer for crash handler
+    strncpy(sock_path_buf, sock_path.c_str(), sizeof(sock_path_buf) - 1);
+    sock_path_buf[sizeof(sock_path_buf) - 1] = '\0';
     
     // Print info about roots being monitored
     if (foreground) {
@@ -1807,6 +1894,7 @@ int main(int argc, char** argv) {
         cleanup_on_socket_error(-1, false, sock_path);
         return 1;
     }
+    srv_fd.store(srv);  // Store globally AFTER validating socket creation succeeded
 
     sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
@@ -1851,7 +1939,37 @@ int main(int argc, char** argv) {
     thread accept_th([&]{
         while (running) {
             int c = accept(srv, nullptr, nullptr);
-            if (c > 0) thread(handle_client, c).detach();
+            if (c > 0) {
+                thread(handle_client, c).detach();
+            } else if (c < 0) {
+                // Save errno immediately after accept() fails
+                int saved_errno = errno;
+                
+                // If interrupted by signal, retry unless we're shutting down
+                if (saved_errno == EINTR) {
+                    if (!running) {
+                        break;
+                    }
+                    continue;
+                }
+                
+                // If socket was closed (EBADF) or shutdown (EINVAL), exit gracefully
+                if (saved_errno == EBADF || saved_errno == EINVAL) {
+                    break;  // Socket closed by signal handler, exit thread
+                }
+                
+                // For other transient errors, log and back off briefly to avoid busy-looping
+                if (foreground) {
+                    cerr << COLOR_YELLOW << "[WARN]" << COLOR_RESET
+                         << " accept() failed: " << strerror(saved_errno) << "\n";
+                }
+                this_thread::sleep_for(100ms);
+                
+                // Check if we're shutting down
+                if (!running) {
+                    break;
+                }
+            }
         }
     });
 
@@ -1859,7 +1977,13 @@ int main(int argc, char** argv) {
     running = 0;
     events_th.join();
     accept_th.join();
-    close(srv);
+    
+    // Cleanup socket - only close if not already closed by signal handler
+    int fd = srv_fd.exchange(-1);
+    if (fd >= 0) {  // Only close if not already closed by signal handler
+        close(fd);
+    }
+    // Always unlink socket file (whether closed by signal handler or not)
     unlink(sock_path.c_str());
     close(in_fd);
     
