@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <fstream>
-#include <regex>
+#include <re2/re2.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <poll.h>
@@ -1312,13 +1312,12 @@ void handle_client(int fd) {
 
     bool has_content = !content_pat.empty();
 
-    unique_ptr<regex> re;
+    unique_ptr<RE2> re;
     if (has_content && is_regex) {
-        regex_constants::syntax_option_type re_flags = regex_constants::ECMAScript;
-        if (case_ins) re_flags |= regex_constants::icase;
-        try {
-            re = make_unique<regex>(content_pat, re_flags);
-        } catch (const regex_error&) {
+        RE2::Options opts;
+        opts.set_case_sensitive(!case_ins);
+        re = make_unique<RE2>(content_pat, opts);
+        if (!re->ok()) {
             string err = "Invalid regex pattern\n";
             write(fd, err.c_str(), err.size());
             close(fd);
@@ -1412,7 +1411,7 @@ void handle_client(int fd) {
                         int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
                         match = fnmatch(content_pat.c_str(), line.c_str(), fnm_flags_content) == 0;
                     } else if (is_regex) {
-                        match = regex_search(line, *re);
+                        match = RE2::PartialMatch(line, *re);
                     } else if (case_ins) {
                         match = strcasestr(line.c_str(), content_pat.c_str()) != nullptr;
                     } else {
@@ -1447,7 +1446,7 @@ void handle_client(int fd) {
                         int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
                         match = fnmatch(content_pat.c_str(), content.c_str(), fnm_flags_content) == 0;
                     } else if (is_regex) {
-                        match = regex_search(content, *re);
+                        match = RE2::PartialMatch(content, *re);
                     } else if (case_ins) {
                         match = strcasestr(content.c_str(), content_pat.c_str()) != nullptr;
                     } else {

@@ -7,10 +7,10 @@ TARGETS = ffind-daemon ffind
 all: $(TARGETS)
 
 ffind-daemon: ffind-daemon.cpp
-	$(CXX) $(CXXFLAGS) $< -o $@ -lsqlite3
+	$(CXX) $(CXXFLAGS) $< -o $@ -lsqlite3 -lre2
 
 ffind: ffind.cpp
-	$(CXX) $(CXXFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< -o $@ -lre2
 
 install: $(TARGETS)
 	install -Dm755 ffind-daemon /usr/local/bin/ffind-daemon

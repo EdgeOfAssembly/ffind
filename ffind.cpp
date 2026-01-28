@@ -4,7 +4,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <regex>
+#include <re2/re2.h>
 
 using namespace std;
 
@@ -241,14 +241,13 @@ int main(int argc, char** argv) {
     bool has_content = !content_pat.empty() || !content_glob.empty();
     
     // Prepare regex for content matching if needed
-    unique_ptr<regex> re_matcher;
+    unique_ptr<RE2> re_matcher;
     if (!content_pat.empty() && is_regex) {
-        regex_constants::syntax_option_type re_flags = regex_constants::ECMAScript;
-        if (case_ins) re_flags |= regex_constants::icase;
-        try {
-            re_matcher = make_unique<regex>(content_pat, re_flags);
-        } catch (const regex_error& e) {
-            cerr << "Invalid regex pattern: " << e.what() << "\n";
+        RE2::Options opts;
+        opts.set_case_sensitive(!case_ins);
+        re_matcher = make_unique<RE2>(content_pat, opts);
+        if (!re_matcher->ok()) {
+            cerr << "Invalid regex pattern: " << re_matcher->error() << "\n";
             return 1;
         }
     }
@@ -318,10 +317,10 @@ int main(int argc, char** argv) {
                 size_t match_len = 0;
                 
                 if (is_regex && re_matcher) {
-                    smatch match;
-                    if (regex_search(content, match, *re_matcher)) {
-                        match_start = match.position(0);
-                        match_len = match.length(0);
+                    re2::StringPiece match;
+                    if (RE2::PartialMatch(content, *re_matcher, &match)) {
+                        match_start = match.data() - content.data();
+                        match_len = match.size();
                         found_match = true;
                     }
                 } else if (!content_glob.empty()) {
