@@ -78,11 +78,24 @@ mkdir -p "$TEST_ROOT/subdir"
 echo "file3 content" > "$TEST_ROOT/subdir/file3.txt"
 
 echo "Test 1: Database creation"
-timeout 35 $FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > /dev/null &
+# Use a more reliable approach: start daemon and wait for it to be ready
+$FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > /dev/null &
 DAEMON_PID=$!
-sleep 35
-kill $DAEMON_PID 2>/dev/null || true
-wait $DAEMON_PID 2>/dev/null || true
+
+# Wait up to 35 seconds for the daemon to flush, checking if it's still running
+for i in $(seq 1 35); do
+    if ! kill -0 "$DAEMON_PID" 2>/dev/null; then
+        echo "Daemon exited unexpectedly"
+        break
+    fi
+    sleep 1
+done
+
+# Terminate daemon gracefully if still running
+if kill -0 "$DAEMON_PID" 2>/dev/null; then
+    kill "$DAEMON_PID" 2>/dev/null || true
+    wait "$DAEMON_PID" 2>/dev/null || true
+fi
 
 if [ -f "$DB_PATH" ]; then
     test_result "Database file created" "pass"
@@ -120,21 +133,24 @@ fi
 
 echo ""
 echo "Test 5: Load from database on restart"
+# Use unique log file within TEST_DIR
+LOG_FILE="$TEST_DIR/daemon_restart.log"
+
 # Start daemon again with same database
-timeout 35 $FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > /tmp/daemon_log.txt &
+$FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > "$LOG_FILE" &
 DAEMON_PID=$!
 sleep 3
 
 # Check log for "Loaded X entries from database"
-if grep -q "Loaded 4 entries from database" /tmp/daemon_log.txt; then
+if grep -q "Loaded 4 entries from database" "$LOG_FILE"; then
     test_result "Entries loaded from database on restart" "pass"
 else
     test_result "Entries loaded from database on restart" "fail"
-    cat /tmp/daemon_log.txt
+    cat "$LOG_FILE"
 fi
 
-kill $DAEMON_PID 2>/dev/null || true
-wait $DAEMON_PID 2>/dev/null || true
+kill "$DAEMON_PID" 2>/dev/null || true
+wait "$DAEMON_PID" 2>/dev/null || true
 
 echo ""
 echo "Test 6: Reconciliation - new file added"
@@ -142,11 +158,22 @@ echo "Test 6: Reconciliation - new file added"
 echo "file4 content" > "$TEST_ROOT/file4.txt"
 
 # Start daemon again
-timeout 35 $FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > /dev/null &
+$FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > /dev/null &
 DAEMON_PID=$!
-sleep 35
-kill $DAEMON_PID 2>/dev/null || true
-wait $DAEMON_PID 2>/dev/null || true
+
+# Wait up to 35 seconds, checking if daemon is still running
+for i in $(seq 1 35); do
+    if ! kill -0 "$DAEMON_PID" 2>/dev/null; then
+        break
+    fi
+    sleep 1
+done
+
+# Terminate daemon if still running
+if kill -0 "$DAEMON_PID" 2>/dev/null; then
+    kill "$DAEMON_PID" 2>/dev/null || true
+fi
+wait "$DAEMON_PID" 2>/dev/null || true
 
 # Check that new file was added
 NEW_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM entries;")
@@ -162,11 +189,22 @@ echo "Test 7: Reconciliation - file deleted"
 rm -f "$TEST_ROOT/file1.txt"
 
 # Start daemon again
-timeout 35 $FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > /dev/null &
+$FFIND_DAEMON --foreground --db "$DB_PATH" "$TEST_ROOT" 2>&1 > /dev/null &
 DAEMON_PID=$!
-sleep 35
-kill $DAEMON_PID 2>/dev/null || true
-wait $DAEMON_PID 2>/dev/null || true
+
+# Wait up to 35 seconds, checking if daemon is still running
+for i in $(seq 1 35); do
+    if ! kill -0 "$DAEMON_PID" 2>/dev/null; then
+        break
+    fi
+    sleep 1
+done
+
+# Terminate daemon if still running
+if kill -0 "$DAEMON_PID" 2>/dev/null; then
+    kill "$DAEMON_PID" 2>/dev/null || true
+fi
+wait "$DAEMON_PID" 2>/dev/null || true
 
 # Check that deleted file was removed
 FINAL_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM entries;")

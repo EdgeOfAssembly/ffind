@@ -170,6 +170,65 @@ bool init_database(const string& path) {
     return true;
 }
 
+// Helper function to escape JSON string
+string json_escape(const string& str) {
+    string escaped;
+    escaped.reserve(str.size());
+    for (char c : str) {
+        switch (c) {
+            case '"':  escaped += "\\\""; break;
+            case '\\': escaped += "\\\\"; break;
+            case '\b': escaped += "\\b"; break;
+            case '\f': escaped += "\\f"; break;
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            case '\t': escaped += "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    // Control characters
+                    char buf[7];
+                    snprintf(buf, sizeof(buf), "\\u%04x", (unsigned char)c);
+                    escaped += buf;
+                } else {
+                    escaped += c;
+                }
+        }
+    }
+    return escaped;
+}
+
+// Helper function to unescape JSON string
+string json_unescape(const string& str) {
+    string unescaped;
+    unescaped.reserve(str.size());
+    for (size_t i = 0; i < str.size(); i++) {
+        if (str[i] == '\\' && i + 1 < str.size()) {
+            switch (str[i + 1]) {
+                case '"':  unescaped += '"'; i++; break;
+                case '\\': unescaped += '\\'; i++; break;
+                case 'b':  unescaped += '\b'; i++; break;
+                case 'f':  unescaped += '\f'; i++; break;
+                case 'n':  unescaped += '\n'; i++; break;
+                case 'r':  unescaped += '\r'; i++; break;
+                case 't':  unescaped += '\t'; i++; break;
+                case 'u':  // Unicode escape - simplified handling
+                    if (i + 5 < str.size()) {
+                        // Just copy the character as-is for now
+                        unescaped += str[i];
+                        unescaped += str[i + 1];
+                    }
+                    break;
+                default:
+                    unescaped += str[i + 1];
+                    i++;
+            }
+        } else {
+            unescaped += str[i];
+        }
+    }
+    return unescaped;
+}
+
 vector<string> load_roots_from_db() {
     vector<string> roots;
     if (!db) return roots;
@@ -181,14 +240,24 @@ vector<string> load_roots_from_db() {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             const char* json_str = (const char*)sqlite3_column_text(stmt, 0);
             if (json_str) {
-                // Simple JSON array parser for root paths
+                // Parse JSON array with proper escape handling
                 string json(json_str);
                 size_t pos = 0;
                 while ((pos = json.find("\"", pos)) != string::npos) {
-                    size_t end = json.find("\"", pos + 1);
-                    if (end == string::npos) break;
+                    size_t end = pos + 1;
+                    // Find closing quote, handling escaped quotes
+                    while (end < json.size()) {
+                        if (json[end] == '"' && (end == 0 || json[end - 1] != '\\')) {
+                            break;
+                        }
+                        end++;
+                    }
+                    if (end >= json.size()) break;
+                    
                     string root = json.substr(pos + 1, end - pos - 1);
-                    if (!root.empty()) roots.push_back(root);
+                    if (!root.empty()) {
+                        roots.push_back(json_unescape(root));
+                    }
                     pos = end + 1;
                 }
             }
@@ -202,21 +271,76 @@ vector<string> load_roots_from_db() {
 void save_roots_to_db(const vector<string>& roots) {
     if (!db) return;
     
-    // Build simple JSON array
+    // Build JSON array with proper escaping
     string json = "[";
     for (size_t i = 0; i < roots.size(); i++) {
         if (i > 0) json += ",";
-        json += "\"" + roots[i] + "\"";
+        json += "\"" + json_escape(roots[i]) + "\"";
     }
     json += "]";
+    
+    int rc;
+    char* errmsg = nullptr;
+    
+    // Start transaction for atomicity
+    rc = sqlite3_exec(db, "BEGIN IMMEDIATE;", nullptr, nullptr, &errmsg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to begin transaction for saving root paths: "
+                 << (errmsg ? errmsg : "unknown error") << "\n";
+        }
+        sqlite3_free(errmsg);
+        return;
+    }
     
     sqlite3_stmt* stmt;
     const char* sql = "INSERT OR REPLACE INTO meta (key, value) VALUES ('root_paths', ?)";
     
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        sqlite3_bind_text(stmt, 1, json.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_step(stmt);
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to prepare statement for saving root paths: "
+                 << sqlite3_errmsg(db) << "\n";
+        }
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    rc = sqlite3_bind_text(stmt, 1, json.c_str(), -1, SQLITE_TRANSIENT);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to bind root paths JSON: " << sqlite3_errmsg(db) << "\n";
+        }
         sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to save root paths: " << sqlite3_errmsg(db) << "\n";
+        }
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    sqlite3_finalize(stmt);
+    
+    rc = sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errmsg);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Failed to commit transaction for saving root paths: "
+                 << (errmsg ? errmsg : "unknown error") << "\n";
+        }
+        sqlite3_free(errmsg);
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
     }
 }
 
@@ -336,9 +460,12 @@ void reconcile_db_with_filesystem() {
 }
 
 void flush_changes_to_db() {
-    if (!db || pending_changes == 0) return;
+    if (!db) return;
     
     lock_guard<mutex> lk(db_mtx);
+    
+    // Capture current pending changes before any operations
+    int changes_to_flush = pending_changes.load();
     
     char* err_msg = nullptr;
     int rc = sqlite3_exec(db, "BEGIN IMMEDIATE;", nullptr, nullptr, &err_msg);
@@ -357,7 +484,19 @@ void flush_changes_to_db() {
     sqlite3_stmt* stmt;
     const char* sql = "INSERT INTO entries (path, size, mtime, is_dir, root_index) VALUES (?, ?, ?, ?, ?)";
     
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        if (foreground) {
+            cerr << COLOR_YELLOW << "Warning: Could not prepare insert statement: "
+                 << sqlite3_errmsg(db) << COLOR_RESET << "\n";
+        }
+        sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    
+    int insert_count = 0;
+    int error_count = 0;
+    {
         lock_guard<mutex> entries_lk(mtx);
         for (const auto& e : entries) {
             sqlite3_bind_text(stmt, 1, e.path.c_str(), -1, SQLITE_TRANSIENT);
@@ -365,10 +504,24 @@ void flush_changes_to_db() {
             sqlite3_bind_int64(stmt, 3, e.mtime);
             sqlite3_bind_int(stmt, 4, e.is_dir ? 1 : 0);
             sqlite3_bind_int(stmt, 5, e.root_index);
-            sqlite3_step(stmt);
+            
+            rc = sqlite3_step(stmt);
+            if (rc == SQLITE_DONE) {
+                insert_count++;
+            } else {
+                error_count++;
+                if (foreground && error_count <= 5) {  // Limit error messages
+                    cerr << COLOR_YELLOW << "Warning: Failed to insert entry " << e.path 
+                         << ": " << sqlite3_errmsg(db) << COLOR_RESET << "\n";
+                }
+            }
             sqlite3_reset(stmt);
         }
-        sqlite3_finalize(stmt);
+    }
+    sqlite3_finalize(stmt);
+    
+    if (error_count > 0 && foreground) {
+        cerr << COLOR_YELLOW << "Warning: " << error_count << " entries failed to insert" << COLOR_RESET << "\n";
     }
     
     // Update sync state
@@ -383,14 +536,16 @@ void flush_changes_to_db() {
         sqlite3_free(err_msg);
         sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
     } else {
-        int flushed = pending_changes.load();
-        pending_changes = 0;
-        db_dirty = false;
+        // Successfully committed - update counters
+        // Subtract the changes we flushed, but keep any new changes that came in during flush
+        int current = pending_changes.load();
+        pending_changes.fetch_sub(min(current, changes_to_flush));
+        db_dirty = (pending_changes.load() > 0);
         last_flush_time = chrono::steady_clock::now();
         
         if (foreground) {
-            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Flushed " << flushed 
-                 << " changes to database\n";
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Flushed " << insert_count 
+                 << " entries to database\n";
         }
     }
 }
@@ -724,7 +879,12 @@ void add_directory_recursive(const string& dir, size_t root_index) {
 void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
     // Initialize inotify first
     in_fd = inotify_init1(IN_NONBLOCK);
-    assert(in_fd > 0);
+    if (in_fd < 0) {
+        int err = errno;
+        cerr << COLOR_RED << "ERROR: inotify_init1 failed: " << strerror(err) 
+             << " (" << err << ")" << COLOR_RESET << "\n";
+        throw runtime_error("inotify_init1 failed");
+    }
     
     // Process each root directory (already canonicalized with trailing slashes)
     for (size_t root_idx = 0; root_idx < roots.size(); root_idx++) {
