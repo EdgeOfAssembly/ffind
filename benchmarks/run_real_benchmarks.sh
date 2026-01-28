@@ -15,7 +15,7 @@ set -e
 #    For fair benchmarks with cache flushing: sudo ./benchmarks/run_real_benchmarks.sh
 
 CORPUS_DIR="/tmp/test-corpus"
-FFIND_DIR="/home/runner/work/ffind/ffind"
+FFIND_DIR="${FFIND_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
 # Check if we have sudo privileges (required for cache flushing)
 CAN_FLUSH_CACHE=false
@@ -23,9 +23,14 @@ if [ "$EUID" -eq 0 ] || sudo -n true 2>/dev/null; then
     CAN_FLUSH_CACHE=true
 fi
 
-# Function to flush filesystem cache
+# Function to flush filesystem cache (Linux only)
 flush_cache() {
     if [ "$CAN_FLUSH_CACHE" = true ]; then
+        # Check if we're on Linux (drop_caches only works on Linux)
+        if [ ! -f /proc/sys/vm/drop_caches ]; then
+            return 0  # Skip cache flushing on non-Linux systems
+        fi
+        
         sync
         if [ "$EUID" -eq 0 ]; then
             echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
@@ -39,6 +44,12 @@ flush_cache() {
 # Check if test corpus exists
 if [ ! -d "$CORPUS_DIR" ]; then
     echo "ERROR: Test corpus not found at $CORPUS_DIR"
+    exit 1
+fi
+
+# Check if required dependencies exist
+if ! command -v bc &> /dev/null; then
+    echo "ERROR: 'bc' is required but not installed. Please install it first."
     exit 1
 fi
 
@@ -148,8 +159,14 @@ echo ""
 
 # Warmup run (discarded)
 echo "Performing warmup run..."
+# Warm up common query types used in benchmarks: extension, type, path, size, content, regex
 ./ffind "*.c" > /dev/null 2>&1 || true
+./ffind "*.h" > /dev/null 2>&1 || true
 ./ffind -type f > /dev/null 2>&1 || true
+./ffind -path "*/include/*" > /dev/null 2>&1 || true
+./ffind -size +100k > /dev/null 2>&1 || true
+./ffind -c "static" > /dev/null 2>&1 || true
+./ffind -c "EXPORT_SYMBOL" -r > /dev/null 2>&1 || true
 echo "Warmup complete."
 echo ""
 
@@ -168,10 +185,20 @@ run_benchmark() {
         fi
         
         local START=$(date +%s.%N)
-        eval "$cmd" > /tmp/bench_output_${i}_$$.txt 2>&1 || true
+        # Use mktemp for secure temporary file creation
+        local tmpfile
+        tmpfile=$(mktemp -t bench_output_${i}_XXXXXX)
+        eval "$cmd" > "$tmpfile" 2>&1 || true
         local END=$(date +%s.%N)
-        local ELAPSED=$(echo "$END - $START" | bc)
-        TIMES+=($ELAPSED)
+        rm -f "$tmpfile"
+        
+        local ELAPSED=$(echo "$END - $START" | bc 2>/dev/null || echo "0")
+        
+        # Guard against negative elapsed times (e.g., due to system clock adjustments)
+        if [ "$(echo "$ELAPSED < 0" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
+            ELAPSED=0
+        fi
+        TIMES+=("$ELAPSED")
     done
     
     # Sort and get median, min, max
@@ -180,17 +207,17 @@ run_benchmark() {
     local MIN=${SORTED[0]}
     local MEDIAN=${SORTED[1]}
     local MAX=${SORTED[2]}
-    local VARIANCE=$(echo "$MAX - $MIN" | bc)
+    local RANGE=$(echo "$MAX - $MIN" | bc 2>/dev/null || echo "0")
     
-    # Check for high variance (>20% of median)
-    local VARIANCE_PCT=0
+    # Check for high range (>20% of median)
+    local RANGE_PCT=0
     if [ -n "$MEDIAN" ] && [ "$(echo "$MEDIAN > 0" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
-        VARIANCE_PCT=$(echo "scale=2; ($VARIANCE / $MEDIAN) * 100" | bc 2>/dev/null || echo "0")
+        RANGE_PCT=$(echo "scale=2; ($RANGE / $MEDIAN) * 100" | bc 2>/dev/null || echo "0")
     fi
     
-    local HIGH_VARIANCE=0
-    if [ -n "$VARIANCE_PCT" ] && [ "$(echo "$VARIANCE_PCT > 20" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
-        HIGH_VARIANCE=1
+    local HIGH_RANGE=0
+    if [ -n "$RANGE_PCT" ] && [ "$(echo "$RANGE_PCT > 20" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
+        HIGH_RANGE=1
     fi
     
     # Output to stderr so it doesn't interfere with return value
@@ -198,10 +225,10 @@ run_benchmark() {
     echo "    Run 2: ${TIMES[1]}s" >&2
     echo "    Run 3: ${TIMES[2]}s" >&2
     echo "    Median: ${MEDIAN}s" >&2
-    echo "    Min: ${MIN}s, Max: ${MAX}s, Variance: ${VARIANCE}s" >&2
+    echo "    Min: ${MIN}s, Max: ${MAX}s, Range: ${RANGE}s" >&2
     
-    if [ "$HIGH_VARIANCE" -eq 1 ]; then
-        echo "    ⚠️  High variance (${VARIANCE_PCT}%) - results may be unreliable" >&2
+    if [ "$HIGH_RANGE" -eq 1 ]; then
+        echo "    ⚠️  High range (${RANGE_PCT}%) - results may be unreliable" >&2
     fi
     
     # Return the median value (to stdout for capture)
@@ -239,7 +266,7 @@ calculate_speedup() {
     
     # Check if time2 is zero or very close to zero
     if [ "$(echo "$time2 > 0.0001" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
-        echo "scale=1; $time1 / $time2" | bc
+        echo "scale=1; $time1 / $time2" | bc 2>/dev/null || echo "0"
     else
         echo "N/A (time too small)"
     fi
@@ -279,7 +306,7 @@ echo ""
 echo "  ffind (warm - data in RAM):"
 FFIND_TIME=$(run_benchmark "./ffind -path 'include/*' -type f" "no")
 echo ""
-if [ "$(echo "$FIND_TIME > 0" | bc)" -eq 1 ]; then
+if [ "$(echo "$FIND_TIME > 0" | bc 2>/dev/null || echo "0")" -eq 1 ]; then
     SPEEDUP=$(calculate_speedup "$FIND_TIME" "$FFIND_TIME")
     echo "  Speedup: ${SPEEDUP}x faster"
 else
@@ -365,6 +392,7 @@ FFIND_TIME=$(run_benchmark "./ffind -type f" "no")
 SPEEDUP=$(calculate_speedup "$FIND_TIME" "$FFIND_TIME")
 echo ""
 echo "  Speedup: ${SPEEDUP}x faster"
+verify_results "find '$CORPUS_DIR' -type f" "./ffind -type f"
 echo ""
 
 # Cleanup
@@ -376,9 +404,13 @@ REMAINING_PID=$(ps aux | grep "[f]find-daemon" | awk '{print $2}' | head -1)
 if [ -n "$REMAINING_PID" ]; then
     kill -9 $REMAINING_PID 2>/dev/null || true
 fi
-rm -f /tmp/ffind-daemon.log
-rm -f /tmp/bench_output_*_$$.txt
-rm -f /tmp/ffind_bench_find.* /tmp/ffind_bench_ffind.*
+
+# Safely remove benchmark temporary files in /tmp
+# Note: mktemp files from verify_results are already cleaned up within the function
+# Only daemon log needs cleanup here (securely created temp files don't use wildcards)
+if [ -f /tmp/ffind-daemon.log ]; then
+    rm -f /tmp/ffind-daemon.log
+fi
 
 echo "========================================="
 echo "Benchmarking complete!"

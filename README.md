@@ -127,8 +127,8 @@ The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically s
 
 **Statistical Rigor:**
 - Each benchmark runs **3 times**
-- Reports **median** (reduces outlier impact), **min**, **max**, and **variance**
-- Warns if variance exceeds 20% (indicates unreliable results)
+- Reports **median** (reduces outlier impact), **min**, **max**, and **range** (max - min)
+- Warns if range exceeds 20% of median (indicates unreliable results)
 - Warmup run discarded to eliminate cold start effects
 
 **Fairness:**
