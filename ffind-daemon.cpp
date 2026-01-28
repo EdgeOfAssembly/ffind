@@ -1044,6 +1044,16 @@ void add_directory_recursive(const string& dir, size_t root_index) {
     try {
         for (auto& e : directory_iterator(dir)) {
             string p = e.path().string();
+            
+            // Skip symlinks to avoid infinite loops
+            if (e.is_symlink()) {
+                if (foreground) {
+                    cerr << COLOR_YELLOW << "[INFO]" << COLOR_RESET 
+                         << " Skipping symlink: " << p << "\n";
+                }
+                continue;
+            }
+            
             if (e.is_directory()) {
                 add_directory_recursive(p, root_index);
             } else {
@@ -1124,15 +1134,45 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
         }
         
         // Add watches for this root
+        if (foreground) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                 << " Setting up filesystem watches for " << roots[root_idx] << "...\n";
+        }
+        
+        int watch_count = 0;
         function<void(const string&)> rec_add = [&](const string& d) {
             add_watch(d);
+            watch_count++;
+            
+            // Show progress every 500 watches
+            if (foreground && watch_count % 500 == 0) {
+                cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                     << " Added " << watch_count << " watches...\n";
+            }
+            
             try {
                 for (auto& e : directory_iterator(d)) {
-                    if (e.is_directory()) rec_add(e.path().string());
+                    // Skip symlinks to avoid infinite loops
+                    if (e.is_symlink()) {
+                        if (foreground) {
+                            cerr << COLOR_YELLOW << "[INFO]" << COLOR_RESET 
+                                 << " Skipping symlink: " << e.path() << "\n";
+                        }
+                        continue;
+                    }
+                    
+                    if (e.is_directory()) {
+                        rec_add(e.path().string());
+                    }
                 }
             } catch (...) {}
         };
         rec_add(roots[root_idx]);
+        
+        if (foreground) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                 << " Completed: Added " << watch_count << " watches\n";
+        }
     }
     
     // Log indexing complete
