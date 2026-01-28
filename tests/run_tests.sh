@@ -94,7 +94,10 @@ run_test_exact_count() {
     # Run command and count lines
     local output
     output=$("${cmd[@]}" 2>&1) || true
-    local actual_count=$(echo "$output" | grep -c . || echo 0)
+    local actual_count=0
+    if [ -n "$output" ]; then
+        actual_count=$(echo "$output" | grep -c . || echo 0)
+    fi
     
     if [ "$actual_count" -eq "$expected_count" ]; then
         echo -e "${GREEN}✓${NC} PASS: $test_name (count: $actual_count)"
@@ -180,6 +183,25 @@ echo "ERROR: something failed" > "$TEMP_DIR/src/error.log"
 echo "This is a normal file" > "$TEMP_DIR/src/normal.txt"
 echo "#include <stdio.h>" > "$TEMP_DIR/include/header.h"
 echo "Documentation text TODO review" > "$TEMP_DIR/docs/guide.txt"
+
+# Files for glob pattern tests
+cat > "$TEMP_DIR/glob_test.txt" << 'EOF'
+TODO: implement feature
+TODO implement another feature
+DONE: completed task
+test1 is here
+test2 is here
+test3 is here
+function_call(arg)
+func_test(123)
+function_name()
+1234 starts with digit
+abcd starts with letter
+2: another digit line
+[test] brackets
+another error message
+this has error in it
+EOF
 
 # File for context line tests
 cat > "$TEMP_DIR/context.txt" << 'EOF'
@@ -305,6 +327,33 @@ echo ""
 echo "--- Case Insensitive Content Tests ---"
 run_test "Case insensitive content todo" "main.cpp" "$FFIND_CLIENT" -c "todo" -i
 run_test "Case insensitive regex error" "error.log" "$FFIND_CLIENT" -c "error" -r -i
+
+# Test 8: Content glob pattern matching
+echo ""
+echo "--- Content Glob Tests (Basic) ---"
+run_test "Glob pattern TODO*" "TODO: implement feature" "$FFIND_CLIENT" -g "TODO*"
+run_test "Glob pattern *error*" "another error message" "$FFIND_CLIENT" -g "*error*"
+run_test "Glob pattern test?*" "test1 is here" "$FFIND_CLIENT" -g "test?*"
+run_test "Glob pattern [0-9]*" "1234 starts with digit" "$FFIND_CLIENT" -g "[0-9]*"
+run_test "Glob pattern [a-z]*" "abcd starts with letter" "$FFIND_CLIENT" -g "[a-z]*"
+run_test "Glob pattern func_*(*)" "func_test(123)" "$FFIND_CLIENT" -g "func_*(*)"
+
+# Test 9: Content glob with case insensitive
+echo ""
+echo "--- Content Glob Tests (Case Insensitive) ---"
+run_test "Glob with -i TODO*" "TODO: implement feature" "$FFIND_CLIENT" -g "todo*" -i
+run_test "Glob with -i *ERROR*" "another error message" "$FFIND_CLIENT" -g "*ERROR*" -i
+
+# Test 10: Content glob with other filters
+echo ""
+echo "--- Content Glob with Other Filters ---"
+run_test "Glob with -name filter" "TODO" "$FFIND_CLIENT" -g "TODO*" -name "*.txt"
+run_test "Glob with -type filter" "TODO" "$FFIND_CLIENT" -g "TODO*" -type f
+
+# Test 11: Content glob no match
+echo ""
+echo "--- Content Glob No Match Tests ---"
+run_test_exact_count "Glob no match (empty)" 0 "$FFIND_CLIENT" -g "NOMATCHPATTERN*"
 
 # Test 7.5: Context lines
 echo ""
@@ -450,8 +499,22 @@ else
     FAILED_TESTS=$((FAILED_TESTS + 1))
 fi
 
+# Test context with glob
+output=$("$FFIND_CLIENT" -g "MATCH*" -A 1 --color=never context.txt 2>&1 | grep "context.txt")
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if echo "$output" | grep -q "context.txt:4:MATCH line 4" && \
+   echo "$output" | grep -q "context.txt:5-line 5"; then
+    echo -e "${GREEN}✓${NC} PASS: Context with -g glob"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Context with -g glob"
+    echo "  Got output:"
+    echo "$output" | sed 's/^/    /'
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
 # Test error: -A without -c
-run_test_error "Error: -A without -c" "Context lines (-A/-B/-C) need -c" "$FFIND_CLIENT" -A 2
+run_test_error "Error: -A without -c or -g" "Context lines (-A/-B/-C) need -c or -g" "$FFIND_CLIENT" -A 2
 
 # Test 8: Size filters
 echo ""
@@ -641,6 +704,15 @@ fi
 
 # Test -r without -c
 run_test_error "Error: -r without -c" "-r needs -c" "$FFIND_CLIENT" -r
+
+# Test -g with -c (mutually exclusive)
+run_test_error "Error: -g with -c" "Cannot use -g with -c" "$FFIND_CLIENT" -g "TODO*" -c "TODO"
+
+# Test -g with -r (mutually exclusive)
+run_test_error "Error: -g with -r" "Cannot use -g with -r" "$FFIND_CLIENT" -g "TODO*" -r
+
+# Test -g without pattern
+run_test_error "Error: -g without pattern" "Missing -g pattern" "$FFIND_CLIENT" -g
 
 # Test bad arguments
 run_test_error "Error: bad argument" "Bad arg" "$FFIND_CLIENT" --invalid-arg

@@ -80,6 +80,18 @@ ffind -c "TODO.*fix" -r
 # Regex content search with case insensitivity
 ffind -c "error" -r -i
 
+# Content glob (fnmatch patterns on lines)
+ffind -g "TODO*"
+
+# Content glob: lines containing "error" (case insensitive)
+ffind -g "*error*" -i
+
+# Content glob: function calls in C files
+ffind -g "func_*(*)" -name "*.c"
+
+# Content glob: lines starting with digit, with 2 lines of context
+ffind -g "[0-9]*" -A 2
+
 # Context lines: show 3 lines after each match (like grep -A)
 ffind -c "error" -A 3
 
@@ -143,9 +155,45 @@ ffind -c "TODO" --color=auto
 - `+N` - modified more than N days ago
 - `N` - modified exactly N days ago (rarely used)
 
+### Content search methods
+
+ffind provides three ways to search file contents, each suited for different use cases:
+
+#### Fixed string search (`-c`)
+Fast substring matching - searches for exact text within lines:
+```bash
+ffind -c "TODO"           # Find lines containing "TODO"
+ffind -c "error" -i       # Case-insensitive search
+```
+
+#### Regex search (`-c` + `-r`)
+Powerful pattern matching using ECMAScript regular expressions:
+```bash
+ffind -c "TODO.*fix" -r           # Match TODO followed by fix
+ffind -c "bug|error" -r -i        # Match bug OR error (case-insensitive)
+ffind -c "^[0-9]+" -r             # Lines starting with digits
+```
+
+#### Glob search (`-g`)
+Shell-style wildcard patterns for intuitive matching:
+```bash
+ffind -g "TODO*"                  # Lines starting with TODO
+ffind -g "*error*" -i             # Lines containing error (case-insensitive)
+ffind -g "func_*(*)"              # Function call patterns
+ffind -g "[0-9]*"                 # Lines starting with a digit
+```
+
+Glob patterns support:
+- `*` - matches any sequence of characters
+- `?` - matches exactly one character
+- `[abc]` - matches any character in the set
+- `[a-z]` - matches any character in the range
+
+**Note**: `-g` is mutually exclusive with `-c` and `-r`. Use `-c` for fixed string search, `-c` with `-r` for regex search, or `-g` for glob pattern search.
+
 ### Context lines
 
-Context lines work just like grep's `-A`, `-B`, and `-C` options, showing surrounding lines for better context when searching file contents. These flags require `-c` (content search).
+Context lines work just like grep's `-A`, `-B`, and `-C` options, showing surrounding lines for better context when searching file contents. These flags require `-c` or `-g` (content search).
 
 - `-A N` - Show N lines **after** each match
 - `-B N` - Show N lines **before** each match

@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
              << "  ffind -path \"src/*\" -type f\n"
              << "  ffind -size +1G -mtime -7\n"
              << "  ffind -c \"todo\" -r -i\n"
+             << "  ffind -g \"TODO*\" -i\n"
              << "  ffind \"*.cpp\" --color=always\n";
         return 1;
     }
@@ -30,6 +31,7 @@ int main(int argc, char** argv) {
     string name_pat = "*";
     string path_pat = "";
     string content_pat = "";
+    string content_glob = "";
     bool case_ins = false;
     bool is_regex = false;
     uint8_t type_filter = 0;
@@ -53,6 +55,9 @@ int main(int argc, char** argv) {
             if (arg == "-c") {
                 if (++i >= argc) { cerr << "Missing -c pattern\n"; return 1; }
                 content_pat = argv[i];
+            } else if (arg == "-g") {
+                if (++i >= argc) { cerr << "Missing -g pattern\n"; return 1; }
+                content_glob = argv[i];
             } else if (arg == "-name") {
                 if (++i >= argc) { cerr << "Missing -name glob\n"; return 1; }
                 name_pat = argv[i];
@@ -149,13 +154,23 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (!content_glob.empty() && !content_pat.empty()) {
+        cerr << "Cannot use -g with -c\n";
+        return 1;
+    }
+
+    if (!content_glob.empty() && is_regex) {
+        cerr << "Cannot use -g with -r\n";
+        return 1;
+    }
+
     if (is_regex && content_pat.empty()) {
         cerr << "-r needs -c\n";
         return 1;
     }
 
-    if ((before_ctx > 0 || after_ctx > 0) && content_pat.empty()) {
-        cerr << "Context lines (-A/-B/-C) need -c\n";
+    if ((before_ctx > 0 || after_ctx > 0) && content_pat.empty() && content_glob.empty()) {
+        cerr << "Context lines (-A/-B/-C) need -c or -g\n";
         return 1;
     }
 
@@ -196,13 +211,16 @@ int main(int argc, char** argv) {
     write(c, &net_plen, 4);
     write(c, path_pat.data(), path_pat.size());
 
-    uint32_t net_clen = htonl(content_pat.size());
+    // Send content_glob as content_pat if -g is used
+    string content_to_send = content_glob.empty() ? content_pat : content_glob;
+    uint32_t net_clen = htonl(content_to_send.size());
     write(c, &net_clen, 4);
-    write(c, content_pat.data(), content_pat.size());
+    write(c, content_to_send.data(), content_to_send.size());
 
     uint8_t flags = 0;
     if (case_ins) flags |= 1;
     if (is_regex) flags |= 2;
+    if (!content_glob.empty()) flags |= 4; // bit 2 (value 4) for content_glob
     write(c, &flags, 1);
 
     write(c, &type_filter, 1);
@@ -220,11 +238,11 @@ int main(int argc, char** argv) {
     write(c, &after_ctx, 1);
 
     // Read and colorize output incrementally
-    bool has_content = !content_pat.empty();
+    bool has_content = !content_pat.empty() || !content_glob.empty();
     
     // Prepare regex for content matching if needed
     unique_ptr<regex> re_matcher;
-    if (has_content && is_regex) {
+    if (!content_pat.empty() && is_regex) {
         regex_constants::syntax_option_type re_flags = regex_constants::ECMAScript;
         if (case_ins) re_flags |= regex_constants::icase;
         try {
@@ -306,6 +324,10 @@ int main(int argc, char** argv) {
                         match_len = match.length(0);
                         found_match = true;
                     }
+                } else if (!content_glob.empty()) {
+                    // For glob patterns, we don't highlight since fnmatch doesn't give position
+                    // Just print the content as-is
+                    found_match = false;
                 } else if (case_ins) {
                     // Case-insensitive substring search
                     string lower_content = content;
