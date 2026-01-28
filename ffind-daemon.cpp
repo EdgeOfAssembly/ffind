@@ -24,11 +24,12 @@ struct Entry {
     int64_t size = 0;
     time_t mtime = 0;
     bool is_dir = false;
+    size_t root_index = 0;  // Which root this entry belongs to
 };
 
 vector<Entry> entries;
 mutex mtx;
-string root_path;
+vector<string> root_paths;  // Multiple roots support
 string sock_path;
 string pid_file_path;
 char pid_file_path_buf[256] = {0};  // Fixed buffer for signal-safe cleanup
@@ -229,6 +230,16 @@ void sig_handler(int) {
     cleanup_pid_file();
 }
 
+// Helper function to find which root a path belongs to
+size_t find_root_index(const string& path) {
+    for (size_t i = 0; i < root_paths.size(); i++) {
+        if (path == root_paths[i] || path.starts_with(root_paths[i])) {
+            return i;
+        }
+    }
+    return 0; // Default to first root if not found
+}
+
 void daemonize() {
     pid_t pid = fork();
     if (pid < 0) exit(1);
@@ -240,7 +251,7 @@ void daemonize() {
     close(STDERR_FILENO);
 }
 
-void update_or_add(const string& full) {
+void update_or_add(const string& full, size_t root_index) {
     struct stat st {};
     if (lstat(full.c_str(), &st) != 0) return;
 
@@ -253,8 +264,15 @@ void update_or_add(const string& full) {
         it->size = sz;
         it->mtime = st.st_mtime;
         it->is_dir = is_dir;
+        it->root_index = root_index;
     } else {
-        entries.emplace_back(full, sz, st.st_mtime, is_dir);
+        Entry e;
+        e.path = full;
+        e.size = sz;
+        e.mtime = st.st_mtime;
+        e.is_dir = is_dir;
+        e.root_index = root_index;
+        entries.push_back(e);
     }
 }
 
@@ -332,9 +350,9 @@ void add_watch(const string& dir) {
     if (wd > 0) wd_to_dir[wd] = dir;
 }
 
-void add_directory_recursive(const string& dir) {
+void add_directory_recursive(const string& dir, size_t root_index) {
     // Add the directory itself
-    update_or_add(dir);
+    update_or_add(dir, root_index);
     add_watch(dir);
     
     // Recursively add all subdirectories and files
@@ -342,44 +360,57 @@ void add_directory_recursive(const string& dir) {
         for (auto& e : directory_iterator(dir)) {
             string p = e.path().string();
             if (e.is_directory()) {
-                add_directory_recursive(p);
+                add_directory_recursive(p, root_index);
             } else {
-                update_or_add(p);
+                update_or_add(p, root_index);
             }
         }
     } catch (...) {}
 }
 
-void initial_setup(const string& r) {
-    root_path = canonical(r).string();
-    if (root_path.back() != '/') root_path += '/';
-
+void initial_setup(const vector<string>& roots) {
+    // Initialize inotify first
     in_fd = inotify_init1(IN_NONBLOCK);
     assert(in_fd > 0);
-
-    {
-        lock_guard<mutex> lk(mtx);
-        for (auto& e : recursive_directory_iterator(root_path, directory_options::skip_permission_denied)) {
+    
+    // Process each root directory
+    for (size_t root_idx = 0; root_idx < roots.size(); root_idx++) {
+        string rp = canonical(roots[root_idx]).string();
+        if (rp.back() != '/') rp += '/';
+        root_paths.push_back(rp);
+        
+        // Index this root
+        {
+            lock_guard<mutex> lk(mtx);
+            for (auto& e : recursive_directory_iterator(rp, directory_options::skip_permission_denied)) {
+                try {
+                    string p = e.path().string();
+                    struct stat st {};
+                    if (lstat(p.c_str(), &st) == 0) {
+                        bool is_dir = S_ISDIR(st.st_mode);
+                        Entry entry;
+                        entry.path = p;
+                        entry.size = is_dir ? 0LL : st.st_size;
+                        entry.mtime = st.st_mtime;
+                        entry.is_dir = is_dir;
+                        entry.root_index = root_idx;
+                        entries.push_back(entry);
+                    }
+                } catch (...) {}
+            }
+        }
+        
+        // Add watches for this root
+        function<void(const string&)> rec_add = [&](const string& d) {
+            add_watch(d);
             try {
-                string p = e.path().string();
-                struct stat st {};
-                if (lstat(p.c_str(), &st) == 0) {
-                    bool is_dir = S_ISDIR(st.st_mode);
-                    entries.emplace_back(p, is_dir ? 0LL : st.st_size, st.st_mtime, is_dir);
+                for (auto& e : directory_iterator(d)) {
+                    if (e.is_directory()) rec_add(e.path().string());
                 }
             } catch (...) {}
-        }
+        };
+        rec_add(rp);
     }
-
-    function<void(const string&)> rec_add = [&](const string& d) {
-        add_watch(d);
-        try {
-            for (auto& e : directory_iterator(d)) {
-                if (e.is_directory()) rec_add(e.path().string());
-            }
-        } catch (...) {}
-    };
-    rec_add(root_path);
 }
 
 void process_events() {
@@ -445,7 +476,8 @@ void process_events() {
                 }
                 if (isd) {
                     if (ev->mask & IN_CREATE) {
-                        add_directory_recursive(full);
+                        size_t root_idx = find_root_index(full);
+                        add_directory_recursive(full, root_idx);
                         if (foreground) {
                             cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory created: "
                                  << COLOR_BOLD << full << COLOR_RESET << " (watch added)\n";
@@ -481,7 +513,8 @@ void process_events() {
                             // no need to re-add a watch for the new path here.
                         } else {
                             // Moved into tree from outside
-                            add_directory_recursive(full);
+                            size_t root_idx = find_root_index(full);
+                            add_directory_recursive(full, root_idx);
                             if (foreground) {
                                 cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Directory created: "
                                      << COLOR_BOLD << full << COLOR_RESET << " (moved in, watch added)\n";
@@ -496,7 +529,10 @@ void process_events() {
                         }
                     }
                 } else {
-                    if (ev->mask & (IN_CREATE | IN_MOVED_TO | IN_MODIFY | IN_CLOSE_WRITE)) update_or_add(full);
+                    if (ev->mask & (IN_CREATE | IN_MOVED_TO | IN_MODIFY | IN_CLOSE_WRITE)) {
+                        size_t root_idx = find_root_index(full);
+                        update_or_add(full, root_idx);
+                    }
                     if (ev->mask & (IN_DELETE | IN_MOVED_FROM)) remove_path(full);
                 }
             }
@@ -594,7 +630,13 @@ void handle_client(int fd) {
             if (!match) continue;
         }
 
-        string rel = e.path.substr(root_path.size());
+        // Calculate relative path from entry's own root
+        string rel;
+        if (e.root_index < root_paths.size()) {
+            rel = e.path.substr(root_paths[e.root_index].size());
+        } else {
+            rel = e.path; // Fallback if root_index is invalid
+        }
 
         size_t pos = e.path.rfind('/');
         string_view base = (pos == string::npos) ? string_view(e.path) : string_view(e.path.data() + pos + 1);
@@ -731,28 +773,100 @@ void handle_client(int fd) {
     close(fd);
 }
 
+// Helper functions for root path validation
+bool check_overlap_and_warn(const vector<string>& roots) {
+    bool has_overlap = false;
+    for (size_t i = 0; i < roots.size(); i++) {
+        for (size_t j = i + 1; j < roots.size(); j++) {
+            if (roots[i].starts_with(roots[j]) || roots[j].starts_with(roots[i])) {
+                cerr << COLOR_YELLOW << "[WARNING] Overlapping roots: " 
+                     << roots[i] << " and " << roots[j] << COLOR_RESET << "\n";
+                has_overlap = true;
+            }
+        }
+    }
+    return has_overlap;
+}
+
+vector<string> deduplicate_paths(const vector<string>& paths) {
+    unordered_set<string> seen;
+    vector<string> result;
+    
+    for (const auto& p : paths) {
+        if (seen.find(p) == seen.end()) {
+            seen.insert(p);
+            result.push_back(p);
+        } else {
+            cerr << COLOR_YELLOW << "[WARNING] Duplicate path ignored: " << p << COLOR_RESET << "\n";
+        }
+    }
+    
+    return result;
+}
+
 int main(int argc, char** argv) {
-    if (argc < 2 || argc > 3) {
-        cerr << "Usage: ffind-daemon [--foreground] /path/to/root\n";
+    if (argc < 2) {
+        cerr << "Usage: ffind-daemon [--foreground] /path/to/root [path2 path3 ...]\n";
         return 1;
     }
 
     bool fg = false;
-    string root;
-    if (argc == 3) {
-        if (string(argv[1]) != "--foreground") {
-            cerr << "Unknown option\n";
+    int first_path_idx = 1;
+    
+    // Check for --foreground option
+    if (string(argv[1]) == "--foreground") {
+        fg = true;
+        first_path_idx = 2;
+        if (argc < 3) {
+            cerr << "Usage: ffind-daemon [--foreground] /path/to/root [path2 path3 ...]\n";
             return 1;
         }
-        fg = true;
-        root = argv[2];
-    } else {
-        root = argv[1];
     }
     
     // Set global foreground flag
     foreground = fg;
-
+    
+    // Collect all root paths
+    vector<string> raw_roots;
+    for (int i = first_path_idx; i < argc; i++) {
+        raw_roots.push_back(argv[i]);
+    }
+    
+    // Validate and canonicalize paths
+    vector<string> canonical_roots;
+    for (const auto& root : raw_roots) {
+        // Check if path exists
+        if (!exists(root)) {
+            cerr << COLOR_RED << "ERROR: Path does not exist: " << root << COLOR_RESET << "\n";
+            return 1;
+        }
+        
+        // Check if it's a directory
+        if (!is_directory(root)) {
+            cerr << COLOR_RED << "ERROR: Path is not a directory: " << root << COLOR_RESET << "\n";
+            return 1;
+        }
+        
+        // Canonicalize the path
+        try {
+            string canon = canonical(root).string();
+            if (canon.back() != '/') canon += '/';
+            canonical_roots.push_back(canon);
+        } catch (const exception& e) {
+            cerr << COLOR_RED << "ERROR: Cannot canonicalize path " << root 
+                 << ": " << e.what() << COLOR_RESET << "\n";
+            return 1;
+        }
+    }
+    
+    // Deduplicate paths
+    canonical_roots = deduplicate_paths(canonical_roots);
+    
+    // Check for overlaps and warn
+    if (foreground) {
+        check_overlap_and_warn(canonical_roots);
+    }
+    
     // Determine PID file path before daemonizing
     pid_file_path = get_pid_file_path();
     
@@ -778,8 +892,21 @@ int main(int argc, char** argv) {
     signal(SIGTERM, sig_handler);
 
     sock_path = "/run/user/" + to_string(getuid()) + "/ffind.sock";
+    
+    // Print info about roots being monitored
+    if (foreground) {
+        if (canonical_roots.size() == 1) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Monitoring 1 root directory:\n";
+        } else {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Monitoring " 
+                 << canonical_roots.size() << " root directories:\n";
+        }
+        for (const auto& rp : canonical_roots) {
+            cerr << "  - " << rp << "\n";
+        }
+    }
 
-    initial_setup(root);
+    initial_setup(canonical_roots);
 
     int srv = socket(AF_UNIX, SOCK_STREAM, 0);
     sockaddr_un addr{};
