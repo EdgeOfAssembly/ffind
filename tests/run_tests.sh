@@ -48,6 +48,12 @@ cleanup() {
         rm -f "$SOCK_PATH"
     fi
     
+    # Clean up PID file
+    PID_FILE="/run/user/$(id -u)/ffind-daemon.pid"
+    if [ -f "$PID_FILE" ]; then
+        rm -f "$PID_FILE"
+    fi
+    
     # Remove temp directory
     if [ -d "$TEMP_DIR" ]; then
         rm -rf "$TEMP_DIR"
@@ -716,6 +722,101 @@ run_test_error "Error: -g without pattern" "Missing -g pattern" "$FFIND_CLIENT" 
 
 # Test bad arguments
 run_test_error "Error: bad argument" "Bad arg" "$FFIND_CLIENT" --invalid-arg
+
+# PID file tests
+echo ""
+echo "--- PID File Tests ---"
+
+# First, stop the current daemon and clean up
+if [ -n "$DAEMON_PID" ] && ps -p "$DAEMON_PID" > /dev/null 2>/dev/null; then
+    kill "$DAEMON_PID" 2>/dev/null || true
+    sleep 2
+fi
+
+PID_FILE="/run/user/$(id -u)/ffind-daemon.pid"
+rm -f "$PID_FILE"
+
+# Test 1: PID file creation
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+"$FFIND_DAEMON" --foreground "$TEMP_DIR" > /dev/null 2>&1 &
+DAEMON_PID=$!
+sleep 2
+if [ -f "$PID_FILE" ]; then
+    PID_IN_FILE=$(cat "$PID_FILE")
+    if ps -p "$PID_IN_FILE" > /dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC} PASS: PID file created with correct PID"
+        PASSED_TESTS=$((PASSED_TESTS + 1))
+    else
+        echo -e "${RED}✗${NC} FAIL: PID file contains invalid PID"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo -e "${RED}✗${NC} FAIL: PID file not created"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 2: Duplicate daemon prevention
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+OUTPUT=$("$FFIND_DAEMON" --foreground "$TEMP_DIR" 2>&1 || true)
+if echo "$OUTPUT" | grep -q "already running"; then
+    echo -e "${GREEN}✓${NC} PASS: Duplicate daemon prevented"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Duplicate daemon not prevented"
+    echo "  Got output: $OUTPUT"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 3: Stale PID file handling
+# Stop the daemon first
+if [ -n "$DAEMON_PID" ] && ps -p "$DAEMON_PID" > /dev/null 2>&1; then
+    kill "$DAEMON_PID" 2>/dev/null || true
+    sleep 2
+fi
+
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+# Create a stale PID file
+echo "99999" > "$PID_FILE"
+# Start daemon in background and check if it handles the stale PID
+"$FFIND_DAEMON" --foreground "$TEMP_DIR" > /dev/null 2>&1 &
+DAEMON_PID=$!
+sleep 2
+# Check if daemon started successfully (which means it handled the stale PID)
+if [ -f "$PID_FILE" ] && ps -p "$DAEMON_PID" > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} PASS: Stale PID file handled and daemon started"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Daemon failed to start after stale PID"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Test 4: PID file cleanup on exit
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if [ -f "$PID_FILE" ]; then
+    PID_TO_KILL=$(cat "$PID_FILE")
+    if [ -n "$PID_TO_KILL" ] && ps -p "$PID_TO_KILL" > /dev/null 2>&1; then
+        kill -TERM "$PID_TO_KILL" 2>/dev/null || true
+        sleep 2
+        if [ ! -f "$PID_FILE" ]; then
+            echo -e "${GREEN}✓${NC} PASS: PID file cleaned up on exit"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo -e "${RED}✗${NC} FAIL: PID file not cleaned up"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo -e "${RED}✗${NC} FAIL: Daemon not running for cleanup test"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo -e "${RED}✗${NC} FAIL: PID file not found for cleanup test"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
+
+# Restart daemon for remaining tests (if any)
+"$FFIND_DAEMON" --foreground "$TEMP_DIR" > /dev/null 2>&1 &
+DAEMON_PID=$!
+sleep 2
 
 # Print summary
 echo ""
