@@ -156,7 +156,7 @@ All benchmarks were run **3 times each**, with the **median time reported**. Ind
 ### Key Findings
 
 #### ✅ Major Improvements with RE2
-1. **Content search 'static':** Improved from 2x slower to within 6% of grep (16x relative improvement)
+1. **Content search 'static':** Improved from 2x slower to within 6% of grep (performance gap nearly eliminated)
 2. **Simple regex 'TODO.*fix':** **1.27x faster than grep** (was 10x slower)
 3. **Regex '^#include':** **1.37x faster than grep**
 4. **Regex 'fixme|todo' (case-insensitive):** **2.16x faster than grep**

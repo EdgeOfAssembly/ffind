@@ -9,10 +9,19 @@ set -e
 #    cp -r /usr/src/linux-headers-* /tmp/test-corpus
 # 2. Build ffind: make clean && make
 # 3. Run this script: ./benchmarks/run_comprehensive_benchmarks.sh
+#
+# Dependencies: bc (basic calculator)
 
 CORPUS_DIR="/tmp/test-corpus"
 FFIND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT_FILE="/tmp/benchmark_results_comprehensive.txt"
+
+# Check if bc is installed
+if ! command -v bc &> /dev/null; then
+    echo "ERROR: 'bc' (basic calculator) is required but not installed"
+    echo "Please install it: sudo apt-get install bc"
+    exit 1
+fi
 
 # Check if test corpus exists
 if [ ! -d "$CORPUS_DIR" ]; then
@@ -50,11 +59,13 @@ else
     DISK_TYPE="Unknown"
 fi
 [ -z "$DISK_TYPE" ] && DISK_TYPE="Unknown"
+# Detect filesystem type
+FS_TYPE=$(df -T "$CORPUS_DIR" 2>/dev/null | tail -1 | awk '{print $2}' || echo "Unknown")
 OS_VERSION=$(lsb_release -d 2>/dev/null | cut -f2 || echo "Unknown")
 KERNEL_VERSION=$(uname -r)
 echo "CPU: $CPU_MODEL ($CPU_CORES cores allocated)" | tee -a "$OUTPUT_FILE"
 echo "RAM: $RAM_TOTAL" | tee -a "$OUTPUT_FILE"
-echo "Disk: $DISK_TYPE (ext4 filesystem)" | tee -a "$OUTPUT_FILE"
+echo "Disk: $DISK_TYPE ($FS_TYPE filesystem)" | tee -a "$OUTPUT_FILE"
 echo "OS: $OS_VERSION" | tee -a "$OUTPUT_FILE"
 echo "Kernel: $KERNEL_VERSION" | tee -a "$OUTPUT_FILE"
 echo "GNU find: $(find --version | head -1 | cut -d' ' -f4)" | tee -a "$OUTPUT_FILE"
@@ -108,6 +119,22 @@ if [ -n "$EXISTING_PID" ]; then
 fi
 rm -f /run/user/$(id -u)/ffind.sock 2>/dev/null || true
 sleep 1
+
+# Set up trap to ensure daemon cleanup on script exit
+cleanup() {
+    if [ -n "$DAEMON_PID" ]; then
+        echo "Cleaning up daemon (PID: $DAEMON_PID)..." >&2
+        kill $DAEMON_PID 2>/dev/null || true
+        sleep 1
+        # Kill any remaining ffind-daemon processes
+        REMAINING_PID=$(ps aux | grep "[f]find-daemon" | awk '{print $2}' | head -1)
+        if [ -n "$REMAINING_PID" ]; then
+            kill -9 $REMAINING_PID 2>/dev/null || true
+        fi
+        rm -f /tmp/ffind-daemon.log
+    fi
+}
+trap cleanup INT TERM EXIT
 
 # Start ffind-daemon and wait for indexing
 echo "Starting ffind-daemon and indexing corpus..." | tee -a "$OUTPUT_FILE"

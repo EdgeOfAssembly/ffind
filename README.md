@@ -120,10 +120,10 @@ Comprehensive benchmarks after RE2 optimization, performed on Linux kernel heade
 
 ### Combined Searches
 
-| Operation | Command | ffind | Speedup |
-|-----------|---------|-------|---------|
-| Search "static" in *.c files | grep --include | **0.004s** | **1.83x faster** |
-| Search "error" in files >50KB | find + grep | **0.010s** | **10.38x faster** |
+| Operation | Command | Baseline time | ffind | Speedup |
+|-----------|---------|---------------|-------|---------|
+| Search "static" in *.c files | grep --include | 0.008s | **0.004s** | **1.83x faster** |
+| Search "error" in files >50KB | find + grep | 0.100s | **0.010s** | **10.38x faster** |
 
 **System Specifications:**
 - CPU: AMD EPYC 7763 64-Core Processor (4 cores allocated)
