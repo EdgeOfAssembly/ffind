@@ -1938,8 +1938,9 @@ int main(int argc, char** argv) {
     int fd = srv_fd.exchange(-1);
     if (fd >= 0) {  // Only close if not already closed by signal handler
         close(fd);
-        unlink(sock_path.c_str());
     }
+    // Always unlink socket file (whether closed by signal handler or not)
+    unlink(sock_path.c_str());
     close(in_fd);
     
     // Graceful shutdown with database flush
