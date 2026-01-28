@@ -25,6 +25,7 @@ const char* VERSION = "1.0";
 
 // ANSI color codes for stderr output
 const char* COLOR_RED = "\033[1;31m";
+const char* COLOR_GREEN = "\033[1;32m";
 const char* COLOR_YELLOW = "\033[1;33m";
 const char* COLOR_CYAN = "\033[36m";
 const char* COLOR_BOLD = "\033[1m";
@@ -1716,17 +1717,69 @@ int main(int argc, char** argv) {
     
     // Reconcile DB with filesystem if database is enabled
     if (db_enabled) {
+        if (foreground) {
+            cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                 << " Reconciling database with filesystem...\n";
+        }
+        
         reconcile_db_with_filesystem();
+        
+        if (foreground) {
+            cerr << COLOR_GREEN << "[INFO]" << COLOR_RESET 
+                 << " Database reconciliation complete\n";
+        }
+    }
+
+    if (foreground) {
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+             << " Creating Unix socket at: " << sock_path << "\n";
     }
 
     int srv = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (srv < 0) {
+        cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+             << " Failed to create socket: " << strerror(errno) << "\n";
+        return 1;
+    }
+
     sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, sock_path.c_str(), sizeof(addr.sun_path)-1);
     addr.sun_path[sizeof(addr.sun_path)-1] = '\0';
+    
+    // Remove old socket if exists
     unlink(sock_path.c_str());
-    bind(srv, (sockaddr*)&addr, sizeof(addr));
-    listen(srv, 16);
+    
+    if (bind(srv, (sockaddr*)&addr, sizeof(addr)) < 0) {
+        cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+             << " Failed to bind socket to " << sock_path << ": " 
+             << strerror(errno) << "\n";
+        
+        // Check if directory exists
+        string dir = "/run/user/" + to_string(getuid());
+        struct stat st;
+        if (stat(dir.c_str(), &st) != 0) {
+            cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+                 << " Directory " << dir << " does not exist\n";
+            cerr << "         Run: mkdir -p " << dir << "\n";
+        }
+        
+        close(srv);
+        return 1;
+    }
+    
+    if (listen(srv, 16) < 0) {
+        cerr << COLOR_RED << "[ERROR]" << COLOR_RESET 
+             << " Failed to listen on socket: " << strerror(errno) << "\n";
+        close(srv);
+        unlink(sock_path.c_str());
+        return 1;
+    }
+    
+    if (foreground) {
+        cerr << COLOR_GREEN << "[INFO]" << COLOR_RESET 
+             << " Daemon ready. Listening on: " << sock_path << "\n";
+    }
 
     thread events_th(process_events);
     thread accept_th([&]{
