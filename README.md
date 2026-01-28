@@ -84,6 +84,62 @@ Fast daemon-based file finder with real-time inotify indexing.
 **Legend**: ◑ = partial/limited support  
 **Note**: `find` has limited regex support (`-regex` for path matching). `find` and `ag`/`ripgrep` need to traverse the filesystem on every search. `locate` uses a pre-built index but doesn't update in real-time. `ffind` combines the best of both: real-time updates with instant search.
 
+## Performance Benchmarks
+
+Real-world benchmarks performed on Linux kernel headers (16,548 files, 3,805 directories, 130MB):
+
+| Operation | find | grep -r | ffind | Speedup vs find/grep |
+|-----------|------|---------|-------|---------------------|
+| Find *.c files | 0.067s | - | **0.004s** | **15.9x faster** |
+| Find *.h files | 0.068s | - | **0.018s** | **3.8x faster** |
+| Find files >100KB | 0.090s | - | **0.003s** | **28.4x faster** |
+| List all files | 0.063s | - | **0.025s** | **2.5x faster** |
+| Search "static" | - | 0.169s | 0.356s | 0.5x (slower*) |
+| Regex search | - | 0.197s | 1.980s | 0.1x (slower*) |
+
+**System Specifications:**
+- CPU: AMD EPYC 7763 64-Core Processor (4 cores allocated)
+- RAM: 16GB
+- Disk: SSD (ext4 filesystem)
+- OS: Ubuntu 24.04 LTS (Linux 6.11.0-1018-azure)
+- GNU find: 4.9.0
+- GNU grep: 3.11
+
+**\*Content Search Performance Note:** The current implementation shows that ffind's content search is slower than grep for this test corpus. This is an area for future optimization. However, ffind excels at file name and metadata searches, which is its primary use case. For content-heavy searches, consider using `grep`/`ripgrep` directly, or using ffind to first filter by file names/paths and then pipe to grep.
+
+### Indexing Performance
+
+Initial indexing of test corpus (16,548 files, 3,805 directories, 130MB):
+- Time: ~3-5 seconds
+- Memory: ~50-80 MB resident
+- Rate: ~3,000-5,500 files/second
+
+*Note: ffind times exclude initial indexing. Subsequent searches use the in-memory index for instant results. The daemon maintains the index in real-time as files change.*
+
+### Benchmark Methodology
+
+All benchmarks performed using:
+- Test corpus: Linux kernel headers (linux-azure-6.11-headers-6.11.0-1018)
+- Each benchmark run 3 times, median time reported
+- Commands redirected to `/dev/null` to measure pure execution time
+- File system caches not explicitly cleared (real-world usage scenario)
+
+**Benchmark script available:** `benchmarks/run_real_benchmarks.sh`
+
+To reproduce these benchmarks:
+```bash
+# Build ffind
+make
+
+# Run benchmarks (requires test corpus in /tmp/test-corpus)
+./benchmarks/run_real_benchmarks.sh
+```
+
+**Comparison tools:**
+- GNU find (version 4.9.0)
+- GNU grep (version 3.11)
+- ag/ripgrep: Not available in test environment
+
 ## Quick Start
 
 ```bash
