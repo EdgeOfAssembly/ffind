@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
                 if (is_regex && re_matcher) {
                     re2::StringPiece input(content);
                     re2::StringPiece match;
-                    if (re_matcher->Match(input, 0, input.size(), RE2::UNANCHORED, &match, 1)) {
+                    if (re_matcher->Match(input, 0, input.size(), re2::RE2::UNANCHORED, &match, 1)) {
                         match_start = match.data() - content.data();
                         match_len = match.size();
                         found_match = true;
