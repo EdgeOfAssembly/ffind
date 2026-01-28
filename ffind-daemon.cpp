@@ -1010,6 +1010,11 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
         throw runtime_error("inotify_init1 failed");
     }
     
+    // Track indexing statistics
+    auto start_time = chrono::steady_clock::now();
+    size_t total_files = 0;
+    size_t total_dirs = 0;
+    
     // Process each root directory (already canonicalized with trailing slashes)
     for (size_t root_idx = 0; root_idx < roots.size(); root_idx++) {
         root_paths.push_back(roots[root_idx]);
@@ -1017,6 +1022,12 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
         // Index this root only if not skipping
         size_t initial_count = 0;
         if (!skip_indexing) {
+            // Log start of indexing for this root
+            if (foreground) {
+                cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                     << " Indexing " << roots[root_idx] << " ...\n";
+            }
+            
             {
                 lock_guard<mutex> lk(mtx);
                 for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
@@ -1033,6 +1044,19 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
                             entry.root_index = root_idx;
                             entries.push_back(entry);
                             initial_count++;
+                            
+                            // Track file vs directory counts
+                            if (is_dir) {
+                                total_dirs++;
+                            } else {
+                                total_files++;
+                            }
+                            
+                            // Log progress every 10000 entries (in foreground mode)
+                            if (foreground && initial_count % 10000 == 0) {
+                                cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+                                     << " Indexed " << initial_count << " entries...\n";
+                            }
                         }
                     } catch (...) {}
                 }
@@ -1055,6 +1079,18 @@ void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
             } catch (...) {}
         };
         rec_add(roots[root_idx]);
+    }
+    
+    // Log indexing complete
+    if (!skip_indexing && foreground) {
+        auto end_time = chrono::steady_clock::now();
+        auto elapsed = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
+        double elapsed_sec = elapsed.count() / 1000.0;
+        
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+             << " Indexing complete: " << total_files << " files, " 
+             << total_dirs << " directories (" << fixed << setprecision(1) 
+             << elapsed_sec << "s)\n";
     }
 }
 
