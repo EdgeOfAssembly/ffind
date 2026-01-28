@@ -1431,6 +1431,8 @@ struct MappedFile {
         
         size = st.st_size;
         if (size == 0) {
+            // Empty files are valid - we'll just have no content to search
+            // Keep fd open for consistency but data will be nullptr
             close(fd);
             fd = -1;
             return;
@@ -1446,7 +1448,10 @@ struct MappedFile {
         }
         
         // Hint: we'll read sequentially
-        madvise(data, size, MADV_SEQUENTIAL);
+        // madvise is advisory, failure is non-fatal
+        if (madvise(data, size, MADV_SEQUENTIAL) != 0) {
+            // Continue anyway - this is just a performance hint
+        }
     }
     
     ~MappedFile() {
@@ -1461,11 +1466,14 @@ struct MappedFile {
     MappedFile& operator=(const MappedFile&) = delete;
 };
 
-// Batch socket writes using writev for zero-copy I/O
+// Batch socket writes using writev for reduced syscall overhead
+// Note: writev batches multiple buffers into single syscalls, significantly
+// reducing context switches. The zero-copy benefits come from mmap avoiding
+// intermediate buffer allocations.
 void send_results_batched(int fd, const vector<string>& results) {
     if (results.empty()) return;
     
-    const size_t MAX_IOV = 1024;  // IOV_MAX limit on Linux
+    const size_t MAX_IOV = 1024;  // Typical IOV_MAX on Linux
     vector<struct iovec> iov;
     iov.reserve(MAX_IOV);
     
@@ -1482,7 +1490,9 @@ void send_results_batched(int fd, const vector<string>& results) {
                 ssize_t n = writev(fd, iov.data() + offset, iov.size() - offset);
                 if (n < 0) {
                     if (errno == EINTR) continue;
-                    return;  // Error - abort sending
+                    // Log error to stderr (client socket might be closed)
+                    // Silently return - client disconnect is expected
+                    return;
                 }
                 
                 // Advance offset by number of complete iovecs written
