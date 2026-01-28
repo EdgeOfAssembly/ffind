@@ -251,7 +251,7 @@ void load_entries_from_db() {
 void reconcile_db_with_filesystem() {
     if (!db) return;
     
-    // Load all entries from DB into a map for quick lookup
+    // Build map of current entries from DB
     unordered_map<string, Entry> db_entries;
     {
         lock_guard<mutex> lk(mtx);
@@ -260,11 +260,12 @@ void reconcile_db_with_filesystem() {
         }
     }
     
-    // Track statistics
+    // Track statistics and changes
     int added = 0, removed = 0, updated = 0;
-    
-    // Walk filesystem and compare
+    vector<Entry> new_entries;
     unordered_set<string> found_paths;
+    
+    // Walk filesystem and build new entry list
     for (size_t root_idx = 0; root_idx < root_paths.size(); root_idx++) {
         try {
             for (auto& e : recursive_directory_iterator(root_paths[root_idx], 
@@ -275,37 +276,63 @@ void reconcile_db_with_filesystem() {
                 struct stat st {};
                 if (lstat(p.c_str(), &st) != 0) continue;
                 
+                bool is_dir = S_ISDIR(st.st_mode);
+                int64_t sz = is_dir ? 0LL : st.st_size;
+                time_t mtime = st.st_mtime;
+                
                 auto it = db_entries.find(p);
                 if (it == db_entries.end()) {
                     // File not in DB - add it
+                    Entry entry;
+                    entry.path = p;
+                    entry.size = sz;
+                    entry.mtime = mtime;
+                    entry.is_dir = is_dir;
+                    entry.root_index = root_idx;
+                    new_entries.push_back(entry);
                     added++;
-                    pending_changes++;
                 } else {
                     // File exists - check if modified
-                    if (it->second.size != (S_ISDIR(st.st_mode) ? 0LL : st.st_size) ||
-                        it->second.mtime != st.st_mtime) {
+                    if (it->second.size != sz || it->second.mtime != mtime) {
+                        Entry entry = it->second;
+                        entry.size = sz;
+                        entry.mtime = mtime;
+                        entry.is_dir = is_dir;
+                        new_entries.push_back(entry);
                         updated++;
-                        pending_changes++;
+                    } else {
+                        // No change
+                        new_entries.push_back(it->second);
                     }
                 }
             }
         } catch (...) {}
     }
     
-    // Find entries in DB but not on filesystem
+    // Count entries that were removed (in DB but not on filesystem)
     for (const auto& [path, entry] : db_entries) {
         if (found_paths.find(path) == found_paths.end()) {
             removed++;
-            pending_changes++;
         }
+    }
+    
+    // Replace entries with reconciled list
+    {
+        lock_guard<mutex> lk(mtx);
+        entries = move(new_entries);
+    }
+    
+    // Mark changes for flushing
+    int total_changes = added + removed + updated;
+    if (total_changes > 0) {
+        pending_changes += total_changes;
+        db_dirty = true;
     }
     
     if (foreground && (added > 0 || removed > 0 || updated > 0)) {
         cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET << " Reconciliation: " 
              << added << " added, " << removed << " removed, " << updated << " updated\n";
     }
-    
-    db_dirty = true;
 }
 
 void flush_changes_to_db() {
@@ -524,7 +551,8 @@ void cleanup_pid_file() {
 
 void sig_handler(int) { 
     running = 0; 
-    cleanup_pid_file();
+    // Note: cleanup_pid_file() removed from signal handler because unlink() is not async-signal-safe
+    // PID file cleanup will happen in main() after signal handler sets running = 0
 }
 
 // Helper function to find which root a path belongs to
@@ -693,7 +721,7 @@ void add_directory_recursive(const string& dir, size_t root_index) {
     } catch (...) {}
 }
 
-void initial_setup(const vector<string>& roots) {
+void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
     // Initialize inotify first
     in_fd = inotify_init1(IN_NONBLOCK);
     assert(in_fd > 0);
@@ -702,33 +730,35 @@ void initial_setup(const vector<string>& roots) {
     for (size_t root_idx = 0; root_idx < roots.size(); root_idx++) {
         root_paths.push_back(roots[root_idx]);
         
-        // Index this root
+        // Index this root only if not skipping
         size_t initial_count = 0;
-        {
-            lock_guard<mutex> lk(mtx);
-            for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
-                try {
-                    string p = e.path().string();
-                    struct stat st {};
-                    if (lstat(p.c_str(), &st) == 0) {
-                        bool is_dir = S_ISDIR(st.st_mode);
-                        Entry entry;
-                        entry.path = p;
-                        entry.size = is_dir ? 0LL : st.st_size;
-                        entry.mtime = st.st_mtime;
-                        entry.is_dir = is_dir;
-                        entry.root_index = root_idx;
-                        entries.push_back(entry);
-                        initial_count++;
-                    }
-                } catch (...) {}
+        if (!skip_indexing) {
+            {
+                lock_guard<mutex> lk(mtx);
+                for (auto& e : recursive_directory_iterator(roots[root_idx], directory_options::skip_permission_denied)) {
+                    try {
+                        string p = e.path().string();
+                        struct stat st {};
+                        if (lstat(p.c_str(), &st) == 0) {
+                            bool is_dir = S_ISDIR(st.st_mode);
+                            Entry entry;
+                            entry.path = p;
+                            entry.size = is_dir ? 0LL : st.st_size;
+                            entry.mtime = st.st_mtime;
+                            entry.is_dir = is_dir;
+                            entry.root_index = root_idx;
+                            entries.push_back(entry);
+                            initial_count++;
+                        }
+                    } catch (...) {}
+                }
             }
-        }
-        
-        // Mark entries as dirty if database is enabled
-        if (db_enabled && initial_count > 0) {
-            pending_changes += initial_count;
-            db_dirty = true;
+            
+            // Mark entries as dirty if database is enabled
+            if (db_enabled && initial_count > 0) {
+                pending_changes += initial_count;
+                db_dirty = true;
+            }
         }
         
         // Add watches for this root
@@ -1251,6 +1281,7 @@ int main(int argc, char** argv) {
     }
     
     // Initialize database if --db was provided
+    vector<string> db_roots;  // Track if entries were loaded from DB
     if (!db_arg.empty()) {
         db_enabled = true;
         db_path = db_arg;
@@ -1266,7 +1297,7 @@ int main(int argc, char** argv) {
         }
         
         // Check root paths match
-        vector<string> db_roots = load_roots_from_db();
+        db_roots = load_roots_from_db();
         if (!db_roots.empty() && db_roots != canonical_roots) {
             if (foreground) {
                 cerr << COLOR_YELLOW << "[WARNING]" << COLOR_RESET 
@@ -1312,7 +1343,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    initial_setup(canonical_roots);
+    // Initialize inotify and watches
+    // Skip filesystem indexing if entries were loaded from database
+    bool skip_indexing = (db_enabled && !db_roots.empty());
+    initial_setup(canonical_roots, skip_indexing);
     
     // Reconcile DB with filesystem if database is enabled
     if (db_enabled) {
