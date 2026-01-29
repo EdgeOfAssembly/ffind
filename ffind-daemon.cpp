@@ -191,8 +191,18 @@ struct Entry {
     size_t root_index = 0;  // Which root this entry belongs to
 };
 
+// Path component index for fast path-filtered queries
+struct PathIndex {
+    // Map directory path → list of entries in that directory
+    unordered_map<string, vector<Entry*>> dir_to_entries;
+    
+    // All unique directory paths (for debugging/stats)
+    unordered_set<string> all_dirs;
+};
+
 vector<Entry> entries;
 mutex mtx;
+PathIndex path_index;
 vector<string> root_paths;  // Multiple roots support
 string sock_path;
 string pid_file_path;
@@ -1012,11 +1022,14 @@ void update_or_add(const string& full, size_t root_index) {
     lock_guard<mutex> lk(mtx);
     auto it = find_if(entries.begin(), entries.end(), [&](const Entry& e){ return e.path == full; });
     if (it != entries.end()) {
+        // Entry already exists - update it in place
         it->size = sz;
         it->mtime = st.st_mtime;
         it->is_dir = is_dir;
         it->root_index = root_index;
+        // Path index doesn't need updating since the entry location didn't change
     } else {
+        // New entry - add to entries and rebuild path index
         Entry e;
         e.path = full;
         e.size = sz;
@@ -1024,6 +1037,20 @@ void update_or_add(const string& full, size_t root_index) {
         e.is_dir = is_dir;
         e.root_index = root_index;
         entries.push_back(e);
+        
+        // Rebuild path index to avoid dangling pointers from vector reallocation
+        // When entries vector reallocates, all stored pointers become invalid
+        path_index.dir_to_entries.clear();
+        path_index.all_dirs.clear();
+        
+        for (auto& entry : entries) {
+            size_t last_slash = entry.path.rfind('/');
+            if (last_slash != string::npos) {
+                string dir = entry.path.substr(0, last_slash);
+                path_index.dir_to_entries[dir].push_back(&entry);
+                path_index.all_dirs.insert(dir);
+            }
+        }
     }
     
     // Mark DB as dirty if persistence is enabled
@@ -1050,6 +1077,22 @@ void remove_path(const string& full, bool recursive = false) {
         pending_changes += removed;
         db_dirty = true;
     }
+    
+    // Rebuild path index since entry pointers may have been invalidated
+    // This is simpler than trying to maintain pointers during vector modifications
+    if (removed > 0) {
+        path_index.dir_to_entries.clear();
+        path_index.all_dirs.clear();
+        
+        for (auto& e : entries) {
+            size_t last_slash = e.path.rfind('/');
+            if (last_slash != string::npos) {
+                string dir = e.path.substr(0, last_slash);
+                path_index.dir_to_entries[dir].push_back(&e);
+                path_index.all_dirs.insert(dir);
+            }
+        }
+    }
 }
 
 void handle_directory_rename(const string& old_path, const string& new_path) {
@@ -1068,6 +1111,21 @@ void handle_directory_rename(const string& old_path, const string& new_path) {
     for (auto& [wd, dir] : wd_to_dir) {
         if (dir == old_path || dir.starts_with(old_path + "/")) {
             dir = new_path + dir.substr(old_path.size());
+        }
+    }
+    
+    // Rebuild path index since paths have changed
+    if (updated > 0) {
+        path_index.dir_to_entries.clear();
+        path_index.all_dirs.clear();
+        
+        for (auto& e : entries) {
+            size_t last_slash = e.path.rfind('/');
+            if (last_slash != string::npos) {
+                string dir = e.path.substr(0, last_slash);
+                path_index.dir_to_entries[dir].push_back(&e);
+                path_index.all_dirs.insert(dir);
+            }
         }
     }
     
@@ -1141,6 +1199,36 @@ void add_directory_recursive(const string& dir, size_t root_index) {
             }
         }
     } catch (...) {}
+}
+
+void build_path_index() {
+    // This function must be called in a single-threaded context (e.g., during daemon startup)
+    // or with mtx already held by the caller. It does NOT acquire the mutex itself.
+    // DO NOT call this from multiple threads without external synchronization.
+    
+    // Clear existing index
+    path_index.dir_to_entries.clear();
+    path_index.all_dirs.clear();
+    
+    for (auto& e : entries) {
+        // Extract directory path from entry path
+        size_t last_slash = e.path.rfind('/');
+        if (last_slash == string::npos) continue;  // Skip entries without directory
+        
+        string dir = e.path.substr(0, last_slash);
+        
+        // Add entry to directory index
+        path_index.dir_to_entries[dir].push_back(&e);
+        
+        // Track unique directories
+        path_index.all_dirs.insert(dir);
+    }
+    
+    if (foreground) {
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+             << " Path index built: " << path_index.all_dirs.size() 
+             << " directories indexed\n";
+    }
 }
 
 void initial_setup(const vector<string>& roots, bool skip_indexing = false) {
@@ -1573,7 +1661,84 @@ void handle_client(int fd) {
 
     int fnm_flags = case_ins ? FNM_CASEFOLD : 0;
 
+    // Analyze path pattern to see if we can use path index
+    bool can_use_index = false;
+    string index_prefix;
+    
+    if (!path_pat.empty()) {
+        // Check if pattern has specific prefix before wildcard
+        size_t first_wildcard = path_pat.find_first_of("*?[");
+        if (first_wildcard != string::npos && first_wildcard > 0) {
+            // Extract the prefix before the wildcard
+            index_prefix = path_pat.substr(0, first_wildcard);
+            
+            // Remove trailing partial component (e.g., "include/st*" -> "include/")
+            // Keep only complete directory paths
+            size_t last_slash = index_prefix.rfind('/');
+            if (last_slash != string::npos) {
+                index_prefix = index_prefix.substr(0, last_slash);
+                can_use_index = true;
+            }
+        } else if (first_wildcard == string::npos && !path_pat.empty()) {
+            // No wildcards - exact path match
+            // Still use index to limit search
+            size_t last_slash = path_pat.rfind('/');
+            if (last_slash != string::npos) {
+                index_prefix = path_pat.substr(0, last_slash);
+                can_use_index = true;
+            }
+        }
+    }
+
     lock_guard<mutex> lk(mtx);
+
+    // Collect candidate entries using path index if possible
+    vector<const Entry*> candidates_from_index;
+    
+    if (can_use_index && !index_prefix.empty()) {
+        // Use path index to narrow down candidates
+        // Scan only directories that match our prefix
+        for (const auto& [dir, dir_entries] : path_index.dir_to_entries) {
+            // Check if this directory path matches our prefix
+            // We need to check each entry's relative path against root_paths
+            bool dir_matches = false;
+            
+            // Try each root to see if this dir matches the pattern when made relative
+            for (size_t root_idx = 0; root_idx < root_paths.size(); root_idx++) {
+                if (dir.starts_with(root_paths[root_idx])) {
+                    string rel_dir = dir.substr(root_paths[root_idx].size());
+                    
+                    // Normalize: remove leading slash if present
+                    if (!rel_dir.empty() && rel_dir.front() == '/') {
+                        rel_dir.erase(0, 1);
+                    }
+                    
+                    // Check if relative directory matches our index prefix with proper boundaries
+                    // Match if: exact match, or rel_dir is under index_prefix, or index_prefix is under rel_dir
+                    if (rel_dir == index_prefix ||
+                        rel_dir.starts_with(index_prefix + "/") ||
+                        index_prefix.starts_with(rel_dir + "/") ||
+                        (rel_dir.empty() && !index_prefix.empty())) {
+                        dir_matches = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (dir_matches) {
+                for (auto* e : dir_entries) {
+                    candidates_from_index.push_back(e);
+                }
+            }
+        }
+        
+        if (foreground && candidates_from_index.size() < entries.size()) {
+            cerr << COLOR_CYAN << "[DEBUG]" << COLOR_RESET 
+                 << " Path index used: scanned " << candidates_from_index.size() 
+                 << " entries (vs " << entries.size() << " total) for prefix '" 
+                 << index_prefix << "'\n";
+        }
+    }
 
     vector<const Entry*> candidates;
     vector<string> path_results;  // Collect results for batched sending
@@ -1581,51 +1746,67 @@ void handle_client(int fd) {
         path_results.reserve(1000);  // Pre-allocate for efficiency
     }
     
-    for (const auto& e : entries) {
+    // Lambda to filter and process a single entry (reduces code duplication)
+    auto process_entry = [&](const Entry* e) {
         bool type_match = (type_filter == 0) ||
-                          (type_filter == 1 && !e.is_dir) ||
-                          (type_filter == 2 && e.is_dir);
-        if (!type_match) continue;
-        if (e.is_dir && has_content) continue;
+                          (type_filter == 1 && !e->is_dir) ||
+                          (type_filter == 2 && e->is_dir);
+        if (!type_match) return;
+        if (e->is_dir && has_content) return;
 
         if (size_op) {
             bool match = false;
-            if (size_op == 1) match = e.size < size_val;
-            else if (size_op == 2) match = e.size == size_val;
-            else if (size_op == 3) match = e.size > size_val;
-            if (!match) continue;
+            if (size_op == 1) match = e->size < size_val;
+            else if (size_op == 2) match = e->size == size_val;
+            else if (size_op == 3) match = e->size > size_val;
+            if (!match) return;
         }
 
         if (mtime_op) {
             time_t now = time(nullptr);
-            int32_t days_old = (now - e.mtime) / 86400;
+            int32_t days_old = (now - e->mtime) / 86400;
             bool match = false;
             if (mtime_op == 1) match = days_old < mtime_days;
             else if (mtime_op == 2) match = days_old == mtime_days;
             else if (mtime_op == 3) match = days_old > mtime_days;
-            if (!match) continue;
+            if (!match) return;
         }
 
         // Calculate relative path from entry's own root
         string rel;
-        if (e.root_index < root_paths.size()) {
-            rel = e.path.substr(root_paths[e.root_index].size());
+        if (e->root_index < root_paths.size()) {
+            rel = e->path.substr(root_paths[e->root_index].size());
         } else {
-            rel = e.path; // Fallback if root_index is invalid
+            rel = e->path; // Fallback if root_index is invalid
         }
 
-        size_t pos = e.path.rfind('/');
-        string_view base = (pos == string::npos) ? string_view(e.path) : string_view(e.path.data() + pos + 1);
+        size_t pos = e->path.rfind('/');
+        string_view base = (pos == string::npos) ? string_view(e->path) : string_view(e->path.data() + pos + 1);
 
         bool name_match = fnmatch(name_pat.c_str(), base.data(), fnm_flags) == 0;
         bool path_match = path_pat.empty() || fnmatch(path_pat.c_str(), rel.c_str(), fnm_flags) == 0;
 
         if (name_match && path_match) {
             if (!has_content) {
-                path_results.push_back(e.path + "\n");
+                path_results.push_back(e->path + "\n");
             } else {
-                candidates.push_back(&e);
+                candidates.push_back(e);
             }
+        }
+    };
+    
+    // Determine which entry set to iterate over
+    bool use_index_results = can_use_index && !index_prefix.empty() && !candidates_from_index.empty();
+    
+    if (use_index_results) {
+        // Iterate over indexed candidates only
+        for (const auto* e : candidates_from_index) {
+            process_entry(e);
+        }
+    } else {
+        // Fall back to full scan of all entries
+        for (const auto& e : entries) {
+            process_entry(&e);
         }
     }
     
@@ -2042,6 +2223,10 @@ int main(int argc, char** argv) {
                  << " Database reconciliation complete\n";
         }
     }
+    
+    // Build path index for fast path-filtered queries
+    // Must be called after all entries are loaded/indexed
+    build_path_index();
 
     if (foreground) {
         cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
