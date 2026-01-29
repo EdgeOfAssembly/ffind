@@ -182,9 +182,51 @@ rm -f /run/user/$(id -u)/ffind.sock
 ```
 
 ### Inconsistent results
-- Clear filesystem caches between runs: `sync && echo 3 | sudo tee /proc/sys/vm/drop_caches`
+- Clear filesystem caches between runs using the cache-flush utility (see below)
 - Ensure no other heavy I/O processes are running
 - Run benchmarks multiple times and average results
+
+## Cache-Flush Utility
+
+The `cache-flush` C binary provides a secure, minimal utility for clearing Linux filesystem caches:
+
+**Build and Setup (one-time):**
+```bash
+# Build the binary
+make cache-flush
+
+# Grant CAP_SYS_ADMIN capability (requires sudo once)
+make install-caps
+
+# Verify it works
+./cache-flush
+```
+
+**Features:**
+- **Security best practice**: Only 47 lines of C code with elevated privileges
+- **No sudo needed**: Uses Linux capabilities (CAP_SYS_ADMIN) instead of running as root
+- **Portable**: Simple C with no external dependencies
+- **Easy to audit**: Small, focused code that's easy to security review
+
+**Manual usage:**
+```bash
+# Flush caches before a benchmark
+./cache-flush
+time find /usr -name "*.so"
+
+# Compare warm vs cold cache
+time find /usr -name "*.so"  # Warm cache
+./cache-flush
+time find /usr -name "*.so"  # Cold cache
+```
+
+**Technical details:**
+- Calls `sync()` to flush dirty pages to disk
+- Writes "3" to `/proc/sys/vm/drop_caches` to clear page cache, dentries, and inodes
+- Requires `CAP_SYS_ADMIN` capability or root privileges
+- Returns 0 on success, 1 on error
+
+The benchmark script (`run_real_benchmarks.sh`) automatically uses this utility when available and properly configured.
 
 ## Contributing
 

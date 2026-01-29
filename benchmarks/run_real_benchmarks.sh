@@ -11,27 +11,32 @@ set -e
 #    cd /tmp && wget http://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar.xz
 #    tar -xf gcc-9.5.0.tar.xz && mv gcc-9.5.0 test-corpus
 # 2. Build ffind: make
-# 3. Run this script: ./benchmarks/run_real_benchmarks.sh
-#    For fair benchmarks with cache flushing: sudo ./benchmarks/run_real_benchmarks.sh
+# 3. Build cache-flush utility: cd benchmarks && make cache-flush && make install-caps
+# 4. Run this script: ./benchmarks/run_real_benchmarks.sh
+#
+# Security Best Practice:
+#   - NEVER run this script or ffind-daemon as root
+#   - Only the tiny cache-flush binary needs CAP_SYS_ADMIN capability
+#   - Use: cd benchmarks && make cache-flush && make install-caps
 
 CORPUS_DIR="/tmp/test-corpus"
-FFIND_DIR="/home/runner/work/ffind/ffind"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FFIND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CACHE_FLUSH_BIN="$SCRIPT_DIR/cache-flush"
 
-# Check if we have sudo privileges (required for cache flushing)
+# Check if we have the cache-flush binary with proper capabilities
 CAN_FLUSH_CACHE=false
-if [ "$EUID" -eq 0 ] || sudo -n true 2>/dev/null; then
-    CAN_FLUSH_CACHE=true
+if [ -x "$CACHE_FLUSH_BIN" ]; then
+    # Try running it to see if it works (will fail gracefully if no caps)
+    if "$CACHE_FLUSH_BIN" >/dev/null 2>&1; then
+        CAN_FLUSH_CACHE=true
+    fi
 fi
 
-# Function to flush filesystem cache
+# Function to flush filesystem cache using the C binary (no sudo needed!)
 flush_cache() {
     if [ "$CAN_FLUSH_CACHE" = true ]; then
-        sync
-        if [ "$EUID" -eq 0 ]; then
-            echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
-        else
-            sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null || true
-        fi
+        "$CACHE_FLUSH_BIN" 2>/dev/null || true
         sleep 0.5
     fi
 }
