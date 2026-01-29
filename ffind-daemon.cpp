@@ -229,10 +229,11 @@ public:
                     try {
                         task();
                     } catch (const exception& e) {
-                        // Silently catch exceptions to prevent worker thread termination
-                        // The exception will be re-thrown when future.get() is called
+                        // Silently catch exceptions here to prevent worker thread termination.
+                        // Exceptions from the user task are already captured by std::packaged_task
+                        // and will be re-thrown when future.get() is called.
                     } catch (...) {
-                        // Catch any other exceptions
+                        // Catch any other exceptions to keep the worker thread alive.
                     }
                 }
             });
@@ -241,9 +242,9 @@ public:
     
     template<class F, class... Args>
     auto enqueue(F&& f, Args&&... args) 
-        -> future<typename result_of<F(Args...)>::type> {
+        -> future<invoke_result_t<F, Args...>> {
         
-        using return_type = typename result_of<F(Args...)>::type;
+        using return_type = invoke_result_t<F, Args...>;
         
         auto task = make_shared<packaged_task<return_type()>>(
             bind(forward<F>(f), forward<Args>(args)...)
@@ -1903,6 +1904,14 @@ void handle_client(int fd) {
     }
 
     if (has_content) {
+        // Ensure thread pool is initialized
+        if (!content_search_pool) {
+            string err = "Internal error: thread pool not initialized\n";
+            write(fd, err.c_str(), err.size());
+            close(fd);
+            return;
+        }
+        
         // Prepare for parallel content search
         vector<future<vector<string>>> futures;
         futures.reserve(candidates.size());
