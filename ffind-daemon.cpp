@@ -200,6 +200,70 @@ struct PathIndex {
     unordered_set<string> all_dirs;
 };
 
+// Thread pool for parallel content search
+class ThreadPool {
+private:
+    vector<thread> workers;
+    queue<function<void()>> tasks;
+    mutex queue_mutex;
+    condition_variable condition;
+    bool stop;
+    
+public:
+    ThreadPool(size_t threads) : stop(false) {
+        for (size_t i = 0; i < threads; ++i) {
+            workers.emplace_back([this] {
+                while (true) {
+                    function<void()> task;
+                    {
+                        unique_lock<mutex> lock(this->queue_mutex);
+                        this->condition.wait(lock, [this] { 
+                            return this->stop || !this->tasks.empty(); 
+                        });
+                        
+                        if (this->stop && this->tasks.empty()) return;
+                        
+                        task = move(this->tasks.front());
+                        this->tasks.pop();
+                    }
+                    task();
+                }
+            });
+        }
+    }
+    
+    template<class F, class... Args>
+    auto enqueue(F&& f, Args&&... args) 
+        -> future<typename result_of<F(Args...)>::type> {
+        
+        using return_type = typename result_of<F(Args...)>::type;
+        
+        auto task = make_shared<packaged_task<return_type()>>(
+            bind(forward<F>(f), forward<Args>(args)...)
+        );
+        
+        future<return_type> res = task->get_future();
+        {
+            unique_lock<mutex> lock(queue_mutex);
+            if (stop) throw runtime_error("enqueue on stopped ThreadPool");
+            tasks.emplace([task]() { (*task)(); });
+        }
+        condition.notify_one();
+        return res;
+    }
+    
+    ~ThreadPool() {
+        {
+            unique_lock<mutex> lock(queue_mutex);
+            stop = true;
+        }
+        condition.notify_all();
+        for (thread& worker : workers) {
+            worker.join();
+        }
+    }
+};
+
 vector<Entry> entries;
 mutex mtx;
 PathIndex path_index;
@@ -229,6 +293,22 @@ chrono::steady_clock::time_point last_flush_time;
 const int FLUSH_INTERVAL_SEC = 30;
 const int FLUSH_THRESHOLD = 100;
 mutex db_mtx;
+
+// Thread pool for parallel content search
+unique_ptr<ThreadPool> content_search_pool;
+
+// Initialize thread pool for content search
+void init_thread_pool() {
+    size_t num_threads = thread::hardware_concurrency();
+    if (num_threads == 0) num_threads = 4;  // Default fallback
+    
+    content_search_pool = make_unique<ThreadPool>(num_threads);
+    
+    if (foreground) {
+        cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
+             << " Thread pool initialized with " << num_threads << " threads\n";
+    }
+}
 
 // Check if DNOTIFY is available on this system
 bool check_dnotify_available() {
@@ -1816,33 +1896,77 @@ void handle_client(int fd) {
     }
 
     if (has_content) {
+        // Prepare for parallel content search
+        vector<future<vector<string>>> futures;
+        futures.reserve(candidates.size());
+        
+        // Submit file processing tasks to thread pool
         for (const auto* ep : candidates) {
-            const string& path = ep->path;
-            MappedFile file(path);
-            if (!file.is_valid()) continue;
+            // Capture necessary variables by value for thread safety
+            string path = ep->path;  // Copy path string
             
-            // Check for binary file (first 1KB)
-            size_t check = min<size_t>(1024, file.size);
-            bool binary = false;
-            for (size_t i = 0; i < check; i++) {
-                if (file.data[i] == '\0') {
-                    binary = true;
-                    break;
-                }
-            }
-            if (binary) continue;
-            
-            if (before_ctx == 0 && after_ctx == 0) {
-                // No context - scan file using mmap
-                const char* line_start = file.data;
-                size_t lineno = 1;
-                vector<string> matches;
+            futures.push_back(content_search_pool->enqueue([path, content_pat, case_ins, 
+                                                            is_regex, content_glob, 
+                                                            before_ctx, after_ctx, &re]() {
+                vector<string> file_results;
                 
-                for (size_t i = 0; i < file.size; i++) {
-                    if (file.data[i] == '\n') {
-                        size_t line_len = file.data + i - line_start;
-                        
-                        // Match pattern in-place (no string allocation unless needed)
+                // Each thread gets its own file mapping
+                MappedFile file(path);
+                if (!file.is_valid()) return file_results;
+                
+                // Check for binary file (first 1KB)
+                size_t check = min<size_t>(1024, file.size);
+                bool binary = false;
+                for (size_t i = 0; i < check; i++) {
+                    if (file.data[i] == '\0') {
+                        binary = true;
+                        break;
+                    }
+                }
+                if (binary) return file_results;
+                
+                if (before_ctx == 0 && after_ctx == 0) {
+                    // No context - scan file using mmap
+                    const char* line_start = file.data;
+                    size_t lineno = 1;
+                    
+                    for (size_t i = 0; i < file.size; i++) {
+                        if (file.data[i] == '\n') {
+                            size_t line_len = file.data + i - line_start;
+                            
+                            // Match pattern in-place (no string allocation unless needed)
+                            bool match = false;
+                            if (content_glob) {
+                                string line_str(line_start, line_len);
+                                int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
+                                match = fnmatch(content_pat.c_str(), line_str.c_str(), fnm_flags_content) == 0;
+                            } else if (is_regex) {
+                                re2::StringPiece line_piece(line_start, line_len);
+                                match = RE2::PartialMatch(line_piece, *re);
+                            } else if (case_ins) {
+                                // Use strcasestr with temporary null-terminated string
+                                string line_str(line_start, line_len);
+                                match = strcasestr(line_str.c_str(), content_pat.c_str()) != nullptr;
+                            } else {
+                                // Simple substring search using memmem
+                                match = (memmem(line_start, line_len, 
+                                              content_pat.c_str(), content_pat.size()) != nullptr);
+                            }
+                            
+                            if (match) {
+                                string out = path + ":" + to_string(lineno) + ":" +
+                                           string(line_start, line_len) + "\n";
+                                file_results.push_back(out);
+                            }
+                            
+                            line_start = file.data + i + 1;
+                            lineno++;
+                        }
+                    }
+                    
+                    // Handle last line if file doesn't end with newline
+                    if (line_start < file.data + file.size) {
+                        size_t line_len = file.data + file.size - line_start;
                         bool match = false;
                         if (content_glob) {
                             string line_str(line_start, line_len);
@@ -1852,130 +1976,110 @@ void handle_client(int fd) {
                             re2::StringPiece line_piece(line_start, line_len);
                             match = RE2::PartialMatch(line_piece, *re);
                         } else if (case_ins) {
-                            // Use strcasestr with temporary null-terminated string
                             string line_str(line_start, line_len);
                             match = strcasestr(line_str.c_str(), content_pat.c_str()) != nullptr;
                         } else {
-                            // Simple substring search using memmem
-                            match = (memmem(line_start, line_len, 
+                            match = (memmem(line_start, line_len,
                                           content_pat.c_str(), content_pat.size()) != nullptr);
                         }
-                        
                         if (match) {
                             string out = path + ":" + to_string(lineno) + ":" +
                                        string(line_start, line_len) + "\n";
-                            matches.push_back(out);
+                            file_results.push_back(out);
                         }
-                        
-                        line_start = file.data + i + 1;
-                        lineno++;
                     }
-                }
-                
-                // Handle last line if file doesn't end with newline
-                if (line_start < file.data + file.size) {
-                    size_t line_len = file.data + file.size - line_start;
-                    bool match = false;
-                    if (content_glob) {
-                        string line_str(line_start, line_len);
-                        int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
-                        match = fnmatch(content_pat.c_str(), line_str.c_str(), fnm_flags_content) == 0;
-                    } else if (is_regex) {
-                        re2::StringPiece line_piece(line_start, line_len);
-                        match = RE2::PartialMatch(line_piece, *re);
-                    } else if (case_ins) {
-                        string line_str(line_start, line_len);
-                        match = strcasestr(line_str.c_str(), content_pat.c_str()) != nullptr;
-                    } else {
-                        match = (memmem(line_start, line_len,
-                                      content_pat.c_str(), content_pat.size()) != nullptr);
+                } else {
+                    // With context lines - parse all lines first
+                    vector<pair<size_t, string>> all_lines; // lineno, content
+                    const char* line_start = file.data;
+                    size_t lineno = 1;
+                    
+                    for (size_t i = 0; i < file.size; i++) {
+                        if (file.data[i] == '\n') {
+                            size_t line_len = file.data + i - line_start;
+                            all_lines.emplace_back(lineno, string(line_start, line_len));
+                            line_start = file.data + i + 1;
+                            lineno++;
+                        }
                     }
-                    if (match) {
-                        string out = path + ":" + to_string(lineno) + ":" +
-                                   string(line_start, line_len) + "\n";
-                        matches.push_back(out);
-                    }
-                }
-                
-                // Batch send all matches for this file
-                send_results_batched(fd, matches);
-            } else {
-                // With context lines - parse all lines first
-                vector<pair<size_t, string>> all_lines; // lineno, content
-                const char* line_start = file.data;
-                size_t lineno = 1;
-                
-                for (size_t i = 0; i < file.size; i++) {
-                    if (file.data[i] == '\n') {
-                        size_t line_len = file.data + i - line_start;
+                    
+                    // Handle last line if file doesn't end with newline
+                    if (line_start < file.data + file.size) {
+                        size_t line_len = file.data + file.size - line_start;
                         all_lines.emplace_back(lineno, string(line_start, line_len));
-                        line_start = file.data + i + 1;
-                        lineno++;
                     }
-                }
-                
-                // Handle last line if file doesn't end with newline
-                if (line_start < file.data + file.size) {
-                    size_t line_len = file.data + file.size - line_start;
-                    all_lines.emplace_back(lineno, string(line_start, line_len));
-                }
-                
-                // Find all matching line indices and store in a set for O(1) lookup
-                vector<size_t> match_indices;
-                unordered_set<size_t> match_set;
-                for (size_t i = 0; i < all_lines.size(); ++i) {
-                    bool match = false;
-                    const string& content = all_lines[i].second;
-                    if (content_glob) {
-                        int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
-                        match = fnmatch(content_pat.c_str(), content.c_str(), fnm_flags_content) == 0;
-                    } else if (is_regex) {
-                        match = RE2::PartialMatch(content, *re);
-                    } else if (case_ins) {
-                        match = strcasestr(content.c_str(), content_pat.c_str()) != nullptr;
-                    } else {
-                        match = content.find(content_pat) != string::npos;
-                    }
-                    if (match) {
-                        match_indices.push_back(i);
-                        match_set.insert(i);
-                    }
-                }
-                
-                // Process matches with context, merging overlapping ranges
-                if (!match_indices.empty()) {
-                    vector<pair<size_t, size_t>> ranges; // start, end (inclusive)
                     
-                    for (size_t match_idx : match_indices) {
-                        size_t start = (match_idx >= before_ctx) ? match_idx - before_ctx : 0;
-                        size_t end = min(match_idx + after_ctx, all_lines.size() - 1);
-                        
-                        // Merge with previous range if overlapping
-                        if (!ranges.empty() && start <= ranges.back().second + 1) {
-                            ranges.back().second = max(ranges.back().second, end);
+                    // Find all matching line indices and store in a set for O(1) lookup
+                    vector<size_t> match_indices;
+                    unordered_set<size_t> match_set;
+                    for (size_t i = 0; i < all_lines.size(); ++i) {
+                        bool match = false;
+                        const string& content = all_lines[i].second;
+                        if (content_glob) {
+                            int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
+                            match = fnmatch(content_pat.c_str(), content.c_str(), fnm_flags_content) == 0;
+                        } else if (is_regex) {
+                            match = RE2::PartialMatch(content, *re);
+                        } else if (case_ins) {
+                            match = strcasestr(content.c_str(), content_pat.c_str()) != nullptr;
                         } else {
-                            ranges.emplace_back(start, end);
+                            match = content.find(content_pat) != string::npos;
+                        }
+                        if (match) {
+                            match_indices.push_back(i);
+                            match_set.insert(i);
                         }
                     }
                     
-                    // Collect all context output for batched sending
-                    vector<string> context_results;
-                    for (size_t r = 0; r < ranges.size(); ++r) {
-                        if (r > 0) {
-                            context_results.push_back("--\n");
+                    // Process matches with context, merging overlapping ranges
+                    if (!match_indices.empty()) {
+                        vector<pair<size_t, size_t>> ranges; // start, end (inclusive)
+                        
+                        for (size_t match_idx : match_indices) {
+                            size_t start = (match_idx >= before_ctx) ? match_idx - before_ctx : 0;
+                            size_t end = min(match_idx + after_ctx, all_lines.size() - 1);
+                            
+                            // Merge with previous range if overlapping
+                            if (!ranges.empty() && start <= ranges.back().second + 1) {
+                                ranges.back().second = max(ranges.back().second, end);
+                            } else {
+                                ranges.emplace_back(start, end);
+                            }
                         }
                         
-                        for (size_t i = ranges[r].first; i <= ranges[r].second; ++i) {
-                            bool is_match = match_set.count(i) > 0;
-                            char separator = is_match ? ':' : '-';
+                        // Collect all context output
+                        for (size_t r = 0; r < ranges.size(); ++r) {
+                            if (r > 0) {
+                                file_results.push_back("--\n");
+                            }
                             
-                            string out = path + ":" + to_string(all_lines[i].first) + separator + all_lines[i].second + "\n";
-                            context_results.push_back(out);
+                            for (size_t i = ranges[r].first; i <= ranges[r].second; ++i) {
+                                bool is_match = match_set.count(i) > 0;
+                                char separator = is_match ? ':' : '-';
+                                
+                                string out = path + ":" + to_string(all_lines[i].first) + separator + all_lines[i].second + "\n";
+                                file_results.push_back(out);
+                            }
                         }
                     }
-                    
-                    // Batch send all context results for this file
-                    send_results_batched(fd, context_results);
+                }
+                
+                return file_results;
+            }));
+        }
+        
+        // Collect results from all worker threads
+        for (auto& future : futures) {
+            try {
+                vector<string> file_results = future.get();
+                if (!file_results.empty()) {
+                    send_results_batched(fd, file_results);
+                }
+            } catch (const exception& e) {
+                // Log error but continue with other files
+                if (foreground) {
+                    cerr << COLOR_YELLOW << "[WARNING]" << COLOR_RESET 
+                         << " Worker thread error: " << e.what() << "\n";
                 }
             }
         }
@@ -2227,6 +2331,9 @@ int main(int argc, char** argv) {
     // Build path index for fast path-filtered queries
     // Must be called after all entries are loaded/indexed
     build_path_index();
+
+    // Initialize thread pool for parallel content search
+    init_thread_pool();
 
     if (foreground) {
         cerr << COLOR_CYAN << "[INFO]" << COLOR_RESET 
