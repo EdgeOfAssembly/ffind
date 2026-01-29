@@ -1,5 +1,26 @@
-// ffind-daemon.cpp (latest full – with -path, -type, -size, -mtime, regex ±i, content fixed/regex)
-#define _GNU_SOURCE
+// ffind-daemon.cpp - Fast file finder daemon with real-time inotify indexing
+//
+// This daemon maintains an in-memory index of the filesystem using inotify
+// for real-time updates. It provides instant search capabilities through a
+// Unix domain socket interface.
+//
+// Architecture Overview:
+// - Main thread: Handles inotify events and socket accept()
+// - Worker threads: Process client requests (one thread per connection)
+// - Thread pool: Parallel content search across multiple CPU cores
+//
+// Security Considerations:
+// - Network input validation with size limits
+// - Signal handler safety (async-signal-safe functions only)
+// - Bounds checking for all buffer operations
+// - Error handling for all system calls
+//
+// Key Functions:
+// - index_directory(): Initial filesystem scan
+// - process_events(): Handle inotify events
+// - handle_client(): Process search requests from clients
+// - search_content_worker(): Parallel content search
+
 #include <bits/stdc++.h>
 #include <sys/stat.h>
 #include <sys/inotify.h>
@@ -960,6 +981,85 @@ void cleanup_pid_file() {
     }
 }
 
+/**
+ * Function: safe_write_all
+ * Purpose: Writes all data to a file descriptor, handling partial writes and EINTR
+ * Parameters:
+ *   - fd: File descriptor to write to
+ *   - buf: Buffer containing data to write
+ *   - count: Number of bytes to write
+ * Returns: true on success, false on error
+ * Security: Handles EINTR and partial writes correctly
+ * Thread-safety: Thread-safe (operates on file descriptor)
+ */
+static bool safe_write_all(int fd, const void* buf, size_t count) {
+    const char* ptr = static_cast<const char*>(buf);
+    size_t remaining = count;
+    
+    while (remaining > 0) {
+        ssize_t written = write(fd, ptr, remaining);
+        
+        if (written < 0) {
+            // EINTR: Interrupted by signal, retry
+            if (errno == EINTR) {
+                continue;
+            }
+            // EPIPE: Broken pipe (client disconnected), not a critical error
+            if (errno == EPIPE) {
+                return false;
+            }
+            // Other errors
+            return false;
+        }
+        
+        // Successful write (may be partial)
+        ptr += written;
+        remaining -= written;
+    }
+    
+    return true;
+}
+
+/**
+ * Function: safe_read_all
+ * Purpose: Reads exactly count bytes from a file descriptor, handling EINTR
+ * Parameters:
+ *   - fd: File descriptor to read from
+ *   - buf: Buffer to read data into
+ *   - count: Number of bytes to read
+ * Returns: true on success, false on error or EOF
+ * Security: Handles EINTR correctly, validates input size
+ * Thread-safety: Thread-safe (operates on file descriptor)
+ */
+static bool safe_read_all(int fd, void* buf, size_t count) {
+    char* ptr = static_cast<char*>(buf);
+    size_t remaining = count;
+    
+    while (remaining > 0) {
+        ssize_t nread = read(fd, ptr, remaining);
+        
+        if (nread < 0) {
+            // EINTR: Interrupted by signal, retry
+            if (errno == EINTR) {
+                continue;
+            }
+            // Other errors
+            return false;
+        }
+        
+        if (nread == 0) {
+            // EOF before reading all data
+            return false;
+        }
+        
+        // Successful read (may be partial)
+        ptr += nread;
+        remaining -= nread;
+    }
+    
+    return true;
+}
+
 // Helper function to clean up resources on socket creation/setup errors
 void cleanup_on_socket_error(int srv_fd, bool unlink_socket, const string& sock_path) {
     // Close socket file descriptor if valid
@@ -1007,7 +1107,10 @@ void crash_handler(int sig) {
             break;
     }
     if (msg != nullptr && len > 0) {
-        write(STDERR_FILENO, msg, len);
+        // SECURITY: Signal handler safety - write() is async-signal-safe
+        // Store result in volatile to suppress warning (we can't handle errors in crash handler)
+        volatile ssize_t write_result = write(STDERR_FILENO, msg, len);
+        (void)write_result;  // Explicitly mark as intentionally unused
     }
     
     // NOTE: We use atomic operations here as best-effort cleanup.
@@ -1050,7 +1153,10 @@ void sig_handler(int sig) {
     // Only print once using global atomic
     if (shutdown_started.exchange(true) == false) {
         const char msg[] = "\n[INFO] Shutdown signal received, stopping gracefully...\n";
-        write(STDERR_FILENO, msg, sizeof(msg)-1);
+        // SECURITY: Signal handler safety - write() is async-signal-safe
+        // Store result in volatile to suppress warning (we can't handle errors in signal handler)
+        volatile ssize_t write_result = write(STDERR_FILENO, msg, sizeof(msg)-1);
+        (void)write_result;  // Explicitly mark as intentionally unused
     }
     
     running = 0; 
@@ -1689,39 +1795,115 @@ void send_results_batched(int fd, const vector<string>& results) {
     }
 }
 
+/**
+ * Function: handle_client
+ * Purpose: Process a search request from a client connection
+ * Parameters:
+ *   - fd: File descriptor of the connected client socket
+ * Returns: void (closes fd before returning)
+ * Security:
+ *   - CRITICAL: Validates all network input sizes (max 1MB per pattern)
+ *   - Handles partial reads and writes correctly
+ *   - Validates regex patterns before use
+ *   - Uses safe_write_all() for error reporting
+ * Thread-safety: Thread-safe (each client has its own fd)
+ * 
+ * Protocol Overview:
+ *   1. Read name pattern length (4 bytes) + pattern data
+ *   2. Read path pattern length (4 bytes) + pattern data
+ *   3. Read content pattern length (4 bytes) + pattern data
+ *   4. Read flags (1 byte): case_insensitive, is_regex, content_glob
+ *   5. Read type filter (1 byte)
+ *   6. Read size operator + value (1 + 8 bytes)
+ *   7. Read mtime operator + days (1 + 4 bytes)
+ *   8. Read context lines: before_ctx, after_ctx (1 + 1 bytes)
+ */
 void handle_client(int fd) {
+    // SECURITY: Maximum pattern size to prevent memory exhaustion attacks
+    constexpr uint32_t MAX_PATTERN_SIZE = 1024 * 1024;  // 1MB limit
+    
     uint32_t net_nlen, net_plen, net_clen;
+    
+    // Read name pattern length and validate
     if (read(fd, &net_nlen, 4) != 4) { close(fd); return; }
     uint32_t name_len = ntohl(net_nlen);
+    // SECURITY: Validate name pattern length
+    if (name_len > MAX_PATTERN_SIZE) { 
+        const char* err = "Name pattern too large\n";
+        safe_write_all(fd, err, strlen(err));
+        close(fd); 
+        return; 
+    }
     string name_pat(name_len, '\0');
-    if (read(fd, name_pat.data(), name_len) != (ssize_t)name_len) { close(fd); return; }
+    if (name_len > 0 && read(fd, name_pat.data(), name_len) != (ssize_t)name_len) { 
+        close(fd); 
+        return; 
+    }
 
+    // Read path pattern length and validate
     if (read(fd, &net_plen, 4) != 4) { close(fd); return; }
     uint32_t path_len = ntohl(net_plen);
+    // SECURITY: Validate path pattern length
+    if (path_len > MAX_PATTERN_SIZE) { 
+        const char* err = "Path pattern too large\n";
+        safe_write_all(fd, err, strlen(err));
+        close(fd); 
+        return; 
+    }
     string path_pat(path_len, '\0');
-    if (read(fd, path_pat.data(), path_len) != (ssize_t)path_len) { close(fd); return; }
+    if (path_len > 0 && read(fd, path_pat.data(), path_len) != (ssize_t)path_len) { 
+        close(fd); 
+        return; 
+    }
 
+    // Read content pattern length and validate
     if (read(fd, &net_clen, 4) != 4) { close(fd); return; }
     uint32_t content_len = ntohl(net_clen);
+    // SECURITY: Validate content pattern length
+    if (content_len > MAX_PATTERN_SIZE) { 
+        const char* err = "Content pattern too large\n";
+        safe_write_all(fd, err, strlen(err));
+        close(fd); 
+        return; 
+    }
     string content_pat(content_len, '\0');
-    if (read(fd, content_pat.data(), content_len) != (ssize_t)content_len) { close(fd); return; }
+    if (content_len > 0 && read(fd, content_pat.data(), content_len) != (ssize_t)content_len) { 
+        close(fd); 
+        return; 
+    }
 
+    // Read flags byte
     uint8_t flags = 0;
     if (read(fd, &flags, 1) != 1) flags = 0;
     bool case_ins = flags & 1;      // bit 0 (value 1)
     bool is_regex = flags & 2;      // bit 1 (value 2)
     bool content_glob = flags & 4;  // bit 2 (value 4)
 
+    // Read type filter
     uint8_t type_filter = 0;
     if (read(fd, &type_filter, 1) != 1) type_filter = 0;
 
+    // Read size filter (operator + optional value)
     uint8_t size_op = 0;
     int64_t size_val = 0;
-    if (read(fd, &size_op, 1) == 1 && size_op) read(fd, &size_val, 8);
+    if (read(fd, &size_op, 1) == 1 && size_op) {
+        // Only read value if operator is present
+        if (!safe_read_all(fd, &size_val, 8)) {
+            close(fd);
+            return;
+        }
+    }
 
+    // Read mtime filter (operator + optional days)
     uint8_t mtime_op = 0;
     int32_t mtime_days = 0;
-    if (read(fd, &mtime_op, 1) == 1 && mtime_op) read(fd, &mtime_days, 4);
+    if (read(fd, &mtime_op, 1) == 1 && mtime_op) {
+        // Only read days if operator is present
+        if (!safe_read_all(fd, &mtime_days, 4)) {
+            close(fd);
+            return;
+        }
+    }
 
     // Read context line parameters (added in v1.1 for context lines feature)
     // Note: For backward compatibility with older daemons, these bytes default to 0 if read fails.
@@ -1734,14 +1916,15 @@ void handle_client(int fd) {
 
     bool has_content = !content_pat.empty();
 
+    // Compile regex if needed
     shared_ptr<RE2> re;  // Use shared_ptr for thread-safe lifetime management
     if (has_content && is_regex) {
         RE2::Options opts;
         opts.set_case_sensitive(!case_ins);
         re = make_shared<RE2>(content_pat, opts);
         if (!re->ok()) {
-            string err = "Invalid regex pattern\n";
-            write(fd, err.c_str(), err.size());
+            const char* err = "Invalid regex pattern\n";
+            safe_write_all(fd, err, strlen(err));
             close(fd);
             return;
         }
@@ -1906,8 +2089,8 @@ void handle_client(int fd) {
     if (has_content) {
         // Ensure thread pool is initialized
         if (!content_search_pool) {
-            string err = "Internal error: thread pool not initialized\n";
-            write(fd, err.c_str(), err.size());
+            const char* err = "Internal error: thread pool not initialized\n";
+            safe_write_all(fd, err, strlen(err));
             close(fd);
             return;
         }

@@ -1,4 +1,23 @@
-// ffind.cpp (latest full client)
+// ffind.cpp - Fast file finder client
+//
+// This is the client program that connects to ffind-daemon via Unix domain socket
+// and sends search requests. It handles command-line parsing, sends search criteria
+// to the daemon, and displays colorized results.
+//
+// Architecture Overview:
+// - Parse command-line arguments into search criteria
+// - Connect to daemon's Unix socket
+// - Send binary protocol message with search parameters
+// - Receive and display results with optional colorization
+//
+// Security Considerations:
+// - Uses safe_write_all() for all socket writes
+// - Validates command-line input
+// - Proper error handling for network operations
+//
+// Protocol: Binary protocol with network byte order for integers
+// See handle_client() in ffind-daemon.cpp for protocol details
+
 #include <bits/stdc++.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -15,6 +34,45 @@ const char* RESET = "\033[0m";
 const char* BOLD = "\033[1m";
 const char* CYAN = "\033[36m";
 const char* BOLD_RED = "\033[1;31m";
+
+/**
+ * Function: safe_write_all
+ * Purpose: Writes all data to a file descriptor, handling partial writes and EINTR
+ * Parameters:
+ *   - fd: File descriptor to write to
+ *   - buf: Buffer containing data to write
+ *   - count: Number of bytes to write
+ * Returns: true on success, false on error
+ * Security: Handles EINTR and partial writes correctly
+ * Thread-safety: Thread-safe (operates on file descriptor)
+ */
+static bool safe_write_all(int fd, const void* buf, size_t count) {
+    const char* ptr = static_cast<const char*>(buf);
+    size_t remaining = count;
+    
+    while (remaining > 0) {
+        ssize_t written = write(fd, ptr, remaining);
+        
+        if (written < 0) {
+            // EINTR: Interrupted by signal, retry
+            if (errno == EINTR) {
+                continue;
+            }
+            // EPIPE: Broken pipe (daemon disconnected)
+            if (errno == EPIPE) {
+                return false;
+            }
+            // Other errors
+            return false;
+        }
+        
+        // Successful write (may be partial)
+        ptr += written;
+        remaining -= written;
+    }
+    
+    return true;
+}
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -203,39 +261,97 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Send search request to daemon using binary protocol
     uint32_t net_nlen = htonl(name_pat.size());
-    write(c, &net_nlen, 4);
-    write(c, name_pat.data(), name_pat.size());
+    if (!safe_write_all(c, &net_nlen, 4)) {
+        cerr << "Failed to send name pattern length\n";
+        close(c);
+        return 1;
+    }
+    if (!name_pat.empty() && !safe_write_all(c, name_pat.data(), name_pat.size())) {
+        cerr << "Failed to send name pattern\n";
+        close(c);
+        return 1;
+    }
 
     uint32_t net_plen = htonl(path_pat.size());
-    write(c, &net_plen, 4);
-    write(c, path_pat.data(), path_pat.size());
+    if (!safe_write_all(c, &net_plen, 4)) {
+        cerr << "Failed to send path pattern length\n";
+        close(c);
+        return 1;
+    }
+    if (!path_pat.empty() && !safe_write_all(c, path_pat.data(), path_pat.size())) {
+        cerr << "Failed to send path pattern\n";
+        close(c);
+        return 1;
+    }
 
     // Send content_glob as content_pat if -g is used
     string content_to_send = content_glob.empty() ? content_pat : content_glob;
     uint32_t net_clen = htonl(content_to_send.size());
-    write(c, &net_clen, 4);
-    write(c, content_to_send.data(), content_to_send.size());
+    if (!safe_write_all(c, &net_clen, 4)) {
+        cerr << "Failed to send content pattern length\n";
+        close(c);
+        return 1;
+    }
+    if (!content_to_send.empty() && !safe_write_all(c, content_to_send.data(), content_to_send.size())) {
+        cerr << "Failed to send content pattern\n";
+        close(c);
+        return 1;
+    }
 
+    // Send flags byte
     uint8_t flags = 0;
     if (case_ins) flags |= 1;
     if (is_regex) flags |= 2;
     if (!content_glob.empty()) flags |= 4; // bit 2 (value 4) for content_glob
-    write(c, &flags, 1);
+    if (!safe_write_all(c, &flags, 1)) {
+        cerr << "Failed to send flags\n";
+        close(c);
+        return 1;
+    }
 
-    write(c, &type_filter, 1);
+    if (!safe_write_all(c, &type_filter, 1)) {
+        cerr << "Failed to send type filter\n";
+        close(c);
+        return 1;
+    }
 
-    write(c, &size_op, 1);
-    if (size_op) write(c, &size_val, 8);
+    if (!safe_write_all(c, &size_op, 1)) {
+        cerr << "Failed to send size operator\n";
+        close(c);
+        return 1;
+    }
+    if (size_op && !safe_write_all(c, &size_val, 8)) {
+        cerr << "Failed to send size value\n";
+        close(c);
+        return 1;
+    }
 
-    write(c, &mtime_op, 1);
-    if (mtime_op) write(c, &mtime_days, 4);
+    if (!safe_write_all(c, &mtime_op, 1)) {
+        cerr << "Failed to send mtime operator\n";
+        close(c);
+        return 1;
+    }
+    if (mtime_op && !safe_write_all(c, &mtime_days, 4)) {
+        cerr << "Failed to send mtime days\n";
+        close(c);
+        return 1;
+    }
 
     // Send context line parameters (protocol extension for context lines feature)
     // Note: Old daemons will ignore/misinterpret these bytes, but this is expected
     // for new feature additions. Users should update both client and daemon together.
-    write(c, &before_ctx, 1);
-    write(c, &after_ctx, 1);
+    if (!safe_write_all(c, &before_ctx, 1)) {
+        cerr << "Failed to send before context\n";
+        close(c);
+        return 1;
+    }
+    if (!safe_write_all(c, &after_ctx, 1)) {
+        cerr << "Failed to send after context\n";
+        close(c);
+        return 1;
+    }
 
     // Read and colorize output incrementally
     bool has_content = !content_pat.empty() || !content_glob.empty();
