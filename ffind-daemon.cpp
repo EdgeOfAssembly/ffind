@@ -1022,14 +1022,14 @@ void update_or_add(const string& full, size_t root_index) {
     lock_guard<mutex> lk(mtx);
     auto it = find_if(entries.begin(), entries.end(), [&](const Entry& e){ return e.path == full; });
     if (it != entries.end()) {
-        // Entry already exists - update it
-        // No need to update path index since the entry pointer remains valid
+        // Entry already exists - update it in place
         it->size = sz;
         it->mtime = st.st_mtime;
         it->is_dir = is_dir;
         it->root_index = root_index;
+        // Path index doesn't need updating since the entry location didn't change
     } else {
-        // New entry - add to entries and path index
+        // New entry - add to entries and rebuild path index
         Entry e;
         e.path = full;
         e.size = sz;
@@ -1038,12 +1038,18 @@ void update_or_add(const string& full, size_t root_index) {
         e.root_index = root_index;
         entries.push_back(e);
         
-        // Update path index with pointer to the new entry
-        size_t last_slash = full.rfind('/');
-        if (last_slash != string::npos) {
-            string dir = full.substr(0, last_slash);
-            path_index.dir_to_entries[dir].push_back(&entries.back());
-            path_index.all_dirs.insert(dir);
+        // Rebuild path index to avoid dangling pointers from vector reallocation
+        // When entries vector reallocates, all stored pointers become invalid
+        path_index.dir_to_entries.clear();
+        path_index.all_dirs.clear();
+        
+        for (auto& entry : entries) {
+            size_t last_slash = entry.path.rfind('/');
+            if (last_slash != string::npos) {
+                string dir = entry.path.substr(0, last_slash);
+                path_index.dir_to_entries[dir].push_back(&entry);
+                path_index.all_dirs.insert(dir);
+            }
         }
     }
     
@@ -1196,12 +1202,13 @@ void add_directory_recursive(const string& dir, size_t root_index) {
 }
 
 void build_path_index() {
+    // This function must be called in a single-threaded context (e.g., during daemon startup)
+    // or with mtx already held by the caller. It does NOT acquire the mutex itself.
+    // DO NOT call this from multiple threads without external synchronization.
+    
     // Clear existing index
     path_index.dir_to_entries.clear();
     path_index.all_dirs.clear();
-    
-    // Note: mtx is already locked by caller in initial_setup, or we lock it here for rebuilds
-    // For safety, we'll assume the caller has the lock or we're in single-threaded context
     
     for (auto& e : entries) {
         // Extract directory path from entry path
@@ -1671,9 +1678,6 @@ void handle_client(int fd) {
             if (last_slash != string::npos) {
                 index_prefix = index_prefix.substr(0, last_slash);
                 can_use_index = true;
-            } else if (first_wildcard == 0) {
-                // Pattern starts with wildcard like "*test*" - can't use index
-                can_use_index = false;
             }
         } else if (first_wildcard == string::npos && !path_pat.empty()) {
             // No wildcards - exact path match
@@ -1703,9 +1707,18 @@ void handle_client(int fd) {
             for (size_t root_idx = 0; root_idx < root_paths.size(); root_idx++) {
                 if (dir.starts_with(root_paths[root_idx])) {
                     string rel_dir = dir.substr(root_paths[root_idx].size());
-                    // Check if relative directory path starts with our index prefix
-                    if (rel_dir.starts_with(index_prefix) || 
-                        (index_prefix + "/").starts_with(rel_dir + "/")) {
+                    
+                    // Normalize: remove leading slash if present
+                    if (!rel_dir.empty() && rel_dir.front() == '/') {
+                        rel_dir.erase(0, 1);
+                    }
+                    
+                    // Check if relative directory matches our index prefix with proper boundaries
+                    // Match if: exact match, or rel_dir is under index_prefix, or index_prefix is under rel_dir
+                    if (rel_dir == index_prefix ||
+                        rel_dir.starts_with(index_prefix + "/") ||
+                        index_prefix.starts_with(rel_dir + "/") ||
+                        (rel_dir.empty() && !index_prefix.empty())) {
                         dir_matches = true;
                         break;
                     }
@@ -1733,106 +1746,67 @@ void handle_client(int fd) {
         path_results.reserve(1000);  // Pre-allocate for efficiency
     }
     
+    // Lambda to filter and process a single entry (reduces code duplication)
+    auto process_entry = [&](const Entry* e) {
+        bool type_match = (type_filter == 0) ||
+                          (type_filter == 1 && !e->is_dir) ||
+                          (type_filter == 2 && e->is_dir);
+        if (!type_match) return;
+        if (e->is_dir && has_content) return;
+
+        if (size_op) {
+            bool match = false;
+            if (size_op == 1) match = e->size < size_val;
+            else if (size_op == 2) match = e->size == size_val;
+            else if (size_op == 3) match = e->size > size_val;
+            if (!match) return;
+        }
+
+        if (mtime_op) {
+            time_t now = time(nullptr);
+            int32_t days_old = (now - e->mtime) / 86400;
+            bool match = false;
+            if (mtime_op == 1) match = days_old < mtime_days;
+            else if (mtime_op == 2) match = days_old == mtime_days;
+            else if (mtime_op == 3) match = days_old > mtime_days;
+            if (!match) return;
+        }
+
+        // Calculate relative path from entry's own root
+        string rel;
+        if (e->root_index < root_paths.size()) {
+            rel = e->path.substr(root_paths[e->root_index].size());
+        } else {
+            rel = e->path; // Fallback if root_index is invalid
+        }
+
+        size_t pos = e->path.rfind('/');
+        string_view base = (pos == string::npos) ? string_view(e->path) : string_view(e->path.data() + pos + 1);
+
+        bool name_match = fnmatch(name_pat.c_str(), base.data(), fnm_flags) == 0;
+        bool path_match = path_pat.empty() || fnmatch(path_pat.c_str(), rel.c_str(), fnm_flags) == 0;
+
+        if (name_match && path_match) {
+            if (!has_content) {
+                path_results.push_back(e->path + "\n");
+            } else {
+                candidates.push_back(e);
+            }
+        }
+    };
+    
     // Determine which entry set to iterate over
     bool use_index_results = can_use_index && !index_prefix.empty() && !candidates_from_index.empty();
     
     if (use_index_results) {
         // Iterate over indexed candidates only
         for (const auto* e : candidates_from_index) {
-            bool type_match = (type_filter == 0) ||
-                              (type_filter == 1 && !e->is_dir) ||
-                              (type_filter == 2 && e->is_dir);
-            if (!type_match) continue;
-            if (e->is_dir && has_content) continue;
-
-            if (size_op) {
-                bool match = false;
-                if (size_op == 1) match = e->size < size_val;
-                else if (size_op == 2) match = e->size == size_val;
-                else if (size_op == 3) match = e->size > size_val;
-                if (!match) continue;
-            }
-
-            if (mtime_op) {
-                time_t now = time(nullptr);
-                int32_t days_old = (now - e->mtime) / 86400;
-                bool match = false;
-                if (mtime_op == 1) match = days_old < mtime_days;
-                else if (mtime_op == 2) match = days_old == mtime_days;
-                else if (mtime_op == 3) match = days_old > mtime_days;
-                if (!match) continue;
-            }
-
-            // Calculate relative path from entry's own root
-            string rel;
-            if (e->root_index < root_paths.size()) {
-                rel = e->path.substr(root_paths[e->root_index].size());
-            } else {
-                rel = e->path; // Fallback if root_index is invalid
-            }
-
-            size_t pos = e->path.rfind('/');
-            string_view base = (pos == string::npos) ? string_view(e->path) : string_view(e->path.data() + pos + 1);
-
-            bool name_match = fnmatch(name_pat.c_str(), base.data(), fnm_flags) == 0;
-            bool path_match = path_pat.empty() || fnmatch(path_pat.c_str(), rel.c_str(), fnm_flags) == 0;
-
-            if (name_match && path_match) {
-                if (!has_content) {
-                    path_results.push_back(e->path + "\n");
-                } else {
-                    candidates.push_back(e);
-                }
-            }
+            process_entry(e);
         }
     } else {
         // Fall back to full scan of all entries
         for (const auto& e : entries) {
-            bool type_match = (type_filter == 0) ||
-                              (type_filter == 1 && !e.is_dir) ||
-                              (type_filter == 2 && e.is_dir);
-            if (!type_match) continue;
-            if (e.is_dir && has_content) continue;
-
-            if (size_op) {
-                bool match = false;
-                if (size_op == 1) match = e.size < size_val;
-                else if (size_op == 2) match = e.size == size_val;
-                else if (size_op == 3) match = e.size > size_val;
-                if (!match) continue;
-            }
-
-            if (mtime_op) {
-                time_t now = time(nullptr);
-                int32_t days_old = (now - e.mtime) / 86400;
-                bool match = false;
-                if (mtime_op == 1) match = days_old < mtime_days;
-                else if (mtime_op == 2) match = days_old == mtime_days;
-                else if (mtime_op == 3) match = days_old > mtime_days;
-                if (!match) continue;
-            }
-
-            // Calculate relative path from entry's own root
-            string rel;
-            if (e.root_index < root_paths.size()) {
-                rel = e.path.substr(root_paths[e.root_index].size());
-            } else {
-                rel = e.path; // Fallback if root_index is invalid
-            }
-
-            size_t pos = e.path.rfind('/');
-            string_view base = (pos == string::npos) ? string_view(e.path) : string_view(e.path.data() + pos + 1);
-
-            bool name_match = fnmatch(name_pat.c_str(), base.data(), fnm_flags) == 0;
-            bool path_match = path_pat.empty() || fnmatch(path_pat.c_str(), rel.c_str(), fnm_flags) == 0;
-
-            if (name_match && path_match) {
-                if (!has_content) {
-                    path_results.push_back(e.path + "\n");
-                } else {
-                    candidates.push_back(&e);
-                }
-            }
+            process_entry(&e);
         }
     }
     
