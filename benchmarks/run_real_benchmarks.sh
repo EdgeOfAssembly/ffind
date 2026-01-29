@@ -11,13 +11,14 @@ set -e
 #    cd /tmp && wget http://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar.xz
 #    tar -xf gcc-9.5.0.tar.xz && mv gcc-9.5.0 test-corpus
 # 2. Build ffind: make
-# 3. Build cache-flush utility: cd benchmarks && make cache-flush && make install-caps
-# 4. Run this script: ./benchmarks/run_real_benchmarks.sh
+# 3. Build cache-flush utility: cd benchmarks && make cache-flush
+# 4. Run this script with sudo: sudo ./benchmarks/run_real_benchmarks.sh
+#    (sudo is needed only for cache-flush, not for ffind itself)
 #
 # Security Best Practice:
-#   - NEVER run this script or ffind-daemon as root
-#   - Only the tiny cache-flush binary needs CAP_SYS_ADMIN capability
-#   - Use: cd benchmarks && make cache-flush && make install-caps
+#   - Run this script with sudo to enable cache flushing: sudo ./run_real_benchmarks.sh
+#   - Only the tiny cache-flush binary executes with elevated privileges
+#   - ffind-daemon and ffind client NEVER run as root
 
 CORPUS_DIR="/tmp/test-corpus"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,10 +34,11 @@ if [ -x "$CACHE_FLUSH_BIN" ]; then
     fi
 fi
 
-# Function to flush filesystem cache using the C binary (no sudo needed!)
+# Function to flush filesystem cache using the C binary (requires sudo)
+# SECURITY: cache-flush needs CAP_SYS_ADMIN to write to /proc/sys/vm/drop_caches
 flush_cache() {
     if [ "$CAN_FLUSH_CACHE" = true ]; then
-        "$CACHE_FLUSH_BIN" 2>/dev/null || true
+        sudo "$CACHE_FLUSH_BIN" 2>/dev/null || true
         sleep 0.5
     fi
 }
@@ -78,9 +80,12 @@ if [ "$CAN_FLUSH_CACHE" = true ]; then
     echo "  - This simulates: find reads from disk, ffind from memory"
 else
     echo "Cache Flushing: DISABLED"
-    echo "  ⚠️  Run with sudo for fair benchmarks: sudo $0"
+    echo "  ⚠️  Run script with sudo for fair benchmarks: sudo $0"
     echo "  ⚠️  Without cache flushing, results may favor find/grep"
     echo "  ⚠️  ffind runs first and warms the cache for find/grep"
+    echo ""
+    echo "  Why sudo? cache-flush needs CAP_SYS_ADMIN to write"
+    echo "  to /proc/sys/vm/drop_caches (Linux security requirement)"
 fi
 echo ""
 echo "Runs per benchmark: 3"
