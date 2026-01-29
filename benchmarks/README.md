@@ -12,8 +12,12 @@ cp -r /usr/src/linux-headers-* /tmp/test-corpus
 cd ..
 make
 
-# 3. Run benchmarks
-./benchmarks/run_real_benchmarks.sh
+# 3. Build cache-flush utility
+cd benchmarks
+make
+
+# 4. Run benchmarks (will prompt for sudo password for cache clearing)
+./run_real_benchmarks.sh
 ```
 
 ## Test Corpus Setup
@@ -193,40 +197,45 @@ The `cache-flush` C binary provides a secure, minimal utility for clearing Linux
 **Build and Setup (one-time):**
 ```bash
 # Build the binary
-make cache-flush
-
-# Grant CAP_SYS_ADMIN capability (requires sudo once)
-make install-caps
-
-# Verify it works
-./cache-flush
+make
 ```
 
+**Usage:**
+```bash
+# The benchmark script calls this automatically with sudo
+# For manual usage:
+sudo ./cache-flush
+```
+
+**Security Model:**
+- **Why sudo is required**: Linux requires elevated privileges to write to `/proc/sys/vm/drop_caches`
+- **Security benefit**: Only minimal auditable C code (~50 lines) runs with elevated privileges
+- **Our approach**: Benchmark script calls sudo internally for cache-flush only
+
 **Features:**
-- **Security best practice**: Only 47 lines of C code with elevated privileges
-- **No sudo needed**: Uses Linux capabilities (CAP_SYS_ADMIN) instead of running as root
+- **Security best practice**: Minimal C code (~50 lines) with elevated privileges
+- **Explicit privilege control**: Requires sudo each time (no permanent capabilities)
 - **Portable**: Simple C with no external dependencies
 - **Easy to audit**: Small, focused code that's easy to security review
 
 **Manual usage:**
 ```bash
 # Flush caches before a benchmark
-./cache-flush
+sudo ./cache-flush
 time find /usr -name "*.so"
 
 # Compare warm vs cold cache
 time find /usr -name "*.so"  # Warm cache
-./cache-flush
+sudo ./cache-flush
 time find /usr -name "*.so"  # Cold cache
 ```
 
 **Technical details:**
 - Calls `sync()` to flush dirty pages to disk
 - Writes "3" to `/proc/sys/vm/drop_caches` to clear page cache, dentries, and inodes
-- Requires `CAP_SYS_ADMIN` capability or root privileges
 - Returns 0 on success, 1 on error
 
-The benchmark script (`run_real_benchmarks.sh`) automatically uses this utility when available and properly configured.
+The benchmark script (`run_real_benchmarks.sh`) automatically uses this utility with sudo when running benchmarks.
 
 ## Contributing
 

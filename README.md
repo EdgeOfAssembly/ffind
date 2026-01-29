@@ -135,16 +135,20 @@ Initial indexing of test corpus (5,629 files, 44 directories, 28MB):
 The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically sound methodology for fair comparisons:
 
 **Cache Management with Dedicated Binary:**
-- ✅ **Cache-flush utility**: Minimal C binary with `CAP_SYS_ADMIN` capability for secure cache clearing
-- ✅ **Security best practice**: Only the tiny `cache-flush` binary needs elevated privileges
-- ✅ **No root required**: Benchmark scripts run as normal user after one-time capability setup
+- ✅ **Cache-flush utility**: Minimal C binary requiring `sudo` for secure cache clearing
+- ✅ **Security best practice**: Only the tiny `cache-flush` binary runs with elevated privileges
+- ✅ **Minimal sudo usage**: Only cache-flush requires sudo, benchmark scripts run as normal user
 - ✅ **Fair comparison**: `find`/`grep` run with cold cache (disk reads), `ffind` with warm cache (RAM)
+
+**Security Model:**
+- The `cache-flush` binary must run with `sudo` to write to `/proc/sys/vm/drop_caches`
+- Only this tiny, auditable C program (~50 lines) needs elevated privileges
+- All other components (ffind-daemon, ffind client, benchmark scripts) run as normal user
 
 **Setup (one-time):**
 ```bash
 cd benchmarks
-make cache-flush      # Build the minimal cache-flush binary
-make install-caps     # Grant CAP_SYS_ADMIN capability (requires sudo once)
+make      # Build the cache-flush utility
 ```
 
 **Statistical Rigor:**
@@ -165,19 +169,20 @@ To reproduce these benchmarks:
 # Build ffind
 make
 
-# Setup cache-flush utility (one-time)
+# Build cache-flush utility (one-time)
 cd benchmarks
-make cache-flush && make install-caps
+make
 
-# Run benchmarks (no sudo needed after setup)
-./benchmarks/run_real_benchmarks.sh
+# Run benchmarks (will prompt for sudo password for cache flushing)
+./run_real_benchmarks.sh
 ```
+
+**Note on sudo**: The benchmark script internally calls `sudo` for cache-flush only. The script itself should be run as a normal user, not with sudo. You will be prompted for your password when cache clearing is needed.
 
 **Note on Results Interpretation:**
 - **With cache flushing**: Shows true speedup of in-memory index vs disk traversal
 - **Without cache flushing**: Results may be misleading if ffind runs first and warms the cache for find/grep
-**Why This Matters:**
-The cache-flush utility follows security best practices by granting minimal privileges to a tiny, auditable binary (47 lines of C) instead of running entire benchmark suites as root. Previous approaches required `sudo` for the entire benchmark script, creating unnecessary security risks.
+
 
 ## Quick Start
 
@@ -242,11 +247,12 @@ For fair benchmark comparisons with cache flushing:
 
 ```bash
 cd benchmarks
-make cache-flush
-make install-caps    # Grants CAP_SYS_ADMIN capability (requires sudo)
+make
 ```
 
-This creates a minimal privileged helper that can flush filesystem caches without requiring the entire benchmark suite to run as root.
+This creates a minimal helper (~50 lines of C) that flushes filesystem caches. The helper requires `sudo` to run because writing to `/proc/sys/vm/drop_caches` requires elevated privileges.
+
+**Security Note**: Only this tiny, auditable binary needs elevated privileges - never run ffind-daemon or the main ffind client as root.
 
 ## Install
 

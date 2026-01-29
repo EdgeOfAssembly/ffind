@@ -11,32 +11,34 @@ set -e
 #    cd /tmp && wget http://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar.xz
 #    tar -xf gcc-9.5.0.tar.xz && mv gcc-9.5.0 test-corpus
 # 2. Build ffind: make
-# 3. Build cache-flush utility: cd benchmarks && make cache-flush && make install-caps
+# 3. Build cache-flush utility: cd benchmarks && make
 # 4. Run this script: ./benchmarks/run_real_benchmarks.sh
 #
-# Security Best Practice:
-#   - NEVER run this script or ffind-daemon as root
-#   - Only the tiny cache-flush binary needs CAP_SYS_ADMIN capability
-#   - Use: cd benchmarks && make cache-flush && make install-caps
+# Security Model:
+#   - This script runs as normal user (DO NOT run with sudo)
+#   - Only cache-flush is called with sudo for clearing kernel caches
+#   - ffind-daemon and ffind client always run as normal user
+#   - You will be prompted for sudo password only for cache flushing
 
 CORPUS_DIR="/tmp/test-corpus"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FFIND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CACHE_FLUSH_BIN="$SCRIPT_DIR/cache-flush"
 
-# Check if we have the cache-flush binary with proper capabilities
+# Check if we have the cache-flush binary and can execute it with sudo
 CAN_FLUSH_CACHE=false
 if [ -x "$CACHE_FLUSH_BIN" ]; then
-    # Try running it to see if it works (will fail gracefully if no caps)
-    if "$CACHE_FLUSH_BIN" >/dev/null 2>&1; then
-        CAN_FLUSH_CACHE=true
-    fi
+    # We'll call it with sudo, so just check if binary exists and is executable
+    # Actual capability check happens when we run it with sudo
+    CAN_FLUSH_CACHE=true
 fi
 
-# Function to flush filesystem cache using the C binary (no sudo needed!)
+# Function to flush filesystem cache using the C binary
+# This function calls sudo internally, so the benchmark script itself
+# should be run as a normal user, not with sudo
 flush_cache() {
     if [ "$CAN_FLUSH_CACHE" = true ]; then
-        "$CACHE_FLUSH_BIN" 2>/dev/null || true
+        sudo "$CACHE_FLUSH_BIN" 2>/dev/null || true
         sleep 0.5
     fi
 }
@@ -76,9 +78,10 @@ if [ "$CAN_FLUSH_CACHE" = true ]; then
     echo "  - Before each find/grep: Cache cleared (cold start)"
     echo "  - Before each ffind: No flush (data in daemon RAM)"
     echo "  - This simulates: find reads from disk, ffind from memory"
+    echo "  - You may be prompted for sudo password for cache clearing"
 else
     echo "Cache Flushing: DISABLED"
-    echo "  ⚠️  Run with sudo for fair benchmarks: sudo $0"
+    echo "  ⚠️  Build cache-flush binary: cd benchmarks && make"
     echo "  ⚠️  Without cache flushing, results may favor find/grep"
     echo "  ⚠️  ffind runs first and warms the cache for find/grep"
 fi
@@ -390,6 +393,6 @@ echo "Benchmarking complete!"
 if [ "$CAN_FLUSH_CACHE" = false ]; then
     echo ""
     echo "Note: Benchmarks ran without cache flushing."
-    echo "For fair comparison, run with: sudo $0"
+    echo "For fair comparison: cd benchmarks && make && ./run_real_benchmarks.sh"
 fi
 echo "========================================="
