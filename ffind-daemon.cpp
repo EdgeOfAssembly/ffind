@@ -16,6 +16,8 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <sqlite3.h>
+#include <sys/uio.h>
+#include <sys/mman.h>
 
 using namespace std;
 using namespace std::filesystem;
@@ -1410,6 +1412,107 @@ void process_events() {
     }
 }
 
+// RAII wrapper for memory-mapped files
+struct MappedFile {
+    char* data;
+    size_t size;
+    int fd;
+    
+    MappedFile(const string& path) : data(nullptr), size(0), fd(-1) {
+        fd = open(path.c_str(), O_RDONLY);
+        if (fd < 0) return;
+        
+        struct stat st;
+        if (fstat(fd, &st) != 0) {
+            close(fd);
+            fd = -1;
+            return;
+        }
+        
+        size = st.st_size;
+        if (size == 0) {
+            // Empty files are valid - we'll just have no content to search
+            // Keep fd open for consistency but data will be nullptr
+            close(fd);
+            fd = -1;
+            return;
+        }
+        
+        data = static_cast<char*>(mmap(nullptr, size, PROT_READ, 
+                                       MAP_PRIVATE, fd, 0));
+        if (data == MAP_FAILED) {
+            data = nullptr;
+            close(fd);
+            fd = -1;
+            return;
+        }
+        
+        // Hint: we'll read sequentially
+        // madvise is advisory, failure is non-fatal
+        if (madvise(data, size, MADV_SEQUENTIAL) != 0) {
+            // Continue anyway - this is just a performance hint
+        }
+    }
+    
+    ~MappedFile() {
+        if (data) munmap(data, size);
+        if (fd >= 0) close(fd);
+    }
+    
+    bool is_valid() const { return data != nullptr; }
+    
+    // Prevent copying
+    MappedFile(const MappedFile&) = delete;
+    MappedFile& operator=(const MappedFile&) = delete;
+};
+
+// Batch socket writes using writev for reduced syscall overhead
+// Note: writev batches multiple buffers into single syscalls, significantly
+// reducing context switches. The zero-copy benefits come from mmap avoiding
+// intermediate buffer allocations.
+void send_results_batched(int fd, const vector<string>& results) {
+    if (results.empty()) return;
+    
+    const size_t MAX_IOV = 1024;  // Typical IOV_MAX on Linux
+    vector<struct iovec> iov;
+    iov.reserve(MAX_IOV);
+    
+    for (size_t i = 0; i < results.size(); i++) {
+        struct iovec vec;
+        vec.iov_base = const_cast<char*>(results[i].c_str());
+        vec.iov_len = results[i].size();
+        iov.push_back(vec);
+        
+        // Flush batch when full or at end
+        if (iov.size() >= MAX_IOV || i == results.size() - 1) {
+            size_t offset = 0;
+            while (offset < iov.size()) {
+                ssize_t n = writev(fd, iov.data() + offset, iov.size() - offset);
+                if (n < 0) {
+                    if (errno == EINTR) continue;
+                    // Log error to stderr (client socket might be closed)
+                    // Silently return - client disconnect is expected
+                    return;
+                }
+                
+                // Advance offset by number of complete iovecs written
+                size_t bytes_written = n;
+                while (offset < iov.size() && bytes_written >= iov[offset].iov_len) {
+                    bytes_written -= iov[offset].iov_len;
+                    offset++;
+                }
+                
+                // Handle partial iovec write
+                if (bytes_written > 0 && offset < iov.size()) {
+                    iov[offset].iov_base = (char*)iov[offset].iov_base + bytes_written;
+                    iov[offset].iov_len -= bytes_written;
+                }
+            }
+            iov.clear();
+        }
+    }
+}
+
 void handle_client(int fd) {
     uint32_t net_nlen, net_plen, net_clen;
     if (read(fd, &net_nlen, 4) != 4) { close(fd); return; }
@@ -1473,6 +1576,11 @@ void handle_client(int fd) {
     lock_guard<mutex> lk(mtx);
 
     vector<const Entry*> candidates;
+    vector<string> path_results;  // Collect results for batched sending
+    if (!has_content) {
+        path_results.reserve(1000);  // Pre-allocate for efficiency
+    }
+    
     for (const auto& e : entries) {
         bool type_match = (type_filter == 0) ||
                           (type_filter == 1 && !e.is_dir) ||
@@ -1514,68 +1622,121 @@ void handle_client(int fd) {
 
         if (name_match && path_match) {
             if (!has_content) {
-                string line = e.path + "\n";
-                write(fd, line.c_str(), line.size());
+                path_results.push_back(e.path + "\n");
             } else {
                 candidates.push_back(&e);
             }
         }
     }
+    
+    // Send all path results in batches
+    if (!path_results.empty()) {
+        send_results_batched(fd, path_results);
+    }
 
     if (has_content) {
         for (const auto* ep : candidates) {
             const string& path = ep->path;
-            ifstream ifs(path, ios::binary);
-            if (!ifs) continue;
-
-            streampos fsize = ifs.tellg();
-            ifs.seekg(0, ios::end);
-            fsize = ifs.tellg() - fsize;
-            ifs.seekg(0);
-
-            size_t check = min<size_t>(1024, max<streampos>(0, fsize));
-            vector<char> head(check);
+            MappedFile file(path);
+            if (!file.is_valid()) continue;
+            
+            // Check for binary file (first 1KB)
+            size_t check = min<size_t>(1024, file.size);
             bool binary = false;
-            if (check > 0) {
-                ifs.read(head.data(), check);
-                for (char c : head) if (c == '\0') { binary = true; break; }
-                ifs.seekg(0);
+            for (size_t i = 0; i < check; i++) {
+                if (file.data[i] == '\0') {
+                    binary = true;
+                    break;
+                }
             }
             if (binary) continue;
-
+            
             if (before_ctx == 0 && after_ctx == 0) {
-                // No context - original behavior
-                string line;
+                // No context - scan file using mmap
+                const char* line_start = file.data;
                 size_t lineno = 1;
-                while (getline(ifs, line)) {
+                vector<string> matches;
+                
+                for (size_t i = 0; i < file.size; i++) {
+                    if (file.data[i] == '\n') {
+                        size_t line_len = file.data + i - line_start;
+                        
+                        // Match pattern in-place (no string allocation unless needed)
+                        bool match = false;
+                        if (content_glob) {
+                            string line_str(line_start, line_len);
+                            int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
+                            match = fnmatch(content_pat.c_str(), line_str.c_str(), fnm_flags_content) == 0;
+                        } else if (is_regex) {
+                            re2::StringPiece line_piece(line_start, line_len);
+                            match = RE2::PartialMatch(line_piece, *re);
+                        } else if (case_ins) {
+                            // Use strcasestr with temporary null-terminated string
+                            string line_str(line_start, line_len);
+                            match = strcasestr(line_str.c_str(), content_pat.c_str()) != nullptr;
+                        } else {
+                            // Simple substring search using memmem
+                            match = (memmem(line_start, line_len, 
+                                          content_pat.c_str(), content_pat.size()) != nullptr);
+                        }
+                        
+                        if (match) {
+                            string out = path + ":" + to_string(lineno) + ":" +
+                                       string(line_start, line_len) + "\n";
+                            matches.push_back(out);
+                        }
+                        
+                        line_start = file.data + i + 1;
+                        lineno++;
+                    }
+                }
+                
+                // Handle last line if file doesn't end with newline
+                if (line_start < file.data + file.size) {
+                    size_t line_len = file.data + file.size - line_start;
                     bool match = false;
                     if (content_glob) {
-                        // Use fnmatch for glob pattern matching
+                        string line_str(line_start, line_len);
                         int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
-                        match = fnmatch(content_pat.c_str(), line.c_str(), fnm_flags_content) == 0;
+                        match = fnmatch(content_pat.c_str(), line_str.c_str(), fnm_flags_content) == 0;
                     } else if (is_regex) {
-                        match = RE2::PartialMatch(line, *re);
+                        re2::StringPiece line_piece(line_start, line_len);
+                        match = RE2::PartialMatch(line_piece, *re);
                     } else if (case_ins) {
-                        match = strcasestr(line.c_str(), content_pat.c_str()) != nullptr;
+                        string line_str(line_start, line_len);
+                        match = strcasestr(line_str.c_str(), content_pat.c_str()) != nullptr;
                     } else {
-                        match = line.find(content_pat) != string::npos;
+                        match = (memmem(line_start, line_len,
+                                      content_pat.c_str(), content_pat.size()) != nullptr);
                     }
                     if (match) {
-                        string out = path + ":" + to_string(lineno) + ":" + line + "\n";
-                        write(fd, out.c_str(), out.size());
+                        string out = path + ":" + to_string(lineno) + ":" +
+                                   string(line_start, line_len) + "\n";
+                        matches.push_back(out);
                     }
-                    ++lineno;
                 }
+                
+                // Batch send all matches for this file
+                send_results_batched(fd, matches);
             } else {
-                // With context lines
+                // With context lines - parse all lines first
                 vector<pair<size_t, string>> all_lines; // lineno, content
-                string line;
+                const char* line_start = file.data;
                 size_t lineno = 1;
                 
-                // Read all lines into memory
-                while (getline(ifs, line)) {
-                    all_lines.emplace_back(lineno, line);
-                    ++lineno;
+                for (size_t i = 0; i < file.size; i++) {
+                    if (file.data[i] == '\n') {
+                        size_t line_len = file.data + i - line_start;
+                        all_lines.emplace_back(lineno, string(line_start, line_len));
+                        line_start = file.data + i + 1;
+                        lineno++;
+                    }
+                }
+                
+                // Handle last line if file doesn't end with newline
+                if (line_start < file.data + file.size) {
+                    size_t line_len = file.data + file.size - line_start;
+                    all_lines.emplace_back(lineno, string(line_start, line_len));
                 }
                 
                 // Find all matching line indices and store in a set for O(1) lookup
@@ -1585,7 +1746,6 @@ void handle_client(int fd) {
                     bool match = false;
                     const string& content = all_lines[i].second;
                     if (content_glob) {
-                        // Use fnmatch for glob pattern matching
                         int fnm_flags_content = case_ins ? FNM_CASEFOLD : 0;
                         match = fnmatch(content_pat.c_str(), content.c_str(), fnm_flags_content) == 0;
                     } else if (is_regex) {
@@ -1617,22 +1777,24 @@ void handle_client(int fd) {
                         }
                     }
                     
-                    // Output ranges with separator between non-contiguous groups
+                    // Collect all context output for batched sending
+                    vector<string> context_results;
                     for (size_t r = 0; r < ranges.size(); ++r) {
                         if (r > 0) {
-                            string sep = "--\n";
-                            write(fd, sep.c_str(), sep.size());
+                            context_results.push_back("--\n");
                         }
                         
                         for (size_t i = ranges[r].first; i <= ranges[r].second; ++i) {
-                            // Check if this line is a match line using O(1) lookup
                             bool is_match = match_set.count(i) > 0;
                             char separator = is_match ? ':' : '-';
                             
                             string out = path + ":" + to_string(all_lines[i].first) + separator + all_lines[i].second + "\n";
-                            write(fd, out.c_str(), out.size());
+                            context_results.push_back(out);
                         }
                     }
+                    
+                    // Batch send all context results for this file
+                    send_results_batched(fd, context_results);
                 }
             }
         }
