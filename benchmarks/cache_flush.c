@@ -2,19 +2,19 @@
  * cache_flush.c - Minimal privileged helper to flush filesystem caches
  *
  * This tiny utility flushes Linux kernel filesystem caches for fair benchmarking.
- * It's designed to be small, auditable, and run with CAP_SYS_ADMIN capability.
+ * It's designed to be small, auditable, and run with sudo.
  *
  * Build:
  *   gcc -O2 -o cache-flush cache_flush.c
- *   sudo setcap cap_sys_admin+ep cache-flush
  *
  * Usage:
- *   ./cache-flush    # Flush caches (no sudo needed after setcap)
+ *   sudo ./cache-flush    # Flush caches (requires elevated privileges)
  *
  * Security Best Practice:
- *   - Grant minimal privileges to this tiny binary (CAP_SYS_ADMIN only)
+ *   - Only this minimal binary needs elevated privileges
  *   - NEVER run benchmarks or ffind-daemon as root
  *   - Keep this code minimal for easy security auditing
+ *   - Use sudo each time for explicit privilege control
  */
 
 #include <stdio.h>
@@ -33,9 +33,7 @@ int main(void) {
     if (!f) {
         perror("fopen /proc/sys/vm/drop_caches");
         fprintf(stderr, "\nTo fix:\n");
-        fprintf(stderr, "  sudo setcap cap_sys_admin+ep cache-flush\n");
-        fprintf(stderr, "Or:\n");
-        fprintf(stderr, "  sudo ./cache-flush\n");
+        fprintf(stderr, "  Run with sudo: sudo ./cache-flush\n");
         return 1;
     }
     
