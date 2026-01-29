@@ -182,9 +182,44 @@ rm -f /run/user/$(id -u)/ffind.sock
 ```
 
 ### Inconsistent results
-- Clear filesystem caches between runs: `sync && echo 3 | sudo tee /proc/sys/vm/drop_caches`
+- Clear filesystem caches between runs: `sudo ./benchmarks/flush-cache.sh`
 - Ensure no other heavy I/O processes are running
 - Run benchmarks multiple times and average results
+
+## Cache Flush Helper
+
+The `flush-cache.sh` script provides a reusable utility for clearing Linux filesystem caches:
+
+```bash
+# Check if cache flushing is available
+./benchmarks/flush-cache.sh --check
+
+# Flush caches (requires sudo)
+sudo ./benchmarks/flush-cache.sh
+
+# Show detailed help
+./benchmarks/flush-cache.sh --help
+```
+
+**Features:**
+- Portable and reusable across different benchmarking scenarios
+- Proper error handling and privilege checking
+- Clear status messages and exit codes
+- Safe to use in automated scripts
+
+**Usage in custom benchmarks:**
+```bash
+# Example: Benchmark with cold cache
+sudo ./benchmarks/flush-cache.sh
+time find /usr -name "*.so"
+
+# Example: Compare warm vs cold cache
+time find /usr -name "*.so"  # Warm cache
+sudo ./benchmarks/flush-cache.sh
+time find /usr -name "*.so"  # Cold cache
+```
+
+The benchmark script (`run_real_benchmarks.sh`) automatically uses this helper when available.
 
 ## Contributing
 
