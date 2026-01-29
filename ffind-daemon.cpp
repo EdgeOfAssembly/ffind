@@ -226,7 +226,14 @@ public:
                         task = move(this->tasks.front());
                         this->tasks.pop();
                     }
-                    task();
+                    try {
+                        task();
+                    } catch (const exception& e) {
+                        // Silently catch exceptions to prevent worker thread termination
+                        // The exception will be re-thrown when future.get() is called
+                    } catch (...) {
+                        // Catch any other exceptions
+                    }
                 }
             });
         }
