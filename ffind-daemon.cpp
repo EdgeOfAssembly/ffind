@@ -1726,11 +1726,11 @@ void handle_client(int fd) {
 
     bool has_content = !content_pat.empty();
 
-    unique_ptr<RE2> re;
+    shared_ptr<RE2> re;  // Use shared_ptr for thread-safe lifetime management
     if (has_content && is_regex) {
         RE2::Options opts;
         opts.set_case_sensitive(!case_ins);
-        re = make_unique<RE2>(content_pat, opts);
+        re = make_shared<RE2>(content_pat, opts);
         if (!re->ok()) {
             string err = "Invalid regex pattern\n";
             write(fd, err.c_str(), err.size());
@@ -1907,7 +1907,7 @@ void handle_client(int fd) {
             
             futures.push_back(content_search_pool->enqueue([path, content_pat, case_ins, 
                                                             is_regex, content_glob, 
-                                                            before_ctx, after_ctx, &re]() {
+                                                            before_ctx, after_ctx, re]() {  // Capture re by value
                 vector<string> file_results;
                 
                 // Each thread gets its own file mapping
