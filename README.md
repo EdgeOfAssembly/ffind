@@ -88,36 +88,45 @@ Fast daemon-based file finder with real-time inotify indexing.
 
 ## Performance Benchmarks
 
-Real-world benchmarks performed on Linux kernel headers (16,548 files, 3,805 directories, 130MB):
+Real-world benchmarks performed on Linux kernel headers (5,629 files, 44 directories, 28MB):
 
-| Operation | find | grep -r | ripgrep | ffind | Speedup vs grep/ripgrep |
-|-----------|------|---------|---------|-------|------------------------|
-| Find *.c files | 0.067s | - | - | **0.004s** | **15.9x faster than find** |
-| Find *.h files | 0.068s | - | - | **0.018s** | **3.8x faster than find** |
-| Find files >100KB | 0.090s | - | - | **0.003s** | **28.4x faster than find** |
-| List all files | 0.063s | - | - | **0.025s** | **2.5x faster than find** |
-| Content search "static" in *.c | - | 0.052s | 0.037s | **0.006s** | **6.2x faster than ripgrep** |
-| Regex search "EXPORT_SYMBOL\|MODULE_" | - | 0.075s | 0.112s | **0.015s** | **5x faster than grep** |
+| Operation | find | grep -r | ffind | Speedup |
+|-----------|------|---------|-------|---------|
+| Find *.c files | 0.008s | - | **0.003s** | **2.5x faster** |
+| Find *.h files | 0.008s | - | **0.003s** | **2.5x faster** |
+| Find files in include/* | 0.007s | - | **0.005s** | **1.4x faster** |
+| Find files >100KB | 0.015s | - | **0.003s** | **5.2x faster** |
+| Content search "static" | - | 0.044s | **0.020s** | **2.2x faster** |
+| Regex search "EXPORT_SYMBOL\|MODULE_" | - | 0.064s | **0.039s** | **1.6x faster** |
+| List all files | 0.008s | - | **0.005s** | **1.6x faster** |
 
 **System Specifications:**
 - CPU: AMD EPYC 7763 64-Core Processor (4 cores allocated)
 - RAM: 16GB
 - Disk: SSD (ext4 filesystem)
-- OS: Ubuntu 24.04 LTS (Linux 6.11.0-1018-azure)
+- OS: Ubuntu 24.04 LTS
 - GNU find: 4.9.0
 - GNU grep: 3.11
-- ripgrep: 14.1.0
 
-**Benchmark Methodology:** The content-search timings above (e.g., ffind **0.006s** vs ripgrep **0.037s**, achieving ~**6.2x** speedup) were obtained on the test corpus described above (Linux kernel headers, 16,565 files). Each tool was run 3 times with the first run discarded as warm-up. The reported times are the median of the remaining runs, measured using the `time` command. Tests were performed with all cores available to each tool (ripgrep uses parallelism by default, ffind uses the thread pool introduced in v1.3).
+**Benchmark Methodology:** Tests use fair cache management methodology:
+- `find`/`grep` run with cold cache (caches flushed before each run when run with proper privileges)
+- `ffind` runs with warm cache (data in daemon's RAM index)
+- Each benchmark runs 3 times, median time reported
+- This represents real-world usage: `find`/`grep` read from disk, `ffind` serves from memory
 
-**Content Search Performance:** With the new thread pool implementation (v1.3), ffind's content search is now **6x faster than ripgrep** and **8.7x faster than grep** by utilizing all available CPU cores for parallel file processing.
+**Why ffind is faster:**
+- **File metadata searches**: No disk I/O - results served instantly from in-memory index
+- **Content searches**: Parallel processing using all CPU cores with minimal disk latency
+- **Real-time indexing**: Index stays up-to-date automatically via inotify
+
+For complete benchmark methodology and cache-flushing setup, see [`benchmarks/README.md`](benchmarks/README.md).
 
 ### Indexing Performance
 
-Initial indexing of test corpus (16,548 files, 3,805 directories, 130MB):
-- Time: ~3-5 seconds
-- Memory: ~50-80 MB resident
-- Rate: ~3,000-5,500 files/second
+Initial indexing of test corpus (5,629 files, 44 directories, 28MB):
+- Time: ~1-2 seconds
+- Memory: ~20-30 MB resident
+- Rate: ~3,000-5,000 files/second
 
 *Note: ffind times exclude initial indexing. Subsequent searches use the in-memory index for instant results. The daemon maintains the index in real-time as files change.*
 
@@ -125,10 +134,18 @@ Initial indexing of test corpus (16,548 files, 3,805 directories, 130MB):
 
 The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically sound methodology for fair comparisons:
 
-**Cache Management:**
-- ✅ **Cache flushing enabled** (when run with `sudo`): Before each `find`/`grep` command, filesystem caches are cleared to simulate cold disk reads
-- ✅ **ffind uses warm cache**: No cache flushing before ffind queries, as data is already in daemon's RAM
-- ⚠️ **Without sudo**: Benchmarks run without cache flushing, which may favor find/grep due to cache warming effects
+**Cache Management with Dedicated Binary:**
+- ✅ **Cache-flush utility**: Minimal C binary with `CAP_SYS_ADMIN` capability for secure cache clearing
+- ✅ **Security best practice**: Only the tiny `cache-flush` binary needs elevated privileges
+- ✅ **No root required**: Benchmark scripts run as normal user after one-time capability setup
+- ✅ **Fair comparison**: `find`/`grep` run with cold cache (disk reads), `ffind` with warm cache (RAM)
+
+**Setup (one-time):**
+```bash
+cd benchmarks
+make cache-flush      # Build the minimal cache-flush binary
+make install-caps     # Grant CAP_SYS_ADMIN capability (requires sudo once)
+```
 
 **Statistical Rigor:**
 - Each benchmark runs **3 times**
@@ -141,41 +158,26 @@ The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically s
 - `ffind`: Warm cache (data in RAM) - simulates daemon's persistent index
 - This comparison is **fair** because it shows the true benefit of ffind's in-memory indexing
 
-**Test Corpus:**
-- Linux kernel headers (linux-azure-6.11-headers-6.11.0-1018)
-- 16,548 files, 3,805 directories, 130MB total
-
-**System Information:**
-- CPU: AMD EPYC 7763 64-Core Processor (4 cores)
-- RAM: 16GB
-- Disk: SSD (ext4 filesystem)
-- OS: Ubuntu 24.04 LTS (Linux 6.11.0-1018-azure)
-
 **Benchmark script available:** `benchmarks/run_real_benchmarks.sh`
 
-To reproduce these benchmarks with fair cache management:
+To reproduce these benchmarks:
 ```bash
 # Build ffind
 make
 
-# Run benchmarks WITH cache flushing (recommended for fair results)
-sudo ./benchmarks/run_real_benchmarks.sh
+# Setup cache-flush utility (one-time)
+cd benchmarks
+make cache-flush && make install-caps
 
-# Or run WITHOUT cache flushing (faster but less fair comparison)
+# Run benchmarks (no sudo needed after setup)
 ./benchmarks/run_real_benchmarks.sh
 ```
 
 **Note on Results Interpretation:**
 - **With cache flushing**: Shows true speedup of in-memory index vs disk traversal
 - **Without cache flushing**: Results may be misleading if ffind runs first and warms the cache for find/grep
-
 **Why This Matters:**
-Previous benchmark methodology didn't flush caches, causing ffind to warm the cache for subsequent find/grep commands. This made find/grep appear faster than they actually are in real-world scenarios. The updated methodology provides fair comparisons by ensuring find/grep experience cold disk reads while ffind uses its in-memory index.
-
-**Comparison tools:**
-- GNU find (version 4.9.0)
-- GNU grep (version 3.11)
-- ag/ripgrep: Not available in test environment
+The cache-flush utility follows security best practices by granting minimal privileges to a tiny, auditable binary (47 lines of C) instead of running entire benchmark suites as root. Previous approaches required `sudo` for the entire benchmark script, creating unnecessary security risks.
 
 ## Quick Start
 
@@ -202,8 +204,29 @@ That's it! The daemon keeps the index updated in real-time as files change.
 - Linux (uses inotify for filesystem monitoring)
 - g++ with C++20 support
 - pthread library
+- sqlite3 development libraries (for persistence feature)
+- RE2 library (for regex support)
 
 ## Build
+
+### Install Dependencies
+
+On Ubuntu/Debian:
+```bash
+sudo apt-get install build-essential libsqlite3-dev libre2-dev
+```
+
+On Fedora/RHEL:
+```bash
+sudo dnf install gcc-c++ sqlite-devel re2-devel
+```
+
+On Arch Linux:
+```bash
+sudo pacman -S base-devel sqlite re2
+```
+
+### Compile
 
 ```bash
 make
@@ -212,6 +235,18 @@ make
 This produces two executables:
 - `ffind-daemon` - the indexing daemon
 - `ffind` - the search client
+
+### Build Cache-Flush Utility (Optional - for benchmarking)
+
+For fair benchmark comparisons with cache flushing:
+
+```bash
+cd benchmarks
+make cache-flush
+make install-caps    # Grants CAP_SYS_ADMIN capability (requires sudo)
+```
+
+This creates a minimal privileged helper that can flush filesystem caches without requiring the entire benchmark suite to run as root.
 
 ## Install
 
