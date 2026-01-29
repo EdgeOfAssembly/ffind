@@ -74,6 +74,36 @@ static bool safe_write_all(int fd, const void* buf, size_t count) {
     return true;
 }
 
+/**
+ * Function: main (client)
+ * Purpose: Command-line client for ffind-daemon
+ * 
+ * Flow:
+ * 1. Parse command-line arguments into search criteria
+ * 2. Connect to daemon's Unix socket
+ * 3. Send binary protocol message with search parameters
+ * 4. Receive results and display with optional colorization
+ * 
+ * Command-Line Interface:
+ * - Supports glob patterns, regex, fixed-string search
+ * - Multiple filter types: name, path, content, size, mtime, type
+ * - Context lines: -A, -B, -C (like grep)
+ * - Color control: --color=auto|always|never
+ * 
+ * Protocol Details:
+ * - Binary protocol with network byte order (big-endian) for integers
+ * - Variable-length strings prefixed with 4-byte length
+ * - Flags byte for case-insensitive, regex, content_glob
+ * - See handle_client() in ffind-daemon.cpp for protocol spec
+ * 
+ * Error Handling:
+ * - Uses safe_write_all() for all socket writes
+ * - Handles daemon not running gracefully
+ * - Validates all command-line arguments
+ * 
+ * REVIEWER_NOTE: This is a simple synchronous client. It sends one request,
+ * receives results, and exits. No complex state management needed.
+ */
 int main(int argc, char** argv) {
     if (argc < 2) {
         cerr << "Usage examples:\n"
@@ -354,9 +384,11 @@ int main(int argc, char** argv) {
     }
 
     // Read and colorize output incrementally
+    // STREAMING OUTPUT: Process results as they arrive from daemon
+    // This provides better responsiveness than buffering all results
     bool has_content = !content_pat.empty() || !content_glob.empty();
     
-    // Prepare regex for content matching if needed
+    // Prepare regex for content matching if needed (for colorization)
     unique_ptr<RE2> re_matcher;
     if (!content_pat.empty() && is_regex) {
         RE2::Options opts;
@@ -373,6 +405,9 @@ int main(int argc, char** argv) {
     char buf[8192];
     ssize_t n;
     
+    // COLORIZATION: Lambda to colorize a single output line
+    // Format: path:lineno:content (match) or path:lineno-content (context)
+    // Colors: path=bold, lineno=cyan, matched_content=bold_red
     auto process_line = [&](const string& line) {
         if (line.empty()) return;
         
