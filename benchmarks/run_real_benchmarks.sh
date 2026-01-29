@@ -20,8 +20,8 @@ set -e
 #   - Use: cd benchmarks && make cache-flush && make install-caps
 
 CORPUS_DIR="/tmp/test-corpus"
-FFIND_DIR="/home/runner/work/ffind/ffind"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FFIND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CACHE_FLUSH_BIN="$SCRIPT_DIR/cache-flush"
 
 # Check if we have the cache-flush binary with proper capabilities

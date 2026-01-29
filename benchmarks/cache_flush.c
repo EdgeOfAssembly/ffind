@@ -23,6 +23,7 @@
 
 int main(void) {
     FILE *f;
+    int ret;
     
     /* Step 1: Flush dirty pages to disk */
     sync();
@@ -38,8 +39,17 @@ int main(void) {
         return 1;
     }
     
-    fprintf(f, "3\n");
-    fclose(f);
+    ret = fprintf(f, "3\n");
+    if (ret < 0) {
+        perror("fprintf");
+        fclose(f);
+        return 1;
+    }
+    
+    if (fclose(f) != 0) {
+        perror("fclose");
+        return 1;
+    }
     
     return 0;
 }
