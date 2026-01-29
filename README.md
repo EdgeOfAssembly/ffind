@@ -142,14 +142,13 @@ The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically s
 
 **Security Model:**
 - The `cache-flush` binary must run with `sudo` to write to `/proc/sys/vm/drop_caches`
-- This requires `CAP_SYS_ADMIN` capability or root privileges (system security requirement)
 - Only this tiny, auditable C program (~50 lines) needs elevated privileges
 - All other components (ffind-daemon, ffind client, benchmark scripts) run as normal user
 
 **Setup (one-time):**
 ```bash
 cd benchmarks
-make cache-flush      # Build the minimal cache-flush binary
+make      # Build the cache-flush utility
 ```
 
 **Statistical Rigor:**
@@ -172,27 +171,18 @@ make
 
 # Build cache-flush utility (one-time)
 cd benchmarks
-make cache-flush
+make
 
 # Run benchmarks (will prompt for sudo password for cache flushing)
-sudo ./benchmarks/run_real_benchmarks.sh
+./run_real_benchmarks.sh
 ```
 
-**Note on sudo requirement**: The benchmark script needs sudo to run `cache-flush` before each find/grep test. This ensures fair cold-cache comparisons. Only the tiny cache-flush binary executes with elevated privileges.
+**Note on sudo**: The benchmark script internally calls `sudo` for cache-flush only. The script itself should be run as a normal user, not with sudo. You will be prompted for your password when cache clearing is needed.
 
 **Note on Results Interpretation:**
 - **With cache flushing**: Shows true speedup of in-memory index vs disk traversal
 - **Without cache flushing**: Results may be misleading if ffind runs first and warms the cache for find/grep
-**Why sudo is Required:**
-- **System limitation**: Linux requires `CAP_SYS_ADMIN` capability to write to `/proc/sys/vm/drop_caches`
-- **Security benefit**: Only the tiny, auditable C program (~50 lines) runs with sudo, not the entire benchmark suite
-- **Alternative approach**: You could use `sudo setcap cap_sys_admin+ep cache-flush` to avoid sudo each time, but this grants permanent elevated privileges to the binary
-- **Recommended**: Use `sudo ./cache-flush` each time for explicit privilege control
 
-**Security Trade-offs:**
-- **Using sudo each time**: More secure (explicit privilege escalation), requires password per session
-- **Using setcap once**: More convenient (no password prompts), but grants permanent capability to binary
-- **This tool uses sudo**: Following principle of explicit privilege control
 
 ## Quick Start
 
@@ -257,10 +247,10 @@ For fair benchmark comparisons with cache flushing:
 
 ```bash
 cd benchmarks
-make cache-flush
+make
 ```
 
-This creates a minimal helper (~50 lines of C) that flushes filesystem caches. The helper requires `sudo` to run because writing to `/proc/sys/vm/drop_caches` requires `CAP_SYS_ADMIN` capability.
+This creates a minimal helper (~50 lines of C) that flushes filesystem caches. The helper requires `sudo` to run because writing to `/proc/sys/vm/drop_caches` requires elevated privileges.
 
 **Security Note**: Only this tiny, auditable binary needs elevated privileges - never run ffind-daemon or the main ffind client as root.
 

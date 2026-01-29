@@ -12,8 +12,12 @@ cp -r /usr/src/linux-headers-* /tmp/test-corpus
 cd ..
 make
 
-# 3. Run benchmarks (will prompt for sudo password)
-sudo ./benchmarks/run_real_benchmarks.sh
+# 3. Build cache-flush utility
+cd benchmarks
+make
+
+# 4. Run benchmarks (will prompt for sudo password for cache clearing)
+./run_real_benchmarks.sh
 ```
 
 ## Test Corpus Setup
@@ -193,20 +197,20 @@ The `cache-flush` C binary provides a secure, minimal utility for clearing Linux
 **Build and Setup (one-time):**
 ```bash
 # Build the binary
-make cache-flush
+make
 ```
 
 **Usage:**
 ```bash
-# Flush caches (requires sudo)
+# The benchmark script calls this automatically with sudo
+# For manual usage:
 sudo ./cache-flush
 ```
 
 **Security Model:**
-- **Why sudo is required**: Linux requires `CAP_SYS_ADMIN` capability to write to `/proc/sys/vm/drop_caches`
+- **Why sudo is required**: Linux requires elevated privileges to write to `/proc/sys/vm/drop_caches`
 - **Security benefit**: Only minimal auditable C code (~50 lines) runs with elevated privileges
-- **Alternative**: You could use `sudo setcap cap_sys_admin+ep cache-flush` to avoid sudo prompts, but this grants permanent elevated privileges to the binary
-- **Our choice**: Require explicit `sudo` each time for better security control
+- **Our approach**: Benchmark script calls sudo internally for cache-flush only
 
 **Features:**
 - **Security best practice**: Minimal C code (~50 lines) with elevated privileges
@@ -229,7 +233,6 @@ time find /usr -name "*.so"  # Cold cache
 **Technical details:**
 - Calls `sync()` to flush dirty pages to disk
 - Writes "3" to `/proc/sys/vm/drop_caches` to clear page cache, dentries, and inodes
-- Requires `CAP_SYS_ADMIN` capability or root privileges (Linux security requirement)
 - Returns 0 on success, 1 on error
 
 The benchmark script (`run_real_benchmarks.sh`) automatically uses this utility with sudo when running benchmarks.
