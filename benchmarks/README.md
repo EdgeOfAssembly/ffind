@@ -204,12 +204,12 @@ sudo ./cache-flush
 
 **Security Model:**
 - **Why sudo is required**: Linux requires `CAP_SYS_ADMIN` capability to write to `/proc/sys/vm/drop_caches`
-- **Security benefit**: Only 55 lines of auditable C code run with elevated privileges
+- **Security benefit**: Only minimal auditable C code (~50 lines) runs with elevated privileges
 - **Alternative**: You could use `sudo setcap cap_sys_admin+ep cache-flush` to avoid sudo prompts, but this grants permanent elevated privileges to the binary
 - **Our choice**: Require explicit `sudo` each time for better security control
 
 **Features:**
-- **Security best practice**: Only 55 lines of C code with elevated privileges
+- **Security best practice**: Minimal C code (~50 lines) with elevated privileges
 - **Explicit privilege control**: Requires sudo each time (no permanent capabilities)
 - **Portable**: Simple C with no external dependencies
 - **Easy to audit**: Small, focused code that's easy to security review

@@ -1086,6 +1086,15 @@ static bool safe_read_all(int fd, void* buf, size_t count) {
     return true;
 }
 
+/**
+ * Helper: ignore_write_result
+ * Purpose: Wrapper to explicitly ignore write() return value in signal handlers
+ * This is needed because newer GCC doesn't suppress warn_unused_result with (void) cast
+ */
+__attribute__((unused)) static inline void ignore_write_result(ssize_t result) {
+    (void)result;
+}
+
 // Helper function to clean up resources on socket creation/setup errors
 void cleanup_on_socket_error(int srv_fd, bool unlink_socket, const string& sock_path) {
     // Close socket file descriptor if valid
@@ -1156,9 +1165,8 @@ void crash_handler(int sig) {
     }
     if (msg != nullptr && len > 0) {
         // SECURITY: Signal handler safety - write() is async-signal-safe
-        // Store result in volatile to suppress warning (we can't handle errors in crash handler)
-        volatile ssize_t write_result = write(STDERR_FILENO, msg, len);
-        (void)write_result;  // Explicitly mark as intentionally unused
+        // Intentionally ignore return value (can't handle errors in crash handler)
+        ignore_write_result(write(STDERR_FILENO, msg, len));
     }
     
     // NOTE: We use atomic operations here as best-effort cleanup.
@@ -1226,9 +1234,8 @@ void sig_handler(int sig) {
     if (shutdown_started.exchange(true) == false) {
         const char msg[] = "\n[INFO] Shutdown signal received, stopping gracefully...\n";
         // SECURITY: Signal handler safety - write() is async-signal-safe
-        // Store result in volatile to suppress warning (we can't handle errors in signal handler)
-        volatile ssize_t write_result = write(STDERR_FILENO, msg, sizeof(msg)-1);
-        (void)write_result;  // Explicitly mark as intentionally unused
+        // Intentionally ignore return value (can't handle errors in signal handler)
+        ignore_write_result(write(STDERR_FILENO, msg, sizeof(msg)-1));
     }
     
     running = 0; 
@@ -2042,7 +2049,7 @@ void handle_client(int fd) {
     uint32_t net_nlen, net_plen, net_clen;
     
     // Read name pattern length and validate
-    if (read(fd, &net_nlen, 4) != 4) { close(fd); return; }
+    if (!safe_read_all(fd, &net_nlen, 4)) { close(fd); return; }
     uint32_t name_len = ntohl(net_nlen);
     // SECURITY: Validate name pattern length
     if (name_len > MAX_PATTERN_SIZE) { 
@@ -2052,13 +2059,13 @@ void handle_client(int fd) {
         return; 
     }
     string name_pat(name_len, '\0');
-    if (name_len > 0 && read(fd, name_pat.data(), name_len) != (ssize_t)name_len) { 
+    if (name_len > 0 && !safe_read_all(fd, name_pat.data(), name_len)) { 
         close(fd); 
         return; 
     }
 
     // Read path pattern length and validate
-    if (read(fd, &net_plen, 4) != 4) { close(fd); return; }
+    if (!safe_read_all(fd, &net_plen, 4)) { close(fd); return; }
     uint32_t path_len = ntohl(net_plen);
     // SECURITY: Validate path pattern length
     if (path_len > MAX_PATTERN_SIZE) { 
@@ -2068,13 +2075,13 @@ void handle_client(int fd) {
         return; 
     }
     string path_pat(path_len, '\0');
-    if (path_len > 0 && read(fd, path_pat.data(), path_len) != (ssize_t)path_len) { 
+    if (path_len > 0 && !safe_read_all(fd, path_pat.data(), path_len)) { 
         close(fd); 
         return; 
     }
 
     // Read content pattern length and validate
-    if (read(fd, &net_clen, 4) != 4) { close(fd); return; }
+    if (!safe_read_all(fd, &net_clen, 4)) { close(fd); return; }
     uint32_t content_len = ntohl(net_clen);
     // SECURITY: Validate content pattern length
     if (content_len > MAX_PATTERN_SIZE) { 
@@ -2084,7 +2091,7 @@ void handle_client(int fd) {
         return; 
     }
     string content_pat(content_len, '\0');
-    if (content_len > 0 && read(fd, content_pat.data(), content_len) != (ssize_t)content_len) { 
+    if (content_len > 0 && !safe_read_all(fd, content_pat.data(), content_len)) { 
         close(fd); 
         return; 
     }

@@ -143,7 +143,7 @@ The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically s
 **Security Model:**
 - The `cache-flush` binary must run with `sudo` to write to `/proc/sys/vm/drop_caches`
 - This requires `CAP_SYS_ADMIN` capability or root privileges (system security requirement)
-- Only this tiny, auditable 55-line C program needs elevated privileges
+- Only this tiny, auditable C program (~50 lines) needs elevated privileges
 - All other components (ffind-daemon, ffind client, benchmark scripts) run as normal user
 
 **Setup (one-time):**
@@ -185,7 +185,7 @@ sudo ./benchmarks/run_real_benchmarks.sh
 - **Without cache flushing**: Results may be misleading if ffind runs first and warms the cache for find/grep
 **Why sudo is Required:**
 - **System limitation**: Linux requires `CAP_SYS_ADMIN` capability to write to `/proc/sys/vm/drop_caches`
-- **Security benefit**: Only the tiny, auditable 55-line C program runs with sudo, not the entire benchmark suite
+- **Security benefit**: Only the tiny, auditable C program (~50 lines) runs with sudo, not the entire benchmark suite
 - **Alternative approach**: You could use `sudo setcap cap_sys_admin+ep cache-flush` to avoid sudo each time, but this grants permanent elevated privileges to the binary
 - **Recommended**: Use `sudo ./cache-flush` each time for explicit privilege control
 
@@ -260,7 +260,7 @@ cd benchmarks
 make cache-flush
 ```
 
-This creates a minimal helper (55 lines of C) that flushes filesystem caches. The helper requires `sudo` to run because writing to `/proc/sys/vm/drop_caches` requires `CAP_SYS_ADMIN` capability.
+This creates a minimal helper (~50 lines of C) that flushes filesystem caches. The helper requires `sudo` to run because writing to `/proc/sys/vm/drop_caches` requires `CAP_SYS_ADMIN` capability.
 
 **Security Note**: Only this tiny, auditable binary needs elevated privileges - never run ffind-daemon or the main ffind client as root.
 

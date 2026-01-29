@@ -25,13 +25,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FFIND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CACHE_FLUSH_BIN="$SCRIPT_DIR/cache-flush"
 
-# Check if we have the cache-flush binary with proper capabilities
+# Check if we have the cache-flush binary and can execute it with sudo
 CAN_FLUSH_CACHE=false
 if [ -x "$CACHE_FLUSH_BIN" ]; then
-    # Try running it to see if it works (will fail gracefully if no caps)
-    if "$CACHE_FLUSH_BIN" >/dev/null 2>&1; then
-        CAN_FLUSH_CACHE=true
-    fi
+    # We'll call it with sudo, so just check if binary exists and is executable
+    # Actual capability check happens when we run it with sudo
+    CAN_FLUSH_CACHE=true
 fi
 
 # Function to flush filesystem cache using the C binary (requires sudo)
