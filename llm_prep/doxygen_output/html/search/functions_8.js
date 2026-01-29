@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['remove_5fpath_0',['remove_path',['../ffind-daemon_8cpp.html#aef341a13753571130f788a38d2ce3b6f',1,'ffind-daemon.cpp']]]
+  ['handle_5fclient_0',['handle_client',['../ffind-daemon_8cpp.html#aa29c4f34a63bacc7d3bcd55e101133fd',1,'ffind-daemon.cpp']]],
+  ['handle_5fdirectory_5frename_1',['handle_directory_rename',['../ffind-daemon_8cpp.html#a6cb59ac446c1f52967690e9c802fffb6',1,'ffind-daemon.cpp']]]
 ];

@@ -1,4 +1,28 @@
 var searchData=
 [
-  ['how_20to_20use_0',['How to Use',['../md_llm__prep_2codebase__overview.html#autotoc_md6',1,'']]]
+  ['daemon_0',['Start the daemon',['../md_README.html#autotoc_md141',1,'']]],
+  ['daemon_20binary_20protocol_1',['Client-to-Daemon Binary Protocol',['../md_ARCHITECTURE.html#autotoc_md23',1,'']]],
+  ['daemon_20cpp_2',['ffind-daemon (ffind-daemon.cpp)',['../md_ARCHITECTURE.html#autotoc_md11',1,'']]],
+  ['daemon_20ffind_20daemon_20cpp_3',['ffind-daemon (ffind-daemon.cpp)',['../md_ARCHITECTURE.html#autotoc_md11',1,'']]],
+  ['daemon_20to_20client_20response_20format_4',['Daemon-to-Client Response Format',['../md_ARCHITECTURE.html#autotoc_md24',1,'']]],
+  ['data_20flow_20diagrams_5',['Data Flow Diagrams',['../md_ARCHITECTURE.html#autotoc_md18',1,'']]],
+  ['date_6',['Execution Date',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md88',1,'']]],
+  ['dependencies_7',['Install Dependencies',['../md_README.html#autotoc_md136',1,'']]],
+  ['descriptions_8',['Component Descriptions',['../md_ARCHITECTURE.html#autotoc_md8',1,'']]],
+  ['details_9',['Implementation Details',['../md_BENCHMARK__RESULTS.html#autotoc_md74',1,'']]],
+  ['development_10',['Appendix: Build and Development',['../md_ARCHITECTURE.html#autotoc_md62',1,'']]],
+  ['development_20guidelines_11',['Development Guidelines',['../md_ARCHITECTURE.html#autotoc_md64',1,'']]],
+  ['diagrams_12',['Data Flow Diagrams',['../md_ARCHITECTURE.html#autotoc_md18',1,'']]],
+  ['difference_20between_20c_20and_20g_13',['Q: What&apos;s the difference between &lt;span class=&quot;tt&quot;&gt;-c&lt;/span&gt; and &lt;span class=&quot;tt&quot;&gt;-g&lt;/span&gt;?',['../md_README.html#autotoc_md165',1,'']]],
+  ['directories_14',['Multiple Root Directories',['../md_README.html#autotoc_md143',1,'']]],
+  ['directories_15',['Q: How do I search multiple directories?',['../md_README.html#autotoc_md164',1,'']]],
+  ['directory_20monitoring_16',['Directory Monitoring',['../md_README.html#autotoc_md155',1,'']]],
+  ['directory_20queries_17',['5. Path Index for Directory Queries',['../md_ARCHITECTURE.html#autotoc_md54',1,'']]],
+  ['directory_20trees_18',['Q: What about huge directory trees?',['../md_README.html#autotoc_md161',1,'']]],
+  ['do_20i_20search_20multiple_20directories_19',['Q: How do I search multiple directories?',['../md_README.html#autotoc_md164',1,'']]],
+  ['documentation_20',['ffind Architecture Documentation',['../md_ARCHITECTURE.html',1,'']]],
+  ['does_20it_20use_20a_20lot_20of_20ram_21',['Q: Does it use a lot of RAM?',['../md_README.html#autotoc_md160',1,'']]],
+  ['does_20persistence_20work_22',['Q: How does persistence work?',['../md_README.html#autotoc_md162',1,'']]],
+  ['download_20gcc_20source_20code_20network_20required_23',['Option 2: Download GCC Source Code (Network Required)',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md101',1,'']]],
+  ['download_20linux_20kernel_20network_20required_24',['Option 3: Download Linux Kernel (Network Required)',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md102',1,'']]]
 ];

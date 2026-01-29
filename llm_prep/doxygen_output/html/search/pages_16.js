@@ -1,4 +1,29 @@
 var searchData=
 [
-  ['version_0',['Implemented (current version)',['../md_TODO.html#autotoc_md32',1,'']]]
+  ['path_20component_20index_20benchmark_20results_0',['Path Component Index - Benchmark Results',['../md_BENCHMARK__RESULTS.html',1,'']]],
+  ['path_20filtered_20queries_20primary_20target_1',['Benchmark 3: Path-Filtered Queries (PRIMARY TARGET)',['../md_BENCHMARK__RESULTS.html#autotoc_md72',1,'']]],
+  ['path_20index_20for_20directory_20queries_2',['5. Path Index for Directory Queries',['../md_ARCHITECTURE.html#autotoc_md54',1,'']]],
+  ['path_20index_20structure_3',['Path Index Structure',['../md_BENCHMARK__RESULTS.html#autotoc_md75',1,'']]],
+  ['performance_4',['Performance',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md112',1,'Factors Affecting Performance'],['../md_README.html#autotoc_md131',1,'Indexing Performance']]],
+  ['performance_20analysis_5',['Performance Analysis',['../md_BENCHMARK__RESULTS.html#autotoc_md78',1,'']]],
+  ['performance_20areas_6',['Strong Performance Areas',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md93',1,'']]],
+  ['performance_20benchmarks_7',['Performance Benchmarks',['../md_README.html#autotoc_md130',1,'']]],
+  ['performance_20benchmarks_20summary_8',['Performance Benchmarks Summary',['../md_ARCHITECTURE.html#autotoc_md60',1,'']]],
+  ['performance_20breakdown_9',['Performance Breakdown',['../md_BENCHMARK__RESULTS.html#autotoc_md80',1,'']]],
+  ['performance_20optimizations_10',['Performance Optimizations',['../md_ARCHITECTURE.html#autotoc_md45',1,'']]],
+  ['performance_20results_11',['Performance Results',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md109',1,'']]],
+  ['persistence_12',['Persistence',['../md_ARCHITECTURE.html#autotoc_md16',1,'5. SQLite Persistence'],['../md_ARCHITECTURE.html#autotoc_md37',1,'SQLite Schema (Optional Persistence)'],['../md_ARCHITECTURE.html#autotoc_md35',1,'Storage and Persistence']]],
+  ['persistence_20flow_13',['Persistence Flow',['../md_ARCHITECTURE.html#autotoc_md38',1,'']]],
+  ['persistence_20optional_14',['SQLite Persistence (Optional)',['../md_README.html#autotoc_md142',1,'']]],
+  ['persistence_20work_15',['Q: How does persistence work?',['../md_README.html#autotoc_md162',1,'']]],
+  ['pool_16',['4. Thread Pool',['../md_ARCHITECTURE.html#autotoc_md15',1,'']]],
+  ['pool_20for_20content_20search_17',['2. Thread Pool for Content Search',['../md_ARCHITECTURE.html#autotoc_md48',1,'']]],
+  ['primary_20target_18',['Benchmark 3: Path-Filtered Queries (PRIMARY TARGET)',['../md_BENCHMARK__RESULTS.html#autotoc_md72',1,'']]],
+  ['priority_20optional_19',['Low Priority / Optional',['../md_TODO.html#autotoc_md171',1,'']]],
+  ['process_20',['Build Process',['../md_ARCHITECTURE.html#autotoc_md63',1,'']]],
+  ['processing_20flow_21',['Query Processing Flow',['../md_ARCHITECTURE.html#autotoc_md19',1,'']]],
+  ['production_20readiness_22',['Production Readiness',['../md_BENCHMARK__RESULTS.html#autotoc_md84',1,'']]],
+  ['propagation_23',['Filesystem Change Propagation',['../md_ARCHITECTURE.html#autotoc_md20',1,'']]],
+  ['protocol_24',['Client-to-Daemon Binary Protocol',['../md_ARCHITECTURE.html#autotoc_md23',1,'']]],
+  ['protocol_20specification_25',['Protocol Specification',['../md_ARCHITECTURE.html#autotoc_md22',1,'']]]
 ];

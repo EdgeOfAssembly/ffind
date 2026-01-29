@@ -1,0 +1,1010 @@
+\chapter{ffind Architecture Documentation }
+\hypertarget{md_ARCHITECTURE}{}\label{md_ARCHITECTURE}\index{ffind Architecture Documentation@{ffind Architecture Documentation}}
+\label{md_ARCHITECTURE_autotoc_md0}%
+\Hypertarget{md_ARCHITECTURE_autotoc_md0}%
+
+
+{\bfseries{Version\+:}} 1.\+0 ~\newline
+ {\bfseries{Last Updated\+:}} 2026-\/01-\/29 ~\newline
+ {\bfseries{Purpose\+:}} Comprehensive architectural documentation for ffind daemon-\/based file finder
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md2}{}\doxysection{\texorpdfstring{Table of Contents}{Table of Contents}}\label{md_ARCHITECTURE_autotoc_md2}
+
+\begin{DoxyEnumerate}
+\item Overview
+\item System Architecture
+\item Component Descriptions
+\item Data Flow Diagrams
+\item Protocol Specification
+\item Threading Model
+\item Security Architecture
+\item Storage and Persistence
+\item Error Handling
+\item Performance Optimizations
+\end{DoxyEnumerate}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md4}{}\doxysection{\texorpdfstring{Overview}{Overview}}\label{md_ARCHITECTURE_autotoc_md4}
+ffind is a high-\/performance file search system consisting of two main components\+:
+
+
+\begin{DoxyItemize}
+\item {\bfseries{ffind-\/daemon}} -\/ Long-\/running server that maintains an in-\/memory file index
+\item {\bfseries{ffind}} -\/ Client CLI tool that queries the daemon and displays results
+\end{DoxyItemize}
+
+The system uses Linux inotify for real-\/time filesystem monitoring and provides instant search capabilities through memory-\/resident indexes.
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md6}{}\doxysection{\texorpdfstring{System Architecture}{System Architecture}}\label{md_ARCHITECTURE_autotoc_md6}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌─────────────────────────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ffind\ System\ Architecture\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{└─────────────────────────────────────────────────────────────────────┘}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ┌──────────────────────────────┐}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ User\ Terminal\ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \$\ ffind\ "{}*.cpp"{}\ -\/c\ "{}TODO"{}\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ └──────────────┬───────────────┘}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ (executes)}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ┌──────────────▼───────────────┐}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ ffind\ Client\ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ (ffind.cpp\ -\/\ \string~400\ LOC)\ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ •\ Parse\ CLI\ arguments\ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ •\ Serialize\ query\ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ •\ Connect\ to\ daemon\ socket\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ •\ Stream\ and\ colorize\ output│}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ └──────────────┬───────────────┘}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ Unix\ Domain\ Socket}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ /run/user/\{UID\}/ffind.sock}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ┌──────────────▼───────────────┐}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ ffind-\/daemon\ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ (ffind-\/daemon.cpp\ \string~2500\ LOC)│}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ ┌────────────────────────┐\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ Main\ Event\ Loop\ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ Accept\ connections\ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ Monitor\ inotify\ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ Handle\ queries\ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ └────────────────────────┘\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ ┌────────────────────────┐\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ In-\/Memory\ Index\ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ vector<Entry>\ entries\ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ File\ paths\ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ Sizes,\ mtimes\ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ Real-\/time\ updates\ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ └────────────────────────┘\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ ┌────────────────────────┐\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ Thread\ Pool\ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ Parallel\ content\ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ \ \ search\ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ N\ worker\ threads\ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ └────────────────────────┘\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ ┌────────────────────────┐\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ SQLite\ Persistence\ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ (Optional\ -\/-\/db)\ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ WAL\ mode\ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │\ \ •\ Periodic\ flushes\ \ \ \ │\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ └────────────────────────┘\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ └───────┬──────────┬───────────┘}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ┌───────▼──┐\ \ \ ┌──▼────────┐}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ inotify\ \ │\ \ \ │\ Filesystem│}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ Events\ \ \ │\ \ \ │\ I/O\ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ └──────────┘\ \ \ └───────────┘}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md8}{}\doxysection{\texorpdfstring{Component Descriptions}{Component Descriptions}}\label{md_ARCHITECTURE_autotoc_md8}
+\hypertarget{md_ARCHITECTURE_autotoc_md9}{}\doxysubsection{\texorpdfstring{ffind Client (ffind.\+cpp)}{ffind Client (ffind.\+cpp)}}\label{md_ARCHITECTURE_autotoc_md9}
+{\bfseries{Purpose\+:}} Command-\/line interface for querying the daemon
+
+{\bfseries{Key Responsibilities\+:}}
+\begin{DoxyItemize}
+\item Parse command-\/line arguments and options
+\item Validate input parameters
+\item Serialize query into binary protocol
+\item Connect to daemon via Unix socket
+\item Stream results with color highlighting
+\item Handle connection errors gracefully
+\end{DoxyItemize}
+
+{\bfseries{Key Functions\+:}}
+\begin{DoxyItemize}
+\item {\ttfamily \doxylink{cache__flush_8c_a840291bc02cba5474a4cb46a9b9566fe}{main()}} -\/ \doxylink{structEntry}{Entry} point, argument parsing, connection management
+\item Output formatting with ANSI color codes
+\item Regex/content match highlighting
+\end{DoxyItemize}
+
+{\bfseries{Dependencies\+:}}
+\begin{DoxyItemize}
+\item RE2 library (for regex support)
+\item Unix socket API
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md11}{}\doxysubsection{\texorpdfstring{ffind-\/daemon (ffind-\/daemon.\+cpp)}{ffind-\/daemon (ffind-\/daemon.\+cpp)}}\label{md_ARCHITECTURE_autotoc_md11}
+{\bfseries{Purpose\+:}} Long-\/running server maintaining file index
+
+{\bfseries{Key Responsibilities\+:}}
+\begin{DoxyItemize}
+\item Build and maintain in-\/memory file index
+\item Monitor filesystem changes via inotify
+\item Handle client queries efficiently
+\item Persist index to SQLite (optional)
+\item Manage thread pool for parallel searches
+\end{DoxyItemize}
+
+{\bfseries{Key Modules\+:}}\hypertarget{md_ARCHITECTURE_autotoc_md12}{}\doxysubsubsection{\texorpdfstring{1. Index Management}{1. Index Management}}\label{md_ARCHITECTURE_autotoc_md12}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keyword}{struct\ }\mbox{\hyperlink{structEntry}{Entry}}\ \{}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordtype}{string}\ \mbox{\hyperlink{structEntry_ab9a48aa7387d27c826433ce35f6ba823}{path}};\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Full\ file\ path}}
+\DoxyCodeLine{\ \ \ \ uint64\_t\ \mbox{\hyperlink{structEntry_a45376b4fa084dbfcce738372fa018aa9}{size}};\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ File\ size\ in\ bytes}}
+\DoxyCodeLine{\ \ \ \ time\_t\ \mbox{\hyperlink{structEntry_a7c953b65196958fa8e9530c2eaabd0ca}{mtime}};\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Modification\ time}}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordtype}{bool}\ is\_directory;\ \ \ \ \ \textcolor{comment}{//\ Directory\ flag}}
+\DoxyCodeLine{\};}
+\DoxyCodeLine{vector<Entry>\ \mbox{\hyperlink{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf}{entries}};\ \ \ \ \ \textcolor{comment}{//\ Main\ in-\/memory\ index}}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md13}{}\doxysubsubsection{\texorpdfstring{2. inotify Integration}{2. inotify Integration}}\label{md_ARCHITECTURE_autotoc_md13}
+
+\begin{DoxyItemize}
+\item Watches all directories recursively
+\item Handles CREATE, DELETE, MODIFY, MOVE events
+\item Cookie-\/based rename tracking
+\item Automatic watch descriptor management
+\end{DoxyItemize}\hypertarget{md_ARCHITECTURE_autotoc_md14}{}\doxysubsubsection{\texorpdfstring{3. Query Handler}{3. Query Handler}}\label{md_ARCHITECTURE_autotoc_md14}
+
+\begin{DoxyItemize}
+\item Deserializes client requests
+\item Filters entries by multiple criteria
+\item Executes parallel content searches
+\item Batches results for efficient transmission
+\end{DoxyItemize}\hypertarget{md_ARCHITECTURE_autotoc_md15}{}\doxysubsubsection{\texorpdfstring{4. Thread Pool}{4. Thread Pool}}\label{md_ARCHITECTURE_autotoc_md15}
+
+\begin{DoxyItemize}
+\item Pre-\/allocated worker threads
+\item Task queue for content search jobs
+\item Synchronization via mutex and condition variables
+\end{DoxyItemize}\hypertarget{md_ARCHITECTURE_autotoc_md16}{}\doxysubsubsection{\texorpdfstring{5. SQLite Persistence}{5. SQLite Persistence}}\label{md_ARCHITECTURE_autotoc_md16}
+
+\begin{DoxyItemize}
+\item WAL mode for concurrent access
+\item Periodic flushes (every 30s or 100 changes)
+\item Reconciliation on startup
+\item Atomic transactions
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md18}{}\doxysection{\texorpdfstring{Data Flow Diagrams}{Data Flow Diagrams}}\label{md_ARCHITECTURE_autotoc_md18}
+\hypertarget{md_ARCHITECTURE_autotoc_md19}{}\doxysubsection{\texorpdfstring{Query Processing Flow}{Query Processing Flow}}\label{md_ARCHITECTURE_autotoc_md19}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌──────────┐}
+\DoxyCodeLine{│\ \ Client\ \ │}
+\DoxyCodeLine{│\ (ffind)\ \ │}
+\DoxyCodeLine{└────┬─────┘}
+\DoxyCodeLine{\ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ 1.\ Serialize\ Query}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ ┌────────────────────────────────────┐}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ Binary\ Protocol\ (Network\ Byte\ Order)│}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ name\_pattern\_len\ (4\ bytes)\ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ name\_pattern\ (UTF-\/8)\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ path\_pattern\_len\ (4\ bytes)\ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ path\_pattern\ (UTF-\/8)\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ content\_pattern\_len\ (4\ bytes)\ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ content\_pattern\ (UTF-\/8)\ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ flags\ (1\ byte)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ \ \ -\/\ case\_insensitive:\ bit\ 0\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ \ \ -\/\ use\_regex:\ bit\ 1\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ \ \ -\/\ use\_glob:\ bit\ 2\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ type\_filter\ (1\ byte)\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ size\_op,\ size\_val\ (9\ bytes)\ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ mtime\_op,\ mtime\_days\ (5\ bytes)\ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ │\ •\ before\_ctx,\ after\_ctx\ (2\ bytes)\ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ \ \ \ └────────────────────────────────────┘}
+\DoxyCodeLine{\ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ 2.\ Send\ to\ Daemon}
+\DoxyCodeLine{\ \ \ \ \ ▼}
+\DoxyCodeLine{┌─────────────────┐}
+\DoxyCodeLine{│\ \ \ Unix\ Socket\ \ \ │}
+\DoxyCodeLine{│\ /run/user/\{UID\}/│}
+\DoxyCodeLine{│\ \ ffind.sock\ \ \ \ \ │}
+\DoxyCodeLine{└────┬────────────┘}
+\DoxyCodeLine{\ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ 3.\ Daemon\ Receives}
+\DoxyCodeLine{\ \ \ \ \ ▼}
+\DoxyCodeLine{┌────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ ffind-\/daemon\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ ┌──────────────────────────────────────────┐\ │}
+\DoxyCodeLine{│\ \ │\ handle\_client()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ Step\ 1:\ Deserialize\ query\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ ├─\ Validate\ string\ lengths\ (<1MB)\ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ └─\ Parse\ all\ filter\ parameters\ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ Step\ 2:\ Lock\ mutex,\ access\ entries[]\ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ Step\ 3:\ Filter\ Phase\ 1\ (Metadata)\ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ ├─\ Name\ pattern\ (glob/regex)\ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ ├─\ Path\ pattern\ (glob/regex)\ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ ├─\ Type\ filter\ (file/dir)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ ├─\ Size\ filter\ (+/-\//=)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ └─\ Mtime\ filter\ (+/-\//=)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ ↓\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ \ candidates[]\ vector\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ Step\ 4:\ Content\ Search\ (if\ needed)\ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ ├─\ Dispatch\ to\ thread\ pool\ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ ├─\ Each\ thread:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ │\ \ \ •\ mmap\ file\ (MAP\_PRIVATE)\ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ │\ \ \ •\ Scan\ lines\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ │\ \ \ •\ Match\ pattern\ (fixed/regex/glob)\ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ │\ \ \ •\ Collect\ context\ lines\ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ └─\ Aggregate\ results\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ Step\ 5:\ Send\ Results\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ │}
+\DoxyCodeLine{│\ \ │\ \ └─\ Batch\ with\ writev()\ for\ efficiency\ \ \ │\ │}
+\DoxyCodeLine{│\ \ └──────────────────────────────────────────┘\ │}
+\DoxyCodeLine{└────────────────────────────────────────────────┘}
+\DoxyCodeLine{\ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ │\ 4.\ Stream\ Results}
+\DoxyCodeLine{\ \ \ \ \ ▼}
+\DoxyCodeLine{┌──────────┐}
+\DoxyCodeLine{│\ \ Client\ \ │}
+\DoxyCodeLine{│\ \ ├─\ Read\ line\ by\ line\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ ├─\ Apply\ color\ highlighting\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ └─\ Output\ to\ stdout\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{└──────────┘}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md20}{}\doxysubsection{\texorpdfstring{Filesystem Change Propagation}{Filesystem Change Propagation}}\label{md_ARCHITECTURE_autotoc_md20}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌───────────────┐}
+\DoxyCodeLine{│\ \ Filesystem\ \ \ │}
+\DoxyCodeLine{│\ \ \ Changes\ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ •\ create()\ \ \ │}
+\DoxyCodeLine{│\ \ •\ unlink()\ \ \ │}
+\DoxyCodeLine{│\ \ •\ rename()\ \ \ │}
+\DoxyCodeLine{│\ \ •\ write()\ \ \ \ │}
+\DoxyCodeLine{└───────┬───────┘}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ Kernel\ generates\ events}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ ▼}
+\DoxyCodeLine{┌─────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ Linux\ inotify\ Subsystem\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ Event\ Types:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ •\ IN\_CREATE\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ •\ IN\_DELETE\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ •\ IN\_MODIFY\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ •\ IN\_MOVED\_FROM\ /\ IN\_MOVED\_TO\ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ •\ IN\_DELETE\_SELF\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{└───────┬─────────────────────────────┘}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ Events\ queued\ in\ kernel\ buffer}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ Read\ via\ read()\ on\ inotify\ fd}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ ▼}
+\DoxyCodeLine{┌──────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ ffind-\/daemon\ Event\ Loop\ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ ┌────────────────────────────────────┐\ \ │}
+\DoxyCodeLine{│\ \ │\ process\_events()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ while\ (true)\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ poll(inotify\_fd,\ timeout)\ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ if\ (events\_ready)\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ read(inotify\_fd,\ buf,\ size)\ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ for\ each\ event:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ switch\ (event.mask)\ \{\ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ case\ IN\_CREATE:\ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ add\_entry()\ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ case\ IN\_DELETE:\ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ remove\_entry()\ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ case\ IN\_MODIFY:\ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ update\_mtime()\ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ case\ IN\_MOVED\_FROM:\ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ store\_cookie()\ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ case\ IN\_MOVED\_TO:\ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \ \ \ \ handle\_rename()\ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ └────────────────────────────────────┘\ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ Index\ Updates:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ ┌────────────────────────────────────┐\ \ │}
+\DoxyCodeLine{│\ \ │\ Lock\ entries\_mutex\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ Modify\ entries[]\ vector\ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ Update\ pending\_changes\ counter\ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ │\ Unlock\ entries\_mutex\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ └────────────────────────────────────┘\ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ Periodic\ DB\ Flush:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ ┌────────────────────────────────────┐\ \ │}
+\DoxyCodeLine{│\ \ │\ if\ (pending\ >=\ 100\ ||\ 30s\ elapsed)\ │\ \ │}
+\DoxyCodeLine{│\ \ │\ \ \ flush\_changes\_to\_db()\ \ \ \ \ \ \ \ \ \ \ \ │\ \ │}
+\DoxyCodeLine{│\ \ └────────────────────────────────────┘\ \ │}
+\DoxyCodeLine{└──────────────────────────────────────────┘}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md22}{}\doxysection{\texorpdfstring{Protocol Specification}{Protocol Specification}}\label{md_ARCHITECTURE_autotoc_md22}
+\hypertarget{md_ARCHITECTURE_autotoc_md23}{}\doxysubsection{\texorpdfstring{Client-\/to-\/\+Daemon Binary Protocol}{Client-\/to-\/\+Daemon Binary Protocol}}\label{md_ARCHITECTURE_autotoc_md23}
+All multi-\/byte integers use {\bfseries{network byte order}} (big-\/endian).
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌─────────────────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Query\ Request\ Format\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{├─────────────────────────────────────────────────────────────┤}
+\DoxyCodeLine{│\ Offset\ │\ Length\ │\ Type\ \ \ \ │\ Field\ \ \ \ \ \ \ \ \ \ \ \ \ │\ Notes\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{├────────┼────────┼─────────┼───────────────────┼──────────────┤}
+\DoxyCodeLine{│\ \ \ 0\ \ \ \ │\ \ \ 4\ \ \ \ │\ uint32\ \ │\ name\_pattern\_len\ \ │\ Network\ order│}
+\DoxyCodeLine{│\ \ \ 4\ \ \ \ │\ \ \ N\ \ \ \ │\ char[]\ \ │\ name\_pattern\ \ \ \ \ \ │\ UTF-\/8\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ 4+N\ \ \ │\ \ \ 4\ \ \ \ │\ uint32\ \ │\ path\_pattern\_len\ \ │\ Network\ order│}
+\DoxyCodeLine{│\ \ 8+N\ \ \ │\ \ \ M\ \ \ \ │\ char[]\ \ │\ path\_pattern\ \ \ \ \ \ │\ UTF-\/8\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ 8+N+M\ \ │\ \ \ 4\ \ \ \ │\ uint32\ \ │\ content\_pat\_len\ \ \ │\ Network\ order│}
+\DoxyCodeLine{│12+N+M\ \ │\ \ \ K\ \ \ \ │\ char[]\ \ │\ content\_pattern\ \ \ │\ UTF-\/8\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│12+N+M+K│\ \ \ 1\ \ \ \ │\ uint8\ \ \ │\ flags\ \ \ \ \ \ \ \ \ \ \ \ \ │\ See\ below\ \ \ \ │}
+\DoxyCodeLine{│13+N+M+K│\ \ \ 1\ \ \ \ │\ uint8\ \ \ │\ type\_filter\ \ \ \ \ \ \ │\ 0=all,1=f,2=d│}
+\DoxyCodeLine{│14+N+M+K│\ \ \ 1\ \ \ \ │\ uint8\ \ \ │\ size\_op\ \ \ \ \ \ \ \ \ \ \ │\ 0=none,1=+,-\/,=│}
+\DoxyCodeLine{│15+N+M+K│\ \ \ 8\ \ \ \ │\ uint64\ \ │\ size\_val\ \ \ \ \ \ \ \ \ \ │\ Only\ if\ op≠0\ │}
+\DoxyCodeLine{│23+N+M+K│\ \ \ 1\ \ \ \ │\ uint8\ \ \ │\ mtime\_op\ \ \ \ \ \ \ \ \ \ │\ 0=none,1=+,-\/,=│}
+\DoxyCodeLine{│24+N+M+K│\ \ \ 4\ \ \ \ │\ int32\ \ \ │\ mtime\_days\ \ \ \ \ \ \ \ │\ Only\ if\ op≠0\ │}
+\DoxyCodeLine{│28+N+M+K│\ \ \ 1\ \ \ \ │\ uint8\ \ \ │\ before\_ctx\ \ \ \ \ \ \ \ │\ Lines\ before\ │}
+\DoxyCodeLine{│29+N+M+K│\ \ \ 1\ \ \ \ │\ uint8\ \ \ │\ after\_ctx\ \ \ \ \ \ \ \ \ │\ Lines\ after\ \ │}
+\DoxyCodeLine{└─────────────────────────────────────────────────────────────┘}
+\DoxyCodeLine{}
+\DoxyCodeLine{Flags\ byte\ (bit\ fields):}
+\DoxyCodeLine{┌───┬───┬───┬───┬───┬───┬───┬───┐}
+\DoxyCodeLine{│\ 7\ │\ 6\ │\ 5\ │\ 4\ │\ 3\ │\ 2\ │\ 1\ │\ 0\ │}
+\DoxyCodeLine{├───┼───┼───┼───┼───┼───┼───┼───┤}
+\DoxyCodeLine{│\ \ \ │\ \ \ │\ \ \ │\ \ \ │\ \ \ │\ G\ │\ R\ │\ I\ │}
+\DoxyCodeLine{└───┴───┴───┴───┴───┴───┴───┴───┘}
+\DoxyCodeLine{\ \ I\ =\ case\_insensitive\ (bit\ 0)}
+\DoxyCodeLine{\ \ R\ =\ use\_regex\ (bit\ 1)}
+\DoxyCodeLine{\ \ G\ =\ use\_glob\ (bit\ 2)}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md24}{}\doxysubsection{\texorpdfstring{Daemon-\/to-\/\+Client Response Format}{Daemon-\/to-\/\+Client Response Format}}\label{md_ARCHITECTURE_autotoc_md24}
+Results are streamed as newline-\/delimited text\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{For\ metadata-\/only\ searches:}
+\DoxyCodeLine{\ \ \ \ /path/to/file1\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ /path/to/file2\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ ...}
+\DoxyCodeLine{}
+\DoxyCodeLine{For\ content\ searches\ (no\ context):}
+\DoxyCodeLine{\ \ \ \ /path/to/file:123:matched\ line\ content\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ /path/to/file:456:another\ match\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ ...}
+\DoxyCodeLine{}
+\DoxyCodeLine{For\ content\ searches\ (with\ context):}
+\DoxyCodeLine{\ \ \ \ /path/to/file:120-\/context\ line\ before\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ /path/to/file:121-\/another\ context\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ /path/to/file:122:MATCHED\ LINE\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ /path/to/file:123-\/context\ after\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ -\/-\/\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ /path/to/file:200:ANOTHER\ MATCH\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ ...}
+\DoxyCodeLine{}
+\DoxyCodeLine{Format:}
+\DoxyCodeLine{\ \ \ \ \{path\}:\{line\_number\}\{separator\}\{line\_content\}\(\backslash\)n}
+\DoxyCodeLine{\ \ \ \ }
+\DoxyCodeLine{\ \ \ \ Separator:}
+\DoxyCodeLine{\ \ \ \ \ \ ':'\ =\ matching\ line}
+\DoxyCodeLine{\ \ \ \ \ \ '-\/'\ =\ context\ line}
+\DoxyCodeLine{\ \ \ \ }
+\DoxyCodeLine{\ \ \ \ Group\ separator:\ '-\/-\/\(\backslash\)n'\ between\ non-\/contiguous\ groups}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md26}{}\doxysection{\texorpdfstring{Threading Model}{Threading Model}}\label{md_ARCHITECTURE_autotoc_md26}
+\hypertarget{md_ARCHITECTURE_autotoc_md27}{}\doxysubsection{\texorpdfstring{Overview}{Overview}}\label{md_ARCHITECTURE_autotoc_md27}
+ffind-\/daemon uses a {\bfseries{hybrid threading model}}\+:
+
+
+\begin{DoxyEnumerate}
+\item {\bfseries{Main thread}} -\/ Event loop for inotify and socket accept
+\item {\bfseries{Client handler threads}} -\/ One per active client connection (short-\/lived)
+\item {\bfseries{Worker thread pool}} -\/ Pre-\/allocated threads for content search
+\end{DoxyEnumerate}
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌────────────────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ffind-\/daemon\ Threading\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{└────────────────────────────────────────────────────────────┘}
+\DoxyCodeLine{}
+\DoxyCodeLine{Main\ Thread\ (Event\ Loop)}
+\DoxyCodeLine{━━━━━━━━━━━━━━━━━━━━━━}
+\DoxyCodeLine{\ \ │}
+\DoxyCodeLine{\ \ ├──→\ poll()\ on:}
+\DoxyCodeLine{\ \ │\ \ \ \ ├─\ inotify\_fd\ \ \ \ \ \ (filesystem\ events)}
+\DoxyCodeLine{\ \ │\ \ \ \ └─\ listen\_sock\_fd\ \ (new\ client\ connections)}
+\DoxyCodeLine{\ \ │}
+\DoxyCodeLine{\ \ ├──→\ inotify\ events\ →\ process\_events()}
+\DoxyCodeLine{\ \ │\ \ \ \ └─\ Update\ entries[]\ vector\ (mutex\ protected)}
+\DoxyCodeLine{\ \ │}
+\DoxyCodeLine{\ \ └──→\ accept()\ →\ spawn\ thread\ →\ handle\_client()}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ↓}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ┌─────────────────────────┐}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ Client\ Handler\ Thread\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ (short-\/lived)\ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ 1.\ Deserialize\ query\ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ 2.\ Lock\ entries\_mutex\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ 3.\ Filter\ metadata\ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ 4.\ If\ content\ search:\ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ dispatch\ to\ pool\ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ 5.\ Send\ results\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ 6.\ Close\ socket\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ 7.\ Thread\ exits\ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ └────────┬────────────────┘}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ Content\ search\ dispatch}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ▼}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ ┌───────────────────────────────────────────────┐}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ Worker\ Thread\ Pool\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ ┌──────────┐\ \ ┌──────────┐\ \ ┌──────────┐\ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ │\ Worker\ 1\ │\ \ │\ Worker\ 2\ │\ \ │\ Worker\ N\ │\ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ └─────┬────┘\ \ └─────┬────┘\ \ └─────┬────┘\ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ └─────────────┴─────────────┘\ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ Task\ Queue\ (mutex\ +\ CV)\ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ ┌──────────────────────┐\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ │\ Task:\ search\ file\ X\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ │\ Task:\ search\ file\ Y\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ │\ Task:\ search\ file\ Z\ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ └──────────────────────┘\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ Each\ worker:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ while\ (true)\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ wait\_for\_task()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ task\ =\ dequeue()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ result\ =\ search\_file(task)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \ \ store\_result(result)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ │\ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ └───────────────────────────────────────────────┘}
+\DoxyCodeLine{}
+\DoxyCodeLine{Synchronization:}
+\DoxyCodeLine{\ \ •\ entries\_mutex:\ Protects\ entries[]\ vector}
+\DoxyCodeLine{\ \ •\ queue\_mutex\ +\ queue\_cv:\ Thread\ pool\ task\ queue}
+\DoxyCodeLine{\ \ •\ results\_mutex:\ Protects\ content\ search\ results}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md28}{}\doxysubsection{\texorpdfstring{Thread Safety Guarantees}{Thread Safety Guarantees}}\label{md_ARCHITECTURE_autotoc_md28}
+
+\begin{DoxyTable}{3}{}{}{1}
+\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Resource  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Protection Mechanism  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Access Pattern  \\
+{\ttfamily \doxylink{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf}{entries}\mbox{[}\mbox{]}}  &{\ttfamily entries\+\_\+mutex}  &Read\+: many, Write\+: exclusive  \\
+{\ttfamily \doxylink{ffind-daemon_8cpp_a67eae545b818fdaaefbdd25be353882a}{path\+\_\+index}}  &{\ttfamily entries\+\_\+mutex}  &Rebuilt when entries modified  \\
+Task queue  &{\ttfamily queue\+\_\+mutex + queue\+\_\+cv}  &Producer-\/consumer  \\
+Content results  &{\ttfamily results\+\_\+mutex}  &Append-\/only during search  \\
+SQLite database  &SQLite internal locking  &WAL mode for concurrency  \\
+inotify watches  &Single-\/threaded access  &Main thread only  \\
+\end{DoxyTable}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md30}{}\doxysection{\texorpdfstring{Security Architecture}{Security Architecture}}\label{md_ARCHITECTURE_autotoc_md30}
+\hypertarget{md_ARCHITECTURE_autotoc_md31}{}\doxysubsection{\texorpdfstring{Threat Model}{Threat Model}}\label{md_ARCHITECTURE_autotoc_md31}
+{\bfseries{Assumptions\+:}}
+\begin{DoxyItemize}
+\item Daemon runs as unprivileged user
+\item Unix socket is per-\/user (untrusted users cannot connect)
+\item Filesystem is trusted (daemon watches paths it has permission to read)
+\item Network is local only (Unix domain sockets)
+\end{DoxyItemize}
+
+{\bfseries{Attack Vectors Considered\+:}}
+\begin{DoxyEnumerate}
+\item Malicious client sending crafted queries
+\item Resource exhaustion (CPU, memory, file descriptors)
+\item Path traversal attempts
+\item Signal-\/based attacks during critical sections
+\item Race conditions in filesystem operations
+\end{DoxyEnumerate}\hypertarget{md_ARCHITECTURE_autotoc_md32}{}\doxysubsection{\texorpdfstring{Security Layers}{Security Layers}}\label{md_ARCHITECTURE_autotoc_md32}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌──────────────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ Defense-\/in-\/Depth\ Layers\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{└──────────────────────────────────────────────────────────┘}
+\DoxyCodeLine{}
+\DoxyCodeLine{Layer\ 1:\ Network\ Input\ Validation}
+\DoxyCodeLine{═══════════════════════════════════}
+\DoxyCodeLine{\ \ ✓\ String\ length\ limits\ (1MB\ max\ per\ field)}
+\DoxyCodeLine{\ \ ✓\ Integer\ overflow\ checks}
+\DoxyCodeLine{\ \ ✓\ Safe\ deserialization\ with\ bounds\ checking}
+\DoxyCodeLine{\ \ ✓\ Reject\ malformed\ protocol\ messages}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ \ ↓\ Query\ accepted}
+\DoxyCodeLine{\ \ \ \ \ \ }
+\DoxyCodeLine{Layer\ 2:\ Filesystem\ Access\ Control}
+\DoxyCodeLine{══════════════════════════════════}
+\DoxyCodeLine{\ \ ✓\ Symlink\ detection\ and\ skipping\ (prevent\ loops)}
+\DoxyCodeLine{\ \ ✓\ Permission\ checks\ (open()\ will\ fail\ if\ not\ readable)}
+\DoxyCodeLine{\ \ ✓\ Path\ canonicalization\ (prevent\ ../\ attacks)}
+\DoxyCodeLine{\ \ ✓\ Per-\/user\ socket\ isolation}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ \ ↓\ Paths\ validated}
+\DoxyCodeLine{\ \ \ \ \ \ }
+\DoxyCodeLine{Layer\ 3:\ Resource\ Limits}
+\DoxyCodeLine{═══════════════════════}
+\DoxyCodeLine{\ \ ✓\ Thread\ pool\ size\ bounded\ (prevent\ fork\ bombs)}
+\DoxyCodeLine{\ \ ✓\ File\ size\ checks\ before\ mmap}
+\DoxyCodeLine{\ \ ✓\ Binary\ file\ detection\ (skip\ non-\/text)}
+\DoxyCodeLine{\ \ ✓\ Socket\ timeout\ and\ cleanup}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ \ ↓\ Resources\ allocated\ safely}
+\DoxyCodeLine{\ \ \ \ \ \ }
+\DoxyCodeLine{Layer\ 4:\ Memory\ Safety}
+\DoxyCodeLine{═════════════════════}
+\DoxyCodeLine{\ \ ✓\ Modern\ C++\ (smart\ pointers,\ RAII)}
+\DoxyCodeLine{\ \ ✓\ Vector\ bounds\ checking\ (at()\ for\ critical\ access)}
+\DoxyCodeLine{\ \ ✓\ MAP\_PRIVATE\ for\ mmap\ (no\ accidental\ writes)}
+\DoxyCodeLine{\ \ ✓\ No\ buffer\ overflows\ (std::string,\ std::vector)}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ \ ↓\ Memory\ operations\ safe}
+\DoxyCodeLine{\ \ \ \ \ \ }
+\DoxyCodeLine{Layer\ 5:\ Error\ Handling}
+\DoxyCodeLine{══════════════════════}
+\DoxyCodeLine{\ \ ✓\ All\ syscalls\ checked\ for\ errors}
+\DoxyCodeLine{\ \ ✓\ EINTR\ handling\ for\ all\ I/O}
+\DoxyCodeLine{\ \ ✓\ EPIPE\ handling\ for\ broken\ connections}
+\DoxyCodeLine{\ \ ✓\ Graceful\ degradation\ on\ failures}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ \ ↓\ Errors\ handled\ properly}
+\DoxyCodeLine{\ \ \ \ \ \ }
+\DoxyCodeLine{Layer\ 6:\ Signal\ Safety}
+\DoxyCodeLine{═════════════════════}
+\DoxyCodeLine{\ \ ✓\ Only\ async-\/signal-\/safe\ functions\ in\ handlers}
+\DoxyCodeLine{\ \ ✓\ Atomic\ flag\ for\ shutdown\ coordination}
+\DoxyCodeLine{\ \ ✓\ No\ malloc/free\ in\ signal\ context}
+\DoxyCodeLine{\ \ ✓\ Minimal\ work\ in\ handlers}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ \ ↓\ Signal-\/safe\ operation}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md33}{}\doxysubsection{\texorpdfstring{Security-\/\+Critical Code Sections}{Security-\/\+Critical Code Sections}}\label{md_ARCHITECTURE_autotoc_md33}
+{\bfseries{SECURITY markers in code identify critical sections\+:}}
+
+
+\begin{DoxyEnumerate}
+\item {\bfseries{Network deserialization}} ({\ttfamily \doxylink{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd}{handle\+\_\+client()}} lines 1692-\/1733)
+\begin{DoxyItemize}
+\item Validates all input lengths before allocation
+\item Rejects oversized requests
+\end{DoxyItemize}
+\item {\bfseries{Signal handlers}} ({\ttfamily \doxylink{ffind-daemon_8cpp_a5054c36923934387c6f7605dd1a2f3c9}{sig\+\_\+handler()}}, {\ttfamily \doxylink{ffind-daemon_8cpp_ae7ca651aefd5176935c0a94a0389e957}{crash\+\_\+handler()}})
+\begin{DoxyItemize}
+\item Uses only write() with fixed buffers
+\item No heap allocation or C++ streams
+\end{DoxyItemize}
+\item {\bfseries{Filesystem traversal}} ({\ttfamily \doxylink{ffind-daemon_8cpp_a3c6ea839f8269e1c879bece01b9d43a0}{add\+\_\+directory\+\_\+recursive()}})
+\begin{DoxyItemize}
+\item Checks {\ttfamily is\+\_\+symlink()} to prevent loops
+\item Skips entries that fail permission checks
+\end{DoxyItemize}
+\item {\bfseries{Memory mapping}} ({\ttfamily \doxylink{structMappedFile}{Mapped\+File}} class)
+\begin{DoxyItemize}
+\item Uses MAP\+\_\+\+PRIVATE (read-\/only semantics)
+\item Checks file size before mapping
+\item Handles mmap failures gracefully
+\end{DoxyItemize}
+\item {\bfseries{Database operations}} (various {\ttfamily \texorpdfstring{$\ast$}{*}\+\_\+db()} functions)
+\begin{DoxyItemize}
+\item Parameterized queries (no SQL injection)
+\item Transaction boundaries for atomicity
+\item Proper error handling for corruption
+\end{DoxyItemize}
+\end{DoxyEnumerate}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md35}{}\doxysection{\texorpdfstring{Storage and Persistence}{Storage and Persistence}}\label{md_ARCHITECTURE_autotoc_md35}
+\hypertarget{md_ARCHITECTURE_autotoc_md36}{}\doxysubsection{\texorpdfstring{In-\/\+Memory Index Structure}{In-\/\+Memory Index Structure}}\label{md_ARCHITECTURE_autotoc_md36}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌──────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ Primary\ Index:\ vector<Entry>\ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{├──────────────────────────────────────────────────┤}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ Entry\ 0:\ \{path="{}/home/user/doc.txt"{},\ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ size=4096,\ mtime=1706572800,\ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ is\_directory=false\}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ Entry\ 1:\ \{path="{}/home/user/code/"{},\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ size=0,\ mtime=1706572900,\ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ is\_directory=true\}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ Entry\ 2:\ \{path="{}/home/user/code/main.cpp"{},\ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ size=2048,\ mtime=1706573000,\ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ is\_directory=false\}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ ...\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ (sorted\ by\ path\ for\ binary\ search)\ \ \ \ │}
+\DoxyCodeLine{└──────────────────────────────────────────────────┘}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ Supplemented\ by}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ▼}
+\DoxyCodeLine{┌──────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ PathIndex:\ map<string,\ vector<size\_t>>\ \ \ \ │}
+\DoxyCodeLine{├──────────────────────────────────────────────────┤}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ "{}home"{}\ →\ [1]\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ "{}home/user"{}\ →\ [1]\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ "{}home/user/code"{}\ →\ [1,\ 2]\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{│\ \ (Maps\ directory\ paths\ to\ entry\ indices\ for\ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ fast\ path-\/based\ queries\ like\ -\/path\ "{}code/*"{})\ \ │}
+\DoxyCodeLine{└──────────────────────────────────────────────────┘}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md37}{}\doxysubsection{\texorpdfstring{SQLite Schema (Optional Persistence)}{SQLite Schema (Optional Persistence)}}\label{md_ARCHITECTURE_autotoc_md37}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keyword}{CREATE}\ \textcolor{keyword}{TABLE}\ entries\ (}
+\DoxyCodeLine{\ \ \ \ path\ TEXT\ \textcolor{keyword}{PRIMARY}\ KEY,}
+\DoxyCodeLine{\ \ \ \ size\ \textcolor{keywordtype}{INTEGER}\ \textcolor{keyword}{NOT}\ \textcolor{stringliteral}{NULL},}
+\DoxyCodeLine{\ \ \ \ mtime\ \textcolor{keywordtype}{INTEGER}\ \textcolor{keyword}{NOT}\ \textcolor{stringliteral}{NULL},}
+\DoxyCodeLine{\ \ \ \ is\_directory\ \textcolor{keywordtype}{INTEGER}\ \textcolor{keyword}{NOT}\ \textcolor{stringliteral}{NULL}\ \ \textcolor{comment}{-\/-\/\ 0\ or\ 1}}
+\DoxyCodeLine{);}
+\DoxyCodeLine{}
+\DoxyCodeLine{\textcolor{keyword}{CREATE}\ INDEX\ idx\_mtime\ \textcolor{keyword}{ON}\ entries(mtime);}
+\DoxyCodeLine{\textcolor{keyword}{CREATE}\ INDEX\ idx\_size\ \textcolor{keyword}{ON}\ entries(size);}
+\DoxyCodeLine{}
+\DoxyCodeLine{\textcolor{comment}{-\/-\/\ Metadata\ table\ for\ reconciliation}}
+\DoxyCodeLine{\textcolor{keyword}{CREATE}\ \textcolor{keyword}{TABLE}\ metadata\ (}
+\DoxyCodeLine{\ \ \ \ key\ TEXT\ \textcolor{keyword}{PRIMARY}\ KEY,}
+\DoxyCodeLine{\ \ \ \ \textcolor{keyword}{value}\ TEXT}
+\DoxyCodeLine{);}
+\DoxyCodeLine{\textcolor{comment}{-\/-\/\ Stores:\ last\_sync\_time,\ root\_paths,\ version}}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md38}{}\doxysubsection{\texorpdfstring{Persistence Flow}{Persistence Flow}}\label{md_ARCHITECTURE_autotoc_md38}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌───────────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ Persistence\ Lifecycle\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{└───────────────────────────────────────────────────────┘}
+\DoxyCodeLine{}
+\DoxyCodeLine{Daemon\ Startup\ with\ -\/-\/db:}
+\DoxyCodeLine{═════════════════════════}
+\DoxyCodeLine{\ \ 1.\ Open/create\ SQLite\ database}
+\DoxyCodeLine{\ \ 2.\ Enable\ WAL\ mode\ (sqlite3\_exec("{}PRAGMA\ journal\_mode=WAL"{}))}
+\DoxyCodeLine{\ \ 3.\ Load\ entries\ from\ database\ →\ entries[]\ vector}
+\DoxyCodeLine{\ \ 4.\ Perform\ filesystem\ reconciliation:}
+\DoxyCodeLine{\ \ \ \ \ ├─\ Scan\ filesystem\ for\ actual\ files}
+\DoxyCodeLine{\ \ \ \ \ ├─\ Compare\ with\ DB\ entries}
+\DoxyCodeLine{\ \ \ \ \ ├─\ Add\ new\ files}
+\DoxyCodeLine{\ \ \ \ \ ├─\ Remove\ deleted\ files}
+\DoxyCodeLine{\ \ \ \ \ └─\ Update\ changed\ files}
+\DoxyCodeLine{\ \ 5.\ Mark\ database\ as\ synced}
+\DoxyCodeLine{}
+\DoxyCodeLine{Runtime\ Operation:}
+\DoxyCodeLine{═════════════════}
+\DoxyCodeLine{\ \ Main\ Loop:}
+\DoxyCodeLine{\ \ \ \ ├─\ Process\ inotify\ events}
+\DoxyCodeLine{\ \ \ \ ├─\ Update\ entries[]\ in\ memory}
+\DoxyCodeLine{\ \ \ \ ├─\ Increment\ pending\_changes\ counter}
+\DoxyCodeLine{\ \ \ \ │}
+\DoxyCodeLine{\ \ \ \ └─\ Periodic\ check\ (every\ iteration):}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ if\ (pending\_changes\ >=\ 100\ ||\ time\_since\_flush\ >\ 30s)\ \{}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ flush\_changes\_to\_db()}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ pending\_changes\ =\ 0}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ last\_flush\_time\ =\ now}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{}
+\DoxyCodeLine{Graceful\ Shutdown:}
+\DoxyCodeLine{═════════════════}
+\DoxyCodeLine{\ \ 1.\ Receive\ SIGTERM/SIGINT}
+\DoxyCodeLine{\ \ 2.\ Set\ shutdown\ flag}
+\DoxyCodeLine{\ \ 3.\ Flush\ remaining\ changes\ to\ DB}
+\DoxyCodeLine{\ \ 4.\ Close\ database\ connection}
+\DoxyCodeLine{\ \ 5.\ Unlink\ socket\ file}
+\DoxyCodeLine{\ \ 6.\ Exit}
+\DoxyCodeLine{}
+\DoxyCodeLine{Crash\ Recovery:}
+\DoxyCodeLine{══════════════}
+\DoxyCodeLine{\ \ •\ WAL\ mode\ ensures\ atomic\ commits}
+\DoxyCodeLine{\ \ •\ On\ next\ startup,\ reconcile\ detects\ inconsistencies}
+\DoxyCodeLine{\ \ •\ Missing\ entries\ are\ re-\/indexed\ from\ filesystem}
+\DoxyCodeLine{\ \ •\ Database\ integrity\ maintained}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md40}{}\doxysection{\texorpdfstring{Error Handling}{Error Handling}}\label{md_ARCHITECTURE_autotoc_md40}
+\hypertarget{md_ARCHITECTURE_autotoc_md41}{}\doxysubsection{\texorpdfstring{Error Handling Strategy}{Error Handling Strategy}}\label{md_ARCHITECTURE_autotoc_md41}
+ffind follows a {\bfseries{graceful degradation}} approach\+:
+
+
+\begin{DoxyEnumerate}
+\item {\bfseries{Non-\/fatal errors}}\+: Log and continue (e.\+g., permission denied on one file)
+\item {\bfseries{Connection errors}}\+: Close client socket, continue serving others
+\item {\bfseries{Fatal errors}}\+: Flush database, cleanup, exit with error code
+\end{DoxyEnumerate}\hypertarget{md_ARCHITECTURE_autotoc_md42}{}\doxysubsection{\texorpdfstring{Error Categories and Responses}{Error Categories and Responses}}\label{md_ARCHITECTURE_autotoc_md42}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{┌──────────────────────────────────────────────────────────┐}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Error\ Handling\ Matrix\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{├─────────────────┬────────────────────┬───────────────────┤}
+\DoxyCodeLine{│\ Error\ Type\ \ \ \ \ \ │\ Example\ \ \ \ \ \ \ \ \ \ \ \ │\ Response\ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{├─────────────────┼────────────────────┼───────────────────┤}
+\DoxyCodeLine{│\ I/O\ Error\ \ \ \ \ \ \ │\ EINTR\ on\ read()\ \ \ \ │\ Retry\ syscall\ \ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ EAGAIN\ on\ write()\ \ │\ Retry\ with\ poll()\ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ EPIPE\ on\ write()\ \ \ │\ Close\ connection\ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ EIO\ on\ disk\ \ \ \ \ \ \ \ │\ Skip\ file,\ log\ \ \ \ │}
+\DoxyCodeLine{├─────────────────┼────────────────────┼───────────────────┤}
+\DoxyCodeLine{│\ Permission\ \ \ \ \ \ │\ EACCES\ on\ open()\ \ \ │\ Skip\ file,\ warn\ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ EPERM\ on\ inotify\ \ \ │\ Skip\ dir,\ warn\ \ \ \ │}
+\DoxyCodeLine{├─────────────────┼────────────────────┼───────────────────┤}
+\DoxyCodeLine{│\ Resource\ Limit\ \ │\ ENFILE\ (too\ many\ \ \ │\ Wait\ and\ retry\ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ open\ files)\ \ \ \ \ \ \ │\ or\ fail\ gracefully│}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ EMFILE\ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │}
+\DoxyCodeLine{├─────────────────┼────────────────────┼───────────────────┤}
+\DoxyCodeLine{│\ Protocol\ Error\ \ │\ Invalid\ query\ \ \ \ \ \ │\ Send\ error\ msg,\ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ Oversized\ input\ \ \ \ │\ close\ connection\ \ │}
+\DoxyCodeLine{├─────────────────┼────────────────────┼───────────────────┤}
+\DoxyCodeLine{│\ Database\ Error\ \ │\ SQLITE\_BUSY\ \ \ \ \ \ \ \ │\ Retry\ with\ backoff│}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ SQLITE\_CORRUPT\ \ \ \ \ │\ Warn,\ disable\ DB\ \ │}
+\DoxyCodeLine{├─────────────────┼────────────────────┼───────────────────┤}
+\DoxyCodeLine{│\ Signal\ \ \ \ \ \ \ \ \ \ │\ SIGTERM\ \ \ \ \ \ \ \ \ \ \ \ │\ Graceful\ shutdown\ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ SIGSEGV\ \ \ \ \ \ \ \ \ \ \ \ │\ Flush\ DB,\ dump\ \ \ \ │}
+\DoxyCodeLine{│\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ │\ stack,\ exit\ \ \ \ \ \ \ │}
+\DoxyCodeLine{└─────────────────┴────────────────────┴───────────────────┘}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md43}{}\doxysubsection{\texorpdfstring{Error Logging}{Error Logging}}\label{md_ARCHITECTURE_autotoc_md43}
+{\bfseries{Foreground mode\+:}} Detailed logging to stderr with color codes {\bfseries{Background mode\+:}} Minimal logging (errors only)
+
+Log levels\+:
+\begin{DoxyItemize}
+\item {\ttfamily \mbox{[}INFO\mbox{]}} -\/ Normal operation (foreground only)
+\item {\ttfamily \mbox{[}WARNING\mbox{]}} -\/ Non-\/fatal issues (yellow)
+\item {\ttfamily \mbox{[}ERROR\mbox{]}} -\/ Fatal errors (red)
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md45}{}\doxysection{\texorpdfstring{Performance Optimizations}{Performance Optimizations}}\label{md_ARCHITECTURE_autotoc_md45}
+\hypertarget{md_ARCHITECTURE_autotoc_md46}{}\doxysubsection{\texorpdfstring{1. Memory-\/\+Resident Index}{1. Memory-\/\+Resident Index}}\label{md_ARCHITECTURE_autotoc_md46}
+{\bfseries{Optimization\+:}} Keep entire file index in RAM
+
+{\bfseries{Benefit\+:}}
+\begin{DoxyItemize}
+\item Metadata queries complete in microseconds
+\item No disk I/O for name/path/size/mtime filters
+\item Binary search on sorted vector (O(log n))
+\end{DoxyItemize}
+
+{\bfseries{Trade-\/off\+:}} Memory usage \texorpdfstring{$\sim$}{\string~}100 bytes per file
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md48}{}\doxysubsection{\texorpdfstring{2. Thread Pool for Content Search}{2. Thread Pool for Content Search}}\label{md_ARCHITECTURE_autotoc_md48}
+{\bfseries{Optimization\+:}} Pre-\/allocated worker threads
+
+{\bfseries{Benefit\+:}}
+\begin{DoxyItemize}
+\item No thread creation overhead per query
+\item Parallel file scanning (utilizes all CPU cores)
+\item Task queue for load balancing
+\end{DoxyItemize}
+
+{\bfseries{Implementation\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{Thread\ pool\ size\ =\ min(32,\ hardware\_concurrency())}
+\DoxyCodeLine{Each\ worker\ processes\ subset\ of\ candidate\ files}
+\DoxyCodeLine{Results\ aggregated\ before\ transmission}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md50}{}\doxysubsection{\texorpdfstring{3. Batched Result Transmission}{3. Batched Result Transmission}}\label{md_ARCHITECTURE_autotoc_md50}
+{\bfseries{Optimization\+:}} Use {\ttfamily writev()} to batch multiple results
+
+{\bfseries{Benefit\+:}}
+\begin{DoxyItemize}
+\item Fewer system calls (10-\/100x reduction)
+\item Better throughput for large result sets
+\item Reduced per-\/call overhead
+\end{DoxyItemize}
+
+{\bfseries{Implementation\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{vector<iovec>\ iov;}
+\DoxyCodeLine{\textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ result\ :\ results)\ \{}
+\DoxyCodeLine{\ \ \ \ iov.push\_back(\{result.data(),\ result.size()\});}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{if}\ (iov.size()\ >=\ 100)\ \{}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ writev(fd,\ iov.data(),\ iov.size());}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ iov.clear();}
+\DoxyCodeLine{\ \ \ \ \}}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md52}{}\doxysubsection{\texorpdfstring{4. Zero-\/\+Copy File Reading (mmap)}{4. Zero-\/\+Copy File Reading (mmap)}}\label{md_ARCHITECTURE_autotoc_md52}
+{\bfseries{Optimization\+:}} Memory-\/map files for content search
+
+{\bfseries{Benefit\+:}}
+\begin{DoxyItemize}
+\item Kernel handles page caching
+\item No user-\/space buffer copying
+\item Efficient for large files
+\end{DoxyItemize}
+
+{\bfseries{Implementation\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\mbox{\hyperlink{structMappedFile}{MappedFile}}\ mf(path);}
+\DoxyCodeLine{\textcolor{keywordflow}{if}\ (mf.valid())\ \{}
+\DoxyCodeLine{\ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ data\ =\ mf.data();}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordtype}{size\_t}\ size\ =\ mf.size();}
+\DoxyCodeLine{\ \ \ \ \textcolor{comment}{//\ Scan\ data\ directly\ without\ copying}}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md54}{}\doxysubsection{\texorpdfstring{5. Path Index for Directory Queries}{5. Path Index for Directory Queries}}\label{md_ARCHITECTURE_autotoc_md54}
+{\bfseries{Optimization\+:}} Precomputed map of directory → entries
+
+{\bfseries{Benefit\+:}}
+\begin{DoxyItemize}
+\item Fast {\ttfamily -\/path "{}dir/\texorpdfstring{$\ast$}{*}"{}} queries
+\item Avoids scanning all entries
+\item O(1) lookup + O(k) iteration (k = files in dir)
+\end{DoxyItemize}
+
+{\bfseries{Rebuild Strategy\+:}}
+\begin{DoxyItemize}
+\item Rebuilt when entries modified
+\item Cached until next modification
+\item Lazy evaluation
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md56}{}\doxysubsection{\texorpdfstring{6. inotify for Real-\/\+Time Updates}{6. inotify for Real-\/\+Time Updates}}\label{md_ARCHITECTURE_autotoc_md56}
+{\bfseries{Optimization\+:}} Use Linux inotify instead of periodic rescans
+
+{\bfseries{Benefit\+:}}
+\begin{DoxyItemize}
+\item Zero polling overhead
+\item Instant index updates
+\item No missed changes
+\end{DoxyItemize}
+
+{\bfseries{Watch Descriptor Management\+:}}
+\begin{DoxyItemize}
+\item Recursive watches on all directories
+\item Automatic cleanup on directory deletion
+\item Cookie-\/based rename tracking
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md58}{}\doxysubsection{\texorpdfstring{7. SQLite Write-\/\+Ahead Logging (WAL)}{7. SQLite Write-\/\+Ahead Logging (WAL)}}\label{md_ARCHITECTURE_autotoc_md58}
+{\bfseries{Optimization\+:}} Enable WAL mode for database
+
+{\bfseries{Benefit\+:}}
+\begin{DoxyItemize}
+\item Concurrent readers during writes
+\item Atomic commits
+\item Better crash recovery
+\end{DoxyItemize}
+
+{\bfseries{Configuration\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{PRAGMA\ journal\_mode=WAL;}
+\DoxyCodeLine{PRAGMA\ synchronous=NORMAL;\ \ \textcolor{comment}{-\/-\/\ Balance\ safety/performance}}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md60}{}\doxysubsection{\texorpdfstring{Performance Benchmarks Summary}{Performance Benchmarks Summary}}\label{md_ARCHITECTURE_autotoc_md60}
+
+\begin{DoxyTable}{3}{}{}{1}
+\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Operation  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Time  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Notes  \\
+Index 10,000 files  &\texorpdfstring{$\sim$}{\string~}2 seconds  &One-\/time startup cost  \\
+Name pattern search  &\texorpdfstring{$<$}{<}1ms  &In-\/memory scan with filtering  \\
+Content search (grep-\/like)  &20-\/50ms  &Parallel, all cores, 5,000 files  \\
+Directory path search  &\texorpdfstring{$<$}{<}1ms  &Path index lookup  \\
+inotify update latency  &\texorpdfstring{$<$}{<}1ms  &From fs event to index update  \\
+Database flush (10k rows)  &\texorpdfstring{$\sim$}{\string~}100ms  &Every 30s or 100 changes  \\
+\end{DoxyTable}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md62}{}\doxysection{\texorpdfstring{Appendix\+: Build and Development}{Appendix\+: Build and Development}}\label{md_ARCHITECTURE_autotoc_md62}
+\hypertarget{md_ARCHITECTURE_autotoc_md63}{}\doxysubsection{\texorpdfstring{Build Process}{Build Process}}\label{md_ARCHITECTURE_autotoc_md63}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Install\ dependencies}
+\DoxyCodeLine{sudo\ apt-\/get\ install\ build-\/essential\ libsqlite3-\/dev\ libre2-\/dev}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Build}
+\DoxyCodeLine{make\ clean\ \&\&\ make}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Outputs:}
+\DoxyCodeLine{\#\ \ \ ffind-\/daemon\ (daemon\ binary)}
+\DoxyCodeLine{\#\ \ \ ffind\ (client\ binary)}
+
+\end{DoxyCode}
+\hypertarget{md_ARCHITECTURE_autotoc_md64}{}\doxysubsection{\texorpdfstring{Development Guidelines}{Development Guidelines}}\label{md_ARCHITECTURE_autotoc_md64}
+
+\begin{DoxyEnumerate}
+\item {\bfseries{Code Style\+:}}
+\begin{DoxyItemize}
+\item Modern C++20 features preferred
+\item Use RAII for all resources
+\item Prefer {\ttfamily std\+:\+:} containers over raw arrays
+\end{DoxyItemize}
+\item {\bfseries{Error Handling\+:}}
+\begin{DoxyItemize}
+\item Check ALL system call return values
+\item Use exceptions sparingly (prefer error codes)
+\item Document error conditions in function headers
+\end{DoxyItemize}
+\item {\bfseries{Testing\+:}}
+\begin{DoxyItemize}
+\item Run {\ttfamily ./tests/run\+\_\+tests.sh} after changes
+\item Test with large directories (100k+ files)
+\item Verify zero compiler warnings
+\end{DoxyItemize}
+\item {\bfseries{Security\+:}}
+\begin{DoxyItemize}
+\item Add {\ttfamily // SECURITY\+:} comments for security-\/critical code
+\item Use {\ttfamily // REVIEWER\+\_\+\+NOTE\+:} for complex logic needing review
+\item Run static analyzers (cppcheck, clang-\/tidy)
+\end{DoxyItemize}
+\end{DoxyEnumerate}
+
+\DoxyHorRuler{0}
+\hypertarget{md_ARCHITECTURE_autotoc_md66}{}\doxysection{\texorpdfstring{Glossary}{Glossary}}\label{md_ARCHITECTURE_autotoc_md66}
+
+\begin{DoxyItemize}
+\item {\bfseries{\doxylink{structEntry}{Entry}}} -\/ A single file or directory in the index
+\item {\bfseries{inotify}} -\/ Linux kernel subsystem for filesystem event monitoring
+\item {\bfseries{Watch Descriptor (WD)}} -\/ Kernel handle for monitored directory
+\item {\bfseries{Path Index}} -\/ Auxiliary data structure mapping directories to entries
+\item {\bfseries{Content Search}} -\/ Grep-\/like scanning of file contents
+\item {\bfseries{WAL}} -\/ Write-\/\+Ahead Logging (SQLite journaling mode)
+\item {\bfseries{Reconciliation}} -\/ Process of syncing database with actual filesystem
+\item {\bfseries{Context Lines}} -\/ Lines before/after a match (like grep -\/A/-\/\+B/-\/C)
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+
+
+{\bfseries{End of Architecture Documentation}}
+
+For implementation details, see source code comments. ~\newline
+ For usage information, see README.\+md. ~\newline
+ For security audit notes, see function-\/level documentation in source files. 

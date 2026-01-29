@@ -1,8 +1,5 @@
 <map id="cleanup_pid_file" name="cleanup_pid_file">
-<area shape="rect" id="Node000001" title=" " alt="" coords="252,5,378,33"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="108,5,234,33"/>
 <area shape="rect" id="Node000002" href="$ffind-daemon_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title=" " alt="" coords="5,5,60,33"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="236,22,60,22,60,17,236,17"/>
-<area shape="rect" id="Node000003" href="$ffind-daemon_8cpp.html#ab326a3e5e38794f3fd51fabbcb5f7ca6" title=" " alt="" coords="108,31,204,58"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="239,31,205,40,204,34,234,32"/>
-<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="90,33,60,27,60,22,95,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="89,20,60,22,60,17,95,18"/>
 </map>

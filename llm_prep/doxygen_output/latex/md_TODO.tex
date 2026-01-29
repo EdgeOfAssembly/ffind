@@ -1,8 +1,8 @@
 \chapter{ffind TODO Summary -\/ January 2026 }
 \hypertarget{md_TODO}{}\label{md_TODO}\index{ffind TODO Summary -\/ January 2026@{ffind TODO Summary -\/ January 2026}}
-\label{md_TODO_autotoc_md31}%
-\Hypertarget{md_TODO_autotoc_md31}%
-\hypertarget{md_TODO_autotoc_md32}{}\doxysection{\texorpdfstring{Implemented (current version)}{Implemented (current version)}}\label{md_TODO_autotoc_md32}
+\label{md_TODO_autotoc_md168}%
+\Hypertarget{md_TODO_autotoc_md168}%
+\hypertarget{md_TODO_autotoc_md169}{}\doxysection{\texorpdfstring{Implemented (current version)}{Implemented (current version)}}\label{md_TODO_autotoc_md169}
 
 \begin{DoxyItemize}
 \item Daemon/client split (ffind-\/daemon + ffind)
@@ -22,15 +22,12 @@
 \item Legacy single-\/arg name glob support
 \item Color output (--color=auto/always/never)
 \item Context lines (-\/A/-\/\+B/-\/C for grep-\/like before/after/context)
-\end{DoxyItemize}\hypertarget{md_TODO_autotoc_md33}{}\doxysection{\texorpdfstring{Remaining / Not Implemented}{Remaining / Not Implemented}}\label{md_TODO_autotoc_md33}
-
-\begin{DoxyItemize}
-\item PID file creation (/run/ffind.pid or similar) for service management
-\item Better directory rename handling (current\+: may need restart)
+\item Better directory rename handling (cookie-\/based inotify rename tracking with path updates)
 \item Multiple root directories support
-\item Persistence (binary dump/load on shutdown/start for faster init)
-\item SQLite backend option (for huge trees, lower RAM)
-\end{DoxyItemize}\hypertarget{md_TODO_autotoc_md34}{}\doxysection{\texorpdfstring{Low Priority / Optional}{Low Priority / Optional}}\label{md_TODO_autotoc_md34}
+\item PID file creation (/run/ffind.pid or similar) for service management
+\item SQLite persistence (--db PATH) with atomic updates, crash recovery, and automatic reconciliation
+\end{DoxyItemize}\hypertarget{md_TODO_autotoc_md170}{}\doxysection{\texorpdfstring{Remaining / Not Implemented}{Remaining / Not Implemented}}\label{md_TODO_autotoc_md170}
+\hypertarget{md_TODO_autotoc_md171}{}\doxysection{\texorpdfstring{Low Priority / Optional}{Low Priority / Optional}}\label{md_TODO_autotoc_md171}
 
 \begin{DoxyItemize}
 \item -\/perm mode filter

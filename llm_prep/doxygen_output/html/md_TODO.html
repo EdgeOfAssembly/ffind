@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>ffind-1.0: ffind TODO Summary - January 2026</title>
+<title>ffind: ffind TODO Summary - January 2026</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">ffind-1.0
+   <div id="projectname">ffind
    </div>
   </td>
  </tr>
@@ -91,8 +91,8 @@ $(function(){initNavTree('md_TODO.html','',''); });
   <div class="headertitle"><div class="title">ffind TODO Summary - January 2026 </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md31"></a></p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md32"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md168"></a></p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md169"></a>
 Implemented (current version)</h1>
 <ul>
 <li>Daemon/client split (ffind-daemon + ffind)</li>
@@ -112,17 +112,14 @@ Implemented (current version)</h1>
 <li>Legacy single-arg name glob support</li>
 <li>Color output (&ndash;color=auto/always/never)</li>
 <li>Context lines (-A/-B/-C for grep-like before/after/context)</li>
-</ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md33"></a>
-Remaining / Not Implemented</h1>
-<ul>
-<li>PID file creation (/run/ffind.pid or similar) for service management</li>
-<li>Better directory rename handling (current: may need restart)</li>
+<li>Better directory rename handling (cookie-based inotify rename tracking with path updates)</li>
 <li>Multiple root directories support</li>
-<li>Persistence (binary dump/load on shutdown/start for faster init)</li>
-<li>SQLite backend option (for huge trees, lower RAM)</li>
+<li>PID file creation (/run/ffind.pid or similar) for service management</li>
+<li>SQLite persistence (&ndash;db PATH) with atomic updates, crash recovery, and automatic reconciliation</li>
 </ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md34"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md170"></a>
+Remaining / Not Implemented</h1>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md171"></a>
 Low Priority / Optional</h1>
 <ul>
 <li>-perm mode filter</li>

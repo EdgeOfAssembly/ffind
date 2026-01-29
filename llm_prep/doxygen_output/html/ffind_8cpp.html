@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>ffind-1.0: ffind.cpp File Reference</title>
+<title>ffind: ffind.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">ffind-1.0
+   <div id="projectname">ffind
    </div>
   </td>
  </tr>
@@ -96,11 +96,11 @@ $(function(){initNavTree('ffind_8cpp.html','',''); });
 <code>#include &lt;sys/un.h&gt;</code><br />
 <code>#include &lt;unistd.h&gt;</code><br />
 <code>#include &lt;arpa/inet.h&gt;</code><br />
-<code>#include &lt;regex&gt;</code><br />
+<code>#include &lt;re2/re2.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for ffind.cpp:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="ffind_8cpp__incl.svg" width="640" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="ffind_8cpp__incl.svg" width="662" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-enum-members" class="groupheader"><a id="enum-members" name="enum-members"></a>
@@ -112,6 +112,7 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:adb67f2caafe3ae5a6a2a28def0468a9f" id="r_adb67f2caafe3ae5a6a2a28def0468a9f"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adb67f2caafe3ae5a6a2a28def0468a9f">safe_write_all</a> (int fd, const void *buf, size_t count)</td></tr>
 <tr class="memitem:a3c04138a5bfe5d72780bb7e82a18e627" id="r_a3c04138a5bfe5d72780bb7e82a18e627"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3c04138a5bfe5d72780bb7e82a18e627">main</a> (int argc, char **argv)</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-var-members" class="groupheader"><a id="var-members" name="var-members"></a>
@@ -168,6 +169,80 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+<p>Function: main (client) Purpose: Command-line client for ffind-daemon</p>
+<p>Flow:</p><ol type="1">
+<li>Parse command-line arguments into search criteria</li>
+<li>Connect to daemon's Unix socket</li>
+<li>Send binary protocol message with search parameters</li>
+<li>Receive results and display with optional colorization</li>
+</ol>
+<p>Command-Line Interface:</p><ul>
+<li>Supports glob patterns, regex, fixed-string search</li>
+<li>Multiple filter types: name, path, content, size, mtime, type</li>
+<li>Context lines: -A, -B, -C (like grep)</li>
+<li>Color control: &ndash;color=auto|always|never</li>
+</ul>
+<p>Protocol Details:</p><ul>
+<li>Binary protocol with network byte order (big-endian) for integers</li>
+<li>Variable-length strings prefixed with 4-byte length</li>
+<li>Flags byte for case-insensitive, regex, content_glob</li>
+<li>See <a class="el" href="ffind-daemon_8cpp.html#aa29c4f34a63bacc7d3bcd55e101133fd">handle_client()</a> in <a class="el" href="ffind-daemon_8cpp.html">ffind-daemon.cpp</a> for protocol spec</li>
+</ul>
+<p>Error Handling:</p><ul>
+<li>Uses <a class="el" href="#adb67f2caafe3ae5a6a2a28def0468a9f">safe_write_all()</a> for all socket writes</li>
+<li>Handles daemon not running gracefully</li>
+<li>Validates all command-line arguments</li>
+</ul>
+<p>REVIEWER_NOTE: This is a simple synchronous client. It sends one request, receives results, and exits. No complex state management needed. </p>
+<div class="dynheader">
+Here is the call graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="ffind_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.svg" width="226" height="91"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="adb67f2caafe3ae5a6a2a28def0468a9f" name="adb67f2caafe3ae5a6a2a28def0468a9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb67f2caafe3ae5a6a2a28def0468a9f">&#9670;&#160;</a></span>safe_write_all()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool safe_write_all </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>fd</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const void *</td>          <td class="paramname"><span class="paramname"><em>buf</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>count</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Function: safe_write_all Purpose: Writes all data to a file descriptor, handling partial writes and EINTR Parameters:</p><ul>
+<li>fd: File descriptor to write to</li>
+<li>buf: Buffer containing data to write</li>
+<li>count: Number of bytes to write Returns: true on success, false on error Security: Handles EINTR and partial writes correctly Thread-safety: Thread-safe (operates on file descriptor) </li>
+</ul>
+<div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="ffind_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f_icgraph.svg" width="226" height="39"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>

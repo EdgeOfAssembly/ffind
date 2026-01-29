@@ -11,10 +11,15 @@
 {\ttfamily \#include $<$unistd.\+h$>$}\newline
 {\ttfamily \#include $<$fcntl.\+h$>$}\newline
 {\ttfamily \#include $<$fstream$>$}\newline
-{\ttfamily \#include $<$regex$>$}\newline
+{\ttfamily \#include $<$re2/re2.\+h$>$}\newline
 {\ttfamily \#include $<$string.\+h$>$}\newline
 {\ttfamily \#include $<$arpa/inet.\+h$>$}\newline
-Include dependency graph for ffind-\/daemon.cpp\+:\nopagebreak
+{\ttfamily \#include $<$poll.\+h$>$}\newline
+{\ttfamily \#include $<$sqlite3.\+h$>$}\newline
+{\ttfamily \#include $<$sys/uio.\+h$>$}\newline
+{\ttfamily \#include $<$sys/mman.\+h$>$}\newline
+Include dependency graph for ffind-\/daemon.cpp\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -24,50 +29,125 @@ Include dependency graph for ffind-\/daemon.cpp\+:\nopagebreak
 \doxysubsubsection*{Classes}
 \begin{DoxyCompactItemize}
 \item 
-struct \mbox{\hyperlink{structEntry}{Entry}}
-\end{DoxyCompactItemize}
-\doxysubsubsection*{Macros}
-\begin{DoxyCompactItemize}
+struct \mbox{\hyperlink{structConfig}{Config}}
 \item 
-\#define \mbox{\hyperlink{ffind-daemon_8cpp_a369266c24eacffb87046522897a570d5}{\+\_\+\+GNU\+\_\+\+SOURCE}}
+struct \mbox{\hyperlink{structEntry}{Entry}}
+\item 
+struct \mbox{\hyperlink{structPathIndex}{Path\+Index}}
+\item 
+class \mbox{\hyperlink{classThreadPool}{Thread\+Pool}}
+\item 
+struct \mbox{\hyperlink{structMappedFile}{Mapped\+File}}
 \end{DoxyCompactItemize}
 \doxysubsubsection*{Functions}
 \begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a78bf8646c074be1959943f73bd7458c0}{show\+\_\+usage}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_af8f154bf210b7ff6d50433da876083e6}{show\+\_\+version}} ()
+\item 
+\mbox{\hyperlink{structConfig}{Config}} \mbox{\hyperlink{ffind-daemon_8cpp_ac90ea00129fdd44112a544f6c4b8ffe8}{parse\+\_\+config\+\_\+file}} (const string \&config\+\_\+path)
+\item 
+\mbox{\hyperlink{structConfig}{Config}} \mbox{\hyperlink{ffind-daemon_8cpp_ae56faec3f7affb7dbacee7c21a944169}{load\+\_\+config}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a273768174833995d8ad2eb25994d3530}{init\+\_\+thread\+\_\+pool}} ()
+\item 
+bool \mbox{\hyperlink{ffind-daemon_8cpp_aca41db1c34064861e1972d04aea0271c}{check\+\_\+dnotify\+\_\+available}} ()
+\item 
+bool \mbox{\hyperlink{ffind-daemon_8cpp_a3ee509d80aed50ed80b0a8a044d6d8aa}{init\+\_\+database}} (const string \&path)
+\item 
+string \mbox{\hyperlink{ffind-daemon_8cpp_aeabf8cc7dee40eed4a5d59eb8c8c3c4e}{json\+\_\+escape}} (const string \&str)
+\item 
+string \mbox{\hyperlink{ffind-daemon_8cpp_a7da495f44c4f9dc3771245fee9943ef0}{json\+\_\+unescape}} (const string \&str)
+\item 
+vector$<$ string $>$ \mbox{\hyperlink{ffind-daemon_8cpp_ac9789d3167d8e76e0a9fe8d5bc23910a}{load\+\_\+roots\+\_\+from\+\_\+db}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a661259a347bae2d165d1653683d41472}{save\+\_\+roots\+\_\+to\+\_\+db}} (const vector$<$ string $>$ \&roots)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a1fe291c8a4f4e82731c0266c42943dee}{load\+\_\+entries\+\_\+from\+\_\+db}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a09d220bcc638f3d7f76e2c424b095129}{reconcile\+\_\+db\+\_\+with\+\_\+filesystem}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a3e4024f4f5d79a6af4aa3ef6153bbec5}{flush\+\_\+changes\+\_\+to\+\_\+db}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a92ad392f2892e1df652d91559748312c}{maybe\+\_\+flush\+\_\+to\+\_\+db}} ()
 \item 
 string \mbox{\hyperlink{ffind-daemon_8cpp_ac2acdbfe25fe356cd7052c036bce7072}{get\+\_\+pid\+\_\+file\+\_\+path}} ()
 \item 
 bool \mbox{\hyperlink{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07}{is\+\_\+process\+\_\+running}} (pid\+\_\+t pid)
 \item 
-bool \mbox{\hyperlink{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f}{check\+\_\+and\+\_\+create\+\_\+pid\+\_\+file}} (const string \&pid\+\_\+path, bool foreground)
+bool \mbox{\hyperlink{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f}{check\+\_\+and\+\_\+create\+\_\+pid\+\_\+file}} (const string \&pid\+\_\+path, bool \mbox{\hyperlink{ffind-daemon_8cpp_a69046de9a005a9a1c5b898f0354c3637}{foreground}})
 \item 
 void \mbox{\hyperlink{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8}{cleanup\+\_\+pid\+\_\+file}} ()
 \item 
-void \mbox{\hyperlink{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6}{sig\+\_\+handler}} (int)
+static bool \mbox{\hyperlink{ffind-daemon_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f}{safe\+\_\+write\+\_\+all}} (int fd, const void \texorpdfstring{$\ast$}{*}buf, size\+\_\+t count)
+\item 
+static bool \mbox{\hyperlink{ffind-daemon_8cpp_affd557bc34b0546314dc6394d0ba6219}{safe\+\_\+read\+\_\+all}} (int fd, void \texorpdfstring{$\ast$}{*}buf, size\+\_\+t count)
+\item 
+\mbox{\hyperlink{ffind-daemon_8cpp_a698e38173a076beb6acf527cb2beaec3}{\+\_\+\+\_\+attribute\+\_\+\+\_\+}} ((unused)) static inline void ignore\+\_\+write\+\_\+result(ssize\+\_\+t result)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_aa4eb8c59e406fff61f4cf476db590854}{cleanup\+\_\+on\+\_\+socket\+\_\+error}} (int \mbox{\hyperlink{ffind-daemon_8cpp_aff73d34ce32e0d14b70a401fc829f4b8}{srv\+\_\+fd}}, bool unlink\+\_\+socket, const string \&\mbox{\hyperlink{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae}{sock\+\_\+path}})
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_ae7ca651aefd5176935c0a94a0389e957}{crash\+\_\+handler}} (int sig)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a5054c36923934387c6f7605dd1a2f3c9}{sig\+\_\+handler}} (int sig)
+\item 
+size\+\_\+t \mbox{\hyperlink{ffind-daemon_8cpp_a9750400b1bc326d136948d3f27ff0858}{find\+\_\+root\+\_\+index}} (const string \&path)
 \item 
 void \mbox{\hyperlink{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e}{daemonize}} ()
 \item 
-void \mbox{\hyperlink{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565}{update\+\_\+or\+\_\+add}} (const string \&full)
+void \mbox{\hyperlink{ffind-daemon_8cpp_adbd569fc9bff2199fe17c1a98905233b}{update\+\_\+or\+\_\+add}} (const string \&full, size\+\_\+t root\+\_\+index)
 \item 
 void \mbox{\hyperlink{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f}{remove\+\_\+path}} (const string \&full, bool recursive=false)
 \item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a6cb59ac446c1f52967690e9c802fffb6}{handle\+\_\+directory\+\_\+rename}} (const string \&old\+\_\+path, const string \&new\+\_\+path)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a8b30fc4c7b3a67defacc946838e40f7f}{cleanup\+\_\+stale\+\_\+pending\+\_\+moves}} ()
+\item 
 void \mbox{\hyperlink{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc}{add\+\_\+watch}} (const string \&dir)
 \item 
-void \mbox{\hyperlink{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b}{initial\+\_\+setup}} (const string \&r)
+void \mbox{\hyperlink{ffind-daemon_8cpp_a3c6ea839f8269e1c879bece01b9d43a0}{add\+\_\+directory\+\_\+recursive}} (const string \&dir, size\+\_\+t root\+\_\+index)
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_ab69d236a01aa6689b1c7709979bf0262}{build\+\_\+path\+\_\+index}} ()
+\item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a2c4f38e0541583328a2ff1fdfd663f6e}{initial\+\_\+setup}} (const vector$<$ string $>$ \&roots, bool skip\+\_\+indexing=false)
 \item 
 void \mbox{\hyperlink{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c}{process\+\_\+events}} ()
 \item 
+void \mbox{\hyperlink{ffind-daemon_8cpp_a7b04429420875e5e02ebc2893cfa8d6f}{send\+\_\+results\+\_\+batched}} (int fd, const vector$<$ string $>$ \&results)
+\item 
 void \mbox{\hyperlink{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd}{handle\+\_\+client}} (int fd)
+\item 
+bool \mbox{\hyperlink{ffind-daemon_8cpp_a9b45a13c2b22d9b98045a6bbb3201183}{check\+\_\+overlap\+\_\+and\+\_\+warn}} (const vector$<$ string $>$ \&roots)
+\item 
+vector$<$ string $>$ \mbox{\hyperlink{ffind-daemon_8cpp_aa3dce2cc3e8187c974d70de730744bae}{deduplicate\+\_\+paths}} (const vector$<$ string $>$ \&paths)
 \item 
 int \mbox{\hyperlink{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}{main}} (int argc, char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}argv)
 \end{DoxyCompactItemize}
 \doxysubsubsection*{Variables}
 \begin{DoxyCompactItemize}
 \item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a0096130a48fa1e8013c4aeb3e05ab047}{VERSION}} = "{}1.\+0"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a53e54caf6eb975dec77f33e016bdb722}{COLOR\+\_\+\+RED}} = "{}\textbackslash{}033\mbox{[}1;31m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a4e3254ec413da5406e1746c8428d319b}{COLOR\+\_\+\+GREEN}} = "{}\textbackslash{}033\mbox{[}1;32m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_aa90ffa37fb9eca85e39b9897569dab68}{COLOR\+\_\+\+YELLOW}} = "{}\textbackslash{}033\mbox{[}1;33m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_ae842347a06b8acf6a90fdd737151afbf}{COLOR\+\_\+\+CYAN}} = "{}\textbackslash{}033\mbox{[}36m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a1b1c042a59f8d4d2b52f9fea8373f486}{COLOR\+\_\+\+BOLD}} = "{}\textbackslash{}033\mbox{[}1m"{}
+\item 
+const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a8a6d517e1ab192944bcbd1af463e7efd}{COLOR\+\_\+\+RESET}} = "{}\textbackslash{}033\mbox{[}0m"{}
+\item 
 vector$<$ \mbox{\hyperlink{structEntry}{Entry}} $>$ \mbox{\hyperlink{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf}{entries}}
 \item 
 mutex \mbox{\hyperlink{ffind-daemon_8cpp_a29ac681ec3efa9e30e1ab1ab251b47f9}{mtx}}
 \item 
-string \mbox{\hyperlink{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4}{root\+\_\+path}}
+\mbox{\hyperlink{structPathIndex}{Path\+Index}} \mbox{\hyperlink{ffind-daemon_8cpp_a67eae545b818fdaaefbdd25be353882a}{path\+\_\+index}}
+\item 
+vector$<$ string $>$ \mbox{\hyperlink{ffind-daemon_8cpp_ad076a9814f749e0f5ad0d730ce5e99da}{root\+\_\+paths}}
 \item 
 string \mbox{\hyperlink{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae}{sock\+\_\+path}}
 \item 
@@ -75,45 +155,118 @@ string \mbox{\hyperlink{ffind-daemon_8cpp_a99a7b197fcb106a59ca82ee82455928c}{pid
 \item 
 char \mbox{\hyperlink{ffind-daemon_8cpp_a84af1c8099c312bc575fd6a8814e3908}{pid\+\_\+file\+\_\+path\+\_\+buf}} \mbox{[}256\mbox{]} = \{0\}
 \item 
+char \mbox{\hyperlink{ffind-daemon_8cpp_aa55665eebc11237ad6ed535ddd896b43}{sock\+\_\+path\+\_\+buf}} \mbox{[}256\mbox{]} = \{0\}
+\item 
 volatile sig\+\_\+atomic\+\_\+t \mbox{\hyperlink{ffind-daemon_8cpp_af3270a6e782fe74a057a44a74d4b29f9}{running}} = 1
+\item 
+atomic$<$ int $>$ \mbox{\hyperlink{ffind-daemon_8cpp_aff73d34ce32e0d14b70a401fc829f4b8}{srv\+\_\+fd}} \{-\/1\}
+\item 
+atomic$<$ bool $>$ \mbox{\hyperlink{ffind-daemon_8cpp_aa460d55f25683acc1f8fde68dbf2b590}{shutdown\+\_\+started}} \{false\}
 \item 
 int \mbox{\hyperlink{ffind-daemon_8cpp_a683029b96d4f70080d7f5d69d5144cd5}{in\+\_\+fd}} = -\/1
 \item 
 unordered\+\_\+map$<$ int, string $>$ \mbox{\hyperlink{ffind-daemon_8cpp_ac2fc5f87ca9b708edcf7dbd5da05ba24}{wd\+\_\+to\+\_\+dir}}
 \item 
-const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a53e54caf6eb975dec77f33e016bdb722}{COLOR\+\_\+\+RED}} = "{}\textbackslash{}033\mbox{[}1;31m"{}
+unordered\+\_\+map$<$ uint32\+\_\+t, pair$<$ string, chrono\+::steady\+\_\+clock\+::time\+\_\+point $>$ $>$ \mbox{\hyperlink{ffind-daemon_8cpp_a6f14fc6fa1500d2e8777d81791cb2234}{pending\+\_\+moves}}
 \item 
-const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_aa90ffa37fb9eca85e39b9897569dab68}{COLOR\+\_\+\+YELLOW}} = "{}\textbackslash{}033\mbox{[}1;33m"{}
+mutex \mbox{\hyperlink{ffind-daemon_8cpp_ad5b8de30cb8dcb8672b1c258e2b7c7de}{pending\+\_\+moves\+\_\+mtx}}
 \item 
-const char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_a8a6d517e1ab192944bcbd1af463e7efd}{COLOR\+\_\+\+RESET}} = "{}\textbackslash{}033\mbox{[}0m"{}
+bool \mbox{\hyperlink{ffind-daemon_8cpp_a69046de9a005a9a1c5b898f0354c3637}{foreground}} = false
+\item 
+sqlite3 \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{ffind-daemon_8cpp_ad6e663497d2c934364b3bcf07496b30b}{db}} = nullptr
+\item 
+string \mbox{\hyperlink{ffind-daemon_8cpp_afd1edb12ca310364dcb2ffdc1a4d1e75}{db\+\_\+path}}
+\item 
+bool \mbox{\hyperlink{ffind-daemon_8cpp_ae0923b8c9f0908d7a840b0f4606d1b91}{db\+\_\+enabled}} = false
+\item 
+atomic$<$ int $>$ \mbox{\hyperlink{ffind-daemon_8cpp_aad04144130b2a01eda7d97301c7d4bd3}{pending\+\_\+changes}} \{0\}
+\item 
+atomic$<$ bool $>$ \mbox{\hyperlink{ffind-daemon_8cpp_a1a0a1c2eb6c45b93c5a08900740589d6}{db\+\_\+dirty}} \{false\}
+\item 
+chrono\+::steady\+\_\+clock\+::time\+\_\+point \mbox{\hyperlink{ffind-daemon_8cpp_ad213aa40136d248d9289e0671c733132}{last\+\_\+flush\+\_\+time}}
+\item 
+const int \mbox{\hyperlink{ffind-daemon_8cpp_ae60628f0cbcc3037cf3ec2e86d465b01}{FLUSH\+\_\+\+INTERVAL\+\_\+\+SEC}} = 30
+\item 
+const int \mbox{\hyperlink{ffind-daemon_8cpp_aef935468d960b3a31186bbbb1e70f619}{FLUSH\+\_\+\+THRESHOLD}} = 100
+\item 
+mutex \mbox{\hyperlink{ffind-daemon_8cpp_a5e26c0966c06e61a5557f279668d600b}{db\+\_\+mtx}}
+\item 
+unique\+\_\+ptr$<$ \mbox{\hyperlink{classThreadPool}{Thread\+Pool}} $>$ \mbox{\hyperlink{ffind-daemon_8cpp_a0335eb0660eedd2db3d7caa2acfba6d4}{content\+\_\+search\+\_\+pool}}
 \end{DoxyCompactItemize}
-
-
-\label{doc-define-members}
-\Hypertarget{ffind-daemon_8cpp_doc-define-members}
-\doxysubsection{Macro Definition Documentation}
-\Hypertarget{ffind-daemon_8cpp_a369266c24eacffb87046522897a570d5}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!\_GNU\_SOURCE@{\_GNU\_SOURCE}}
-\index{\_GNU\_SOURCE@{\_GNU\_SOURCE}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
-\doxysubsubsection{\texorpdfstring{\_GNU\_SOURCE}{\_GNU\_SOURCE}}
-{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a369266c24eacffb87046522897a570d5} 
-\#define \+\_\+\+GNU\+\_\+\+SOURCE}
-
 
 
 \label{doc-func-members}
 \Hypertarget{ffind-daemon_8cpp_doc-func-members}
 \doxysubsection{Function Documentation}
+\Hypertarget{ffind-daemon_8cpp_a698e38173a076beb6acf527cb2beaec3}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!\_\_attribute\_\_@{\_\_attribute\_\_}}
+\index{\_\_attribute\_\_@{\_\_attribute\_\_}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{\_\_attribute\_\_()}{\_\_attribute\_\_()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a698e38173a076beb6acf527cb2beaec3} 
+\+\_\+\+\_\+attribute\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{(unused)}]{}{}\end{DoxyParamCaption})}
+
+Helper\+: ignore\+\_\+write\+\_\+result Purpose\+: Wrapper to explicitly ignore write() return value in signal handlers This is needed because newer GCC doesn\textquotesingle{}t suppress warn\+\_\+unused\+\_\+result with (void) cast \Hypertarget{ffind-daemon_8cpp_a3c6ea839f8269e1c879bece01b9d43a0}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!add\_directory\_recursive@{add\_directory\_recursive}}
+\index{add\_directory\_recursive@{add\_directory\_recursive}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{add\_directory\_recursive()}{add\_directory\_recursive()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a3c6ea839f8269e1c879bece01b9d43a0} 
+void add\+\_\+directory\+\_\+recursive (\begin{DoxyParamCaption}\item[{const string \&}]{dir}{, }\item[{size\+\_\+t}]{root\+\_\+index}{}\end{DoxyParamCaption})}
+
+Function\+: add\+\_\+directory\+\_\+recursive Purpose\+: Recursively index a directory and all its subdirectories Parameters\+:
+\begin{DoxyItemize}
+\item dir\+: Directory path to index
+\item root\+\_\+index\+: Index of the root directory in the roots vector Returns\+: void Security\+:
+\item Skips symlinks to prevent infinite loops
+\item Exception-\/safe\+: catches all exceptions from directory iteration Thread-\/safety\+: Not thread-\/safe (called during initial indexing or from event thread)
+\end{DoxyItemize}
+
+Implementation Notes\+:
+\begin{DoxyItemize}
+\item Adds inotify watch for real-\/time updates
+\item Recursively processes subdirectories depth-\/first
+\item Symlinks are intentionally skipped (logged in foreground mode)
+\item Exceptions from filesystem operations are caught and ignored
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: Symlink handling prevents traversal loops but means symlinked directories are not indexed. This is a deliberate design choice. Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_a3c6ea839f8269e1c879bece01b9d43a0_icgraph}
+\end{center}
+\end{figure}
 \Hypertarget{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!add\_watch@{add\_watch}}
 \index{add\_watch@{add\_watch}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
 \doxysubsubsection{\texorpdfstring{add\_watch()}{add\_watch()}}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc} 
 void add\+\_\+watch (\begin{DoxyParamCaption}\item[{const string \&}]{dir}{}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:\nopagebreak
+Function\+: add\+\_\+watch Purpose\+: Register an inotify watch on a directory Parameters\+:
+\begin{DoxyItemize}
+\item dir\+: Directory path to watch Returns\+: void Security\+:
+\item No validation of directory path (assumes caller validates)
+\item Watch descriptor stored in global map Thread-\/safety\+: Not thread-\/safe (called from single-\/threaded context during indexing)
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This assumes inotify\+\_\+add\+\_\+watch() succeeds. Failed watches are silently ignored (wd \texorpdfstring{$<$}{<}= 0). This is acceptable as indexing continues without real-\/time updates for that directory. \Hypertarget{ffind-daemon_8cpp_ab69d236a01aa6689b1c7709979bf0262}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!build\_path\_index@{build\_path\_index}}
+\index{build\_path\_index@{build\_path\_index}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{build\_path\_index()}{build\_path\_index()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ab69d236a01aa6689b1c7709979bf0262} 
+void build\+\_\+path\+\_\+index (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_a205ebedc5089e1667f29c6e01c934afc_icgraph}
+\includegraphics[width=348pt]{ffind-daemon_8cpp_ab69d236a01aa6689b1c7709979bf0262_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=256pt]{ffind-daemon_8cpp_ab69d236a01aa6689b1c7709979bf0262_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!check\_and\_create\_pid\_file@{check\_and\_create\_pid\_file}}
@@ -122,20 +275,54 @@ Here is the caller graph for this function\+:\nopagebreak
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f} 
 bool check\+\_\+and\+\_\+create\+\_\+pid\+\_\+file (\begin{DoxyParamCaption}\item[{const string \&}]{pid\+\_\+path}{, }\item[{bool}]{foreground}{}\end{DoxyParamCaption})}
 
-Here is the call graph for this function\+:
-\nopagebreak
-\begin{figure}[H]
-\begin{center}
-\leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f_cgraph}
-\end{center}
-\end{figure}
 Here is the caller graph for this function\+:
 \nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
 \includegraphics[width=301pt]{ffind-daemon_8cpp_afe3d8064e402d5fda40480e60546ef2f_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_aca41db1c34064861e1972d04aea0271c}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!check\_dnotify\_available@{check\_dnotify\_available}}
+\index{check\_dnotify\_available@{check\_dnotify\_available}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{check\_dnotify\_available()}{check\_dnotify\_available()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aca41db1c34064861e1972d04aea0271c} 
+bool check\+\_\+dnotify\+\_\+available (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=291pt]{ffind-daemon_8cpp_aca41db1c34064861e1972d04aea0271c_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a9b45a13c2b22d9b98045a6bbb3201183}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!check\_overlap\_and\_warn@{check\_overlap\_and\_warn}}
+\index{check\_overlap\_and\_warn@{check\_overlap\_and\_warn}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{check\_overlap\_and\_warn()}{check\_overlap\_and\_warn()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a9b45a13c2b22d9b98045a6bbb3201183} 
+bool check\+\_\+overlap\+\_\+and\+\_\+warn (\begin{DoxyParamCaption}\item[{const vector$<$ string $>$ \&}]{roots}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=296pt]{ffind-daemon_8cpp_a9b45a13c2b22d9b98045a6bbb3201183_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_aa4eb8c59e406fff61f4cf476db590854}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!cleanup\_on\_socket\_error@{cleanup\_on\_socket\_error}}
+\index{cleanup\_on\_socket\_error@{cleanup\_on\_socket\_error}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{cleanup\_on\_socket\_error()}{cleanup\_on\_socket\_error()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa4eb8c59e406fff61f4cf476db590854} 
+void cleanup\+\_\+on\+\_\+socket\+\_\+error (\begin{DoxyParamCaption}\item[{int}]{srv\+\_\+fd}{, }\item[{bool}]{unlink\+\_\+socket}{, }\item[{const string \&}]{sock\+\_\+path}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=294pt]{ffind-daemon_8cpp_aa4eb8c59e406fff61f4cf476db590854_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!cleanup\_pid\_file@{cleanup\_pid\_file}}
@@ -149,7 +336,39 @@ Here is the caller graph for this function\+:
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8_icgraph}
+\includegraphics[width=252pt]{ffind-daemon_8cpp_a09c579b994a755d8cbd88831609690a8_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a8b30fc4c7b3a67defacc946838e40f7f}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!cleanup\_stale\_pending\_moves@{cleanup\_stale\_pending\_moves}}
+\index{cleanup\_stale\_pending\_moves@{cleanup\_stale\_pending\_moves}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{cleanup\_stale\_pending\_moves()}{cleanup\_stale\_pending\_moves()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a8b30fc4c7b3a67defacc946838e40f7f} 
+void cleanup\+\_\+stale\+\_\+pending\+\_\+moves (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{ffind-daemon_8cpp_ae7ca651aefd5176935c0a94a0389e957}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!crash\_handler@{crash\_handler}}
+\index{crash\_handler@{crash\_handler}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{crash\_handler()}{crash\_handler()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae7ca651aefd5176935c0a94a0389e957} 
+void crash\+\_\+handler (\begin{DoxyParamCaption}\item[{int}]{sig}{}\end{DoxyParamCaption})}
+
+Function\+: crash\+\_\+handler Purpose\+: Emergency cleanup on fatal signals (SIGSEGV, SIGABRT, SIGBUS) Parameters\+:
+\begin{DoxyItemize}
+\item sig\+: Signal number that triggered the crash Returns\+: Does not return (re-\/raises signal after cleanup) Security\+:
+\item CRITICAL\+: Only uses async-\/signal-\/safe functions
+\item write() -\/ async-\/signal-\/safe per POSIX
+\item close() -\/ async-\/signal-\/safe per POSIX
+\item unlink() -\/ async-\/signal-\/safe per POSIX
+\item signal(), raise() -\/ async-\/signal-\/safe per POSIX
+\item std\+::atomic -\/ NOT guaranteed async-\/signal-\/safe, but lock-\/free operations typically compile to single instructions (documented risk accepted)
+\item NEVER calls\+: malloc, free, printf, C++ iostreams, sqlite3 functions Thread-\/safety\+: Called from signal context (any thread)
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This function runs in signal context with severe restrictions. Only async-\/signal-\/safe functions are allowed. Any violation can cause deadlock or corruption. The use of std\+::atomic is a documented implementation choice that works in practice but is not guaranteed by standards. Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=241pt]{ffind-daemon_8cpp_ae7ca651aefd5176935c0a94a0389e957_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!daemonize@{daemonize}}
@@ -158,11 +377,46 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e} 
 void daemonize (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:\nopagebreak
+Here is the caller graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
 \includegraphics[width=227pt]{ffind-daemon_8cpp_a869452f0c0952acd39230fcf0ef89c1e_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_aa3dce2cc3e8187c974d70de730744bae}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!deduplicate\_paths@{deduplicate\_paths}}
+\index{deduplicate\_paths@{deduplicate\_paths}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{deduplicate\_paths()}{deduplicate\_paths()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa3dce2cc3e8187c974d70de730744bae} 
+vector$<$ string $>$ deduplicate\+\_\+paths (\begin{DoxyParamCaption}\item[{const vector$<$ string $>$ \&}]{paths}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=262pt]{ffind-daemon_8cpp_aa3dce2cc3e8187c974d70de730744bae_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a9750400b1bc326d136948d3f27ff0858}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!find\_root\_index@{find\_root\_index}}
+\index{find\_root\_index@{find\_root\_index}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{find\_root\_index()}{find\_root\_index()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a9750400b1bc326d136948d3f27ff0858} 
+size\+\_\+t find\+\_\+root\+\_\+index (\begin{DoxyParamCaption}\item[{const string \&}]{path}{}\end{DoxyParamCaption})}
+
+\Hypertarget{ffind-daemon_8cpp_a3e4024f4f5d79a6af4aa3ef6153bbec5}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!flush\_changes\_to\_db@{flush\_changes\_to\_db}}
+\index{flush\_changes\_to\_db@{flush\_changes\_to\_db}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{flush\_changes\_to\_db()}{flush\_changes\_to\_db()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a3e4024f4f5d79a6af4aa3ef6153bbec5} 
+void flush\+\_\+changes\+\_\+to\+\_\+db (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=274pt]{ffind-daemon_8cpp_a3e4024f4f5d79a6af4aa3ef6153bbec5_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_ac2acdbfe25fe356cd7052c036bce7072}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!get\_pid\_file\_path@{get\_pid\_file\_path}}
@@ -185,31 +439,109 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd} 
 void handle\+\_\+client (\begin{DoxyParamCaption}\item[{int}]{fd}{}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:\nopagebreak
+Function\+: handle\+\_\+client Purpose\+: Process a search request from a client connection Parameters\+:
+\begin{DoxyItemize}
+\item fd\+: File descriptor of the connected client socket Returns\+: void (closes fd before returning) Security\+:
+\item CRITICAL\+: Validates all network input sizes (max 1MB per pattern)
+\item Handles partial reads and writes correctly
+\item Validates regex patterns before use
+\item Uses \doxylink{ffind-daemon_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f}{safe\+\_\+write\+\_\+all()} for error reporting Thread-\/safety\+: Thread-\/safe (each client has its own fd)
+\end{DoxyItemize}
+
+Protocol Overview\+:
+\begin{DoxyEnumerate}
+\item Read name pattern length (4 bytes) + pattern data
+\item Read path pattern length (4 bytes) + pattern data
+\item Read content pattern length (4 bytes) + pattern data
+\item Read flags (1 byte)\+: case\+\_\+insensitive, is\+\_\+regex, content\+\_\+glob
+\item Read type filter (1 byte)
+\item Read size operator + value (1 + 8 bytes)
+\item Read mtime operator + days (1 + 4 bytes)
+\item Read context lines\+: before\+\_\+ctx, after\+\_\+ctx (1 + 1 bytes) 
+\end{DoxyEnumerate}Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=319pt]{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
 \includegraphics[width=238pt]{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd_icgraph}
 \end{center}
 \end{figure}
-\Hypertarget{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!initial\_setup@{initial\_setup}}
-\index{initial\_setup@{initial\_setup}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
-\doxysubsubsection{\texorpdfstring{initial\_setup()}{initial\_setup()}}
-{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b} 
-void initial\+\_\+setup (\begin{DoxyParamCaption}\item[{const string \&}]{r}{}\end{DoxyParamCaption})}
+\Hypertarget{ffind-daemon_8cpp_a6cb59ac446c1f52967690e9c802fffb6}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!handle\_directory\_rename@{handle\_directory\_rename}}
+\index{handle\_directory\_rename@{handle\_directory\_rename}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{handle\_directory\_rename()}{handle\_directory\_rename()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a6cb59ac446c1f52967690e9c802fffb6} 
+void handle\+\_\+directory\+\_\+rename (\begin{DoxyParamCaption}\item[{const string \&}]{old\+\_\+path}{, }\item[{const string \&}]{new\+\_\+path}{}\end{DoxyParamCaption})}
 
-Here is the call graph for this function\+:\nopagebreak
+\Hypertarget{ffind-daemon_8cpp_a3ee509d80aed50ed80b0a8a044d6d8aa}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!init\_database@{init\_database}}
+\index{init\_database@{init\_database}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{init\_database()}{init\_database()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a3ee509d80aed50ed80b0a8a044d6d8aa} 
+bool init\+\_\+database (\begin{DoxyParamCaption}\item[{const string \&}]{path}{}\end{DoxyParamCaption})}
+
+Function\+: init\+\_\+database Purpose\+: Initialize SQLite database for persistent index storage Parameters\+:
+\begin{DoxyItemize}
+\item path\+: Filesystem path for the SQLite database file Returns\+: true on success, false on error Security\+:
+\item Creates database with restricted permissions (inherited from umask)
+\item Uses WAL mode for crash safety and better concurrency
+\item Sets synchronous=NORMAL for balance of speed and safety Thread-\/safety\+: Must be called from main thread before other threads start
+\end{DoxyItemize}
+
+Schema Overview\+:
+\begin{DoxyItemize}
+\item meta\+: Key-\/value pairs for root paths and configuration
+\item entries\+: File/directory index (path, size, mtime, is\+\_\+dir, root\+\_\+index)
+\item sync\+\_\+state\+: Tracks last full sync time and dirty flag
+\end{DoxyItemize}
+
+WAL Mode Benefits\+:
+\begin{DoxyItemize}
+\item Atomic commits even on crashes or power loss
+\item Better read concurrency (readers don\textquotesingle{}t block writers)
+\item Automatic checkpoint management by SQLite
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: WAL mode is critical for crash safety. In WAL mode, commits are atomic and survive crashes. The -\/wal and -\/shm files are automatically managed by SQLite. Here is the caller graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=261pt]{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_cgraph}
+\includegraphics[width=239pt]{ffind-daemon_8cpp_a3ee509d80aed50ed80b0a8a044d6d8aa_icgraph}
 \end{center}
 \end{figure}
-Here is the caller graph for this function\+:\nopagebreak
+\Hypertarget{ffind-daemon_8cpp_a273768174833995d8ad2eb25994d3530}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!init\_thread\_pool@{init\_thread\_pool}}
+\index{init\_thread\_pool@{init\_thread\_pool}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{init\_thread\_pool()}{init\_thread\_pool()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a273768174833995d8ad2eb25994d3530} 
+void init\+\_\+thread\+\_\+pool (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=233pt]{ffind-daemon_8cpp_a59ef0737c0ccd8f244dee8a52d4c1e9b_icgraph}
+\includegraphics[width=252pt]{ffind-daemon_8cpp_a273768174833995d8ad2eb25994d3530_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a2c4f38e0541583328a2ff1fdfd663f6e}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!initial\_setup@{initial\_setup}}
+\index{initial\_setup@{initial\_setup}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{initial\_setup()}{initial\_setup()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a2c4f38e0541583328a2ff1fdfd663f6e} 
+void initial\+\_\+setup (\begin{DoxyParamCaption}\item[{const vector$<$ string $>$ \&}]{roots}{, }\item[{bool}]{skip\+\_\+indexing}{ = {\ttfamily false}}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=233pt]{ffind-daemon_8cpp_a2c4f38e0541583328a2ff1fdfd663f6e_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!is\_process\_running@{is\_process\_running}}
@@ -218,12 +550,66 @@ Here is the caller graph for this function\+:\nopagebreak
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07} 
 bool is\+\_\+process\+\_\+running (\begin{DoxyParamCaption}\item[{pid\+\_\+t}]{pid}{}\end{DoxyParamCaption})}
 
+\Hypertarget{ffind-daemon_8cpp_aeabf8cc7dee40eed4a5d59eb8c8c3c4e}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!json\_escape@{json\_escape}}
+\index{json\_escape@{json\_escape}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{json\_escape()}{json\_escape()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aeabf8cc7dee40eed4a5d59eb8c8c3c4e} 
+string json\+\_\+escape (\begin{DoxyParamCaption}\item[{const string \&}]{str}{}\end{DoxyParamCaption})}
+
+\Hypertarget{ffind-daemon_8cpp_a7da495f44c4f9dc3771245fee9943ef0}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!json\_unescape@{json\_unescape}}
+\index{json\_unescape@{json\_unescape}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{json\_unescape()}{json\_unescape()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a7da495f44c4f9dc3771245fee9943ef0} 
+string json\+\_\+unescape (\begin{DoxyParamCaption}\item[{const string \&}]{str}{}\end{DoxyParamCaption})}
+
+\Hypertarget{ffind-daemon_8cpp_ae56faec3f7affb7dbacee7c21a944169}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!load\_config@{load\_config}}
+\index{load\_config@{load\_config}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{load\_config()}{load\_config()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae56faec3f7affb7dbacee7c21a944169} 
+\mbox{\hyperlink{structConfig}{Config}} load\+\_\+config (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=285pt]{ffind-daemon_8cpp_ae56faec3f7affb7dbacee7c21a944169_cgraph}
+\end{center}
+\end{figure}
 Here is the caller graph for this function\+:
 \nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_a2e370751950e83a2c633a69dfe026e07_icgraph}
+\includegraphics[width=228pt]{ffind-daemon_8cpp_ae56faec3f7affb7dbacee7c21a944169_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a1fe291c8a4f4e82731c0266c42943dee}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!load\_entries\_from\_db@{load\_entries\_from\_db}}
+\index{load\_entries\_from\_db@{load\_entries\_from\_db}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{load\_entries\_from\_db()}{load\_entries\_from\_db()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a1fe291c8a4f4e82731c0266c42943dee} 
+void load\+\_\+entries\+\_\+from\+\_\+db (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=279pt]{ffind-daemon_8cpp_a1fe291c8a4f4e82731c0266c42943dee_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_ac9789d3167d8e76e0a9fe8d5bc23910a}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!load\_roots\_from\_db@{load\_roots\_from\_db}}
+\index{load\_roots\_from\_db@{load\_roots\_from\_db}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{load\_roots\_from\_db()}{load\_roots\_from\_db()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ac9789d3167d8e76e0a9fe8d5bc23910a} 
+vector$<$ string $>$ load\+\_\+roots\+\_\+from\+\_\+db (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=270pt]{ffind-daemon_8cpp_ac9789d3167d8e76e0a9fe8d5bc23910a_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!main@{main}}
@@ -232,12 +618,72 @@ Here is the caller graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627} 
 int main (\begin{DoxyParamCaption}\item[{int}]{argc}{, }\item[{char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}}]{argv}{}\end{DoxyParamCaption})}
 
-Here is the call graph for this function\+:
+Function\+: main Purpose\+: \doxylink{structEntry}{Entry} point for ffind-\/daemon
+
+Initialization Flow\+:
+\begin{DoxyEnumerate}
+\item Load configuration from \texorpdfstring{$\sim$}{\string~}/.config/ffind/daemon.\+conf
+\item Parse command-\/line arguments (CLI overrides config)
+\item Validate and canonicalize root directory paths
+\item Check for overlapping roots and warn
+\item Enable SQLite persistence if --db specified
+\item Daemonize if not in foreground mode
+\item Create Unix domain socket for client communication
+\item Initialize inotify for filesystem monitoring
+\item Initialize thread pool for content search
+\item Index all root directories recursively
+\item Enter main event loop (accept clients + process inotify)
+\end{DoxyEnumerate}
+
+Security Model\+:
+\begin{DoxyItemize}
+\item Runs as unprivileged user (never requires root)
+\item Socket created in /run/user/\$\+UID with 0600 permissions
+\item PID file in /run/user/\$\+UID with 0644 permissions
+\item Signal handlers use only async-\/signal-\/safe functions
+\item All network input validated with size limits
+\end{DoxyItemize}
+
+Signal Handling\+:
+\begin{DoxyItemize}
+\item SIGINT/\+SIGTERM\+: Graceful shutdown
+\item SIGSEGV/\+SIGABRT/\+SIGBUS\+: Emergency cleanup + core dump
+\end{DoxyItemize}
+
+Resource Cleanup\+:
+\begin{DoxyItemize}
+\item Socket file deleted on exit
+\item PID file deleted on exit
+\item Database flushed on graceful shutdown
+\item All watches removed on exit
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This is the main daemon entry point. It sets up all infrastructure before entering the event loop. Error handling must be robust as this runs long-\/term as a service. Here is the call graph for this function\+:
 \nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph}
+\includegraphics[height=550pt]{ffind-daemon_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a92ad392f2892e1df652d91559748312c}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!maybe\_flush\_to\_db@{maybe\_flush\_to\_db}}
+\index{maybe\_flush\_to\_db@{maybe\_flush\_to\_db}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{maybe\_flush\_to\_db()}{maybe\_flush\_to\_db()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a92ad392f2892e1df652d91559748312c} 
+void maybe\+\_\+flush\+\_\+to\+\_\+db (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{ffind-daemon_8cpp_ac90ea00129fdd44112a544f6c4b8ffe8}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!parse\_config\_file@{parse\_config\_file}}
+\index{parse\_config\_file@{parse\_config\_file}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{parse\_config\_file()}{parse\_config\_file()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ac90ea00129fdd44112a544f6c4b8ffe8} 
+\mbox{\hyperlink{structConfig}{Config}} parse\+\_\+config\+\_\+file (\begin{DoxyParamCaption}\item[{const string \&}]{config\+\_\+path}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_ac90ea00129fdd44112a544f6c4b8ffe8_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!process\_events@{process\_events}}
@@ -246,18 +692,34 @@ Here is the call graph for this function\+:
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c} 
 void process\+\_\+events (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
-Here is the call graph for this function\+:\nopagebreak
-\begin{figure}[H]
-\begin{center}
-\leavevmode
-\includegraphics[width=296pt]{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_cgraph}
-\end{center}
-\end{figure}
-Here is the caller graph for this function\+:\nopagebreak
+Function\+: process\+\_\+events Purpose\+: Main event loop for processing inotify filesystem events Parameters\+: None Returns\+: void (runs until \textquotesingle{}running\textquotesingle{} flag is cleared) Security\+:
+\begin{DoxyItemize}
+\item Bounds checking on inotify event buffer parsing
+\item Handles partial reads correctly
+\item Validates event structure sizes before access
+\item Protected against malformed inotify events Thread-\/safety\+: Runs in dedicated thread, uses mutexes for shared data
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This is the core filesystem monitoring loop. It must correctly parse inotify events without buffer overruns. Events can be variable-\/length due to the filename field. Here is the caller graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
 \includegraphics[width=249pt]{ffind-daemon_8cpp_a168b2a4f368ef1066408f4976ec8431c_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a09d220bcc638f3d7f76e2c424b095129}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!reconcile\_db\_with\_filesystem@{reconcile\_db\_with\_filesystem}}
+\index{reconcile\_db\_with\_filesystem@{reconcile\_db\_with\_filesystem}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{reconcile\_db\_with\_filesystem()}{reconcile\_db\_with\_filesystem()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a09d220bcc638f3d7f76e2c424b095129} 
+void reconcile\+\_\+db\+\_\+with\+\_\+filesystem (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=317pt]{ffind-daemon_8cpp_a09d220bcc638f3d7f76e2c424b095129_icgraph}
 \end{center}
 \end{figure}
 \Hypertarget{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!remove\_path@{remove\_path}}
@@ -266,45 +728,177 @@ Here is the caller graph for this function\+:\nopagebreak
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f} 
 void remove\+\_\+path (\begin{DoxyParamCaption}\item[{const string \&}]{full}{, }\item[{bool}]{recursive}{ = {\ttfamily false}}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:\nopagebreak
-\begin{figure}[H]
-\begin{center}
-\leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_aef341a13753571130f788a38d2ce3b6f_icgraph}
-\end{center}
-\end{figure}
-\Hypertarget{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!sig\_handler@{sig\_handler}}
-\index{sig\_handler@{sig\_handler}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
-\doxysubsubsection{\texorpdfstring{sig\_handler()}{sig\_handler()}}
-{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6} 
-void sig\+\_\+handler (\begin{DoxyParamCaption}\item[{int}]{}{}\end{DoxyParamCaption})}
+Function\+: remove\+\_\+path Purpose\+: Remove a file or directory from the in-\/memory index Parameters\+:
+\begin{DoxyItemize}
+\item full\+: Full absolute path to remove
+\item recursive\+: If true, also removes all entries under this path (for directories) Returns\+: void Security\+:
+\item Thread-\/safe\+: Uses mutex lock
+\item Rebuilds path index after removal to maintain consistency
+\item Updates database dirty flag if persistence is enabled Thread-\/safety\+: Thread-\/safe (uses mtx)
+\end{DoxyItemize}
 
-Here is the call graph for this function\+:
+Implementation Notes\+:
+\begin{DoxyItemize}
+\item For recursive removal, uses starts\+\_\+with() to match all children
+\item Invalidates entry pointers when vector is modified
+\item Rebuilds entire path index for simplicity (could be optimized)
+\item Tracks removed count for database synchronization 
+\end{DoxyItemize}\Hypertarget{ffind-daemon_8cpp_affd557bc34b0546314dc6394d0ba6219}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!safe\_read\_all@{safe\_read\_all}}
+\index{safe\_read\_all@{safe\_read\_all}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{safe\_read\_all()}{safe\_read\_all()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_affd557bc34b0546314dc6394d0ba6219} 
+bool safe\+\_\+read\+\_\+all (\begin{DoxyParamCaption}\item[{int}]{fd}{, }\item[{void \texorpdfstring{$\ast$}{*}}]{buf}{, }\item[{size\+\_\+t}]{count}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+Function\+: safe\+\_\+read\+\_\+all Purpose\+: Reads exactly count bytes from a file descriptor, handling EINTR Parameters\+:
+\begin{DoxyItemize}
+\item fd\+: File descriptor to read from
+\item buf\+: Buffer to read data into
+\item count\+: Number of bytes to read Returns\+: true on success, false on error or EOF Security\+: Handles EINTR correctly, validates input size Thread-\/safety\+: Thread-\/safe (operates on file descriptor) 
+\end{DoxyItemize}Here is the caller graph for this function\+:
 \nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=283pt]{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_cgraph}
+\includegraphics[width=350pt]{ffind-daemon_8cpp_affd557bc34b0546314dc6394d0ba6219_icgraph}
 \end{center}
 \end{figure}
-Here is the caller graph for this function\+:\nopagebreak
+\Hypertarget{ffind-daemon_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!safe\_write\_all@{safe\_write\_all}}
+\index{safe\_write\_all@{safe\_write\_all}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{safe\_write\_all()}{safe\_write\_all()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f} 
+bool safe\+\_\+write\+\_\+all (\begin{DoxyParamCaption}\item[{int}]{fd}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{buf}{, }\item[{size\+\_\+t}]{count}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+Function\+: safe\+\_\+write\+\_\+all Purpose\+: Writes all data to a file descriptor, handling partial writes and EINTR Parameters\+:
+\begin{DoxyItemize}
+\item fd\+: File descriptor to write to
+\item buf\+: Buffer containing data to write
+\item count\+: Number of bytes to write Returns\+: true on success, false on error Security\+: Handles EINTR and partial writes correctly Thread-\/safety\+: Thread-\/safe (operates on file descriptor) 
+\end{DoxyItemize}Here is the caller graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=229pt]{ffind-daemon_8cpp_ab326a3e5e38794f3fd51fabbcb5f7ca6_icgraph}
+\includegraphics[width=350pt]{ffind-daemon_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f_icgraph}
 \end{center}
 \end{figure}
-\Hypertarget{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!update\_or\_add@{update\_or\_add}}
+\Hypertarget{ffind-daemon_8cpp_a661259a347bae2d165d1653683d41472}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!save\_roots\_to\_db@{save\_roots\_to\_db}}
+\index{save\_roots\_to\_db@{save\_roots\_to\_db}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{save\_roots\_to\_db()}{save\_roots\_to\_db()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a661259a347bae2d165d1653683d41472} 
+void save\+\_\+roots\+\_\+to\+\_\+db (\begin{DoxyParamCaption}\item[{const vector$<$ string $>$ \&}]{roots}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=258pt]{ffind-daemon_8cpp_a661259a347bae2d165d1653683d41472_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a7b04429420875e5e02ebc2893cfa8d6f}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!send\_results\_batched@{send\_results\_batched}}
+\index{send\_results\_batched@{send\_results\_batched}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{send\_results\_batched()}{send\_results\_batched()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a7b04429420875e5e02ebc2893cfa8d6f} 
+void send\+\_\+results\+\_\+batched (\begin{DoxyParamCaption}\item[{int}]{fd}{, }\item[{const vector$<$ string $>$ \&}]{results}{}\end{DoxyParamCaption})}
+
+Function\+: send\+\_\+results\+\_\+batched Purpose\+: Send search results to client using batched writev() for efficiency Parameters\+:
+\begin{DoxyItemize}
+\item fd\+: Client socket file descriptor
+\item results\+: Vector of result strings to send Returns\+: void Security\+:
+\item Handles EINTR correctly in writev() loop
+\item Handles partial writes correctly
+\item No buffer overflow risk (sends only complete strings) Thread-\/safety\+: Thread-\/safe (each client has unique fd)
+\end{DoxyItemize}
+
+Performance Notes\+:
+\begin{DoxyItemize}
+\item Uses writev() to batch multiple strings into fewer syscalls
+\item Reduces context switches compared to individual write() calls
+\item Batches up to 1024 iovecs at a time (typical IOV\+\_\+\+MAX on Linux)
+\item Handles partial writes by adjusting iovec pointers
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This function implements the gather I/O pattern for efficiency. The partial write handling is complex but correct. Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{ffind-daemon_8cpp_a7b04429420875e5e02ebc2893cfa8d6f_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a78bf8646c074be1959943f73bd7458c0}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!show\_usage@{show\_usage}}
+\index{show\_usage@{show\_usage}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{show\_usage()}{show\_usage()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a78bf8646c074be1959943f73bd7458c0} 
+void show\+\_\+usage (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=233pt]{ffind-daemon_8cpp_a78bf8646c074be1959943f73bd7458c0_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_af8f154bf210b7ff6d50433da876083e6}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!show\_version@{show\_version}}
+\index{show\_version@{show\_version}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{show\_version()}{show\_version()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_af8f154bf210b7ff6d50433da876083e6} 
+void show\+\_\+version (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=240pt]{ffind-daemon_8cpp_af8f154bf210b7ff6d50433da876083e6_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_a5054c36923934387c6f7605dd1a2f3c9}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!sig\_handler@{sig\_handler}}
+\index{sig\_handler@{sig\_handler}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{sig\_handler()}{sig\_handler()}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a5054c36923934387c6f7605dd1a2f3c9} 
+void sig\+\_\+handler (\begin{DoxyParamCaption}\item[{int}]{sig}{}\end{DoxyParamCaption})}
+
+Function\+: sig\+\_\+handler Purpose\+: Graceful shutdown handler for SIGINT and SIGTERM Parameters\+:
+\begin{DoxyItemize}
+\item sig\+: Signal number (unused, suppressed with (void)sig) Returns\+: void Security\+:
+\item CRITICAL\+: Only uses async-\/signal-\/safe functions
+\item write() -\/ async-\/signal-\/safe per POSIX
+\item close() -\/ async-\/signal-\/safe per POSIX ~\newline
+
+\item std\+::atomic\+::exchange() -\/ NOT guaranteed async-\/signal-\/safe, but lock-\/free operations typically compile to single instructions (documented risk)
+\item NEVER calls\+: malloc, free, printf, C++ iostreams, sqlite3 functions Thread-\/safety\+: Called from signal context (any thread)
+\end{DoxyItemize}
+
+Implementation Notes\+:
+\begin{DoxyItemize}
+\item Sets atomic flag to initiate graceful shutdown
+\item Closes server socket to unblock accept() call in main thread
+\item Main thread polls the \textquotesingle{}running\textquotesingle{} flag and performs full cleanup
+\item Database writes happen in main thread, not here
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This handler sets flags and closes FDs to wake the main thread. All complex cleanup happens in the main thread after detecting shutdown. Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=229pt]{ffind-daemon_8cpp_a5054c36923934387c6f7605dd1a2f3c9_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind-daemon_8cpp_adbd569fc9bff2199fe17c1a98905233b}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!update\_or\_add@{update\_or\_add}}
 \index{update\_or\_add@{update\_or\_add}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
 \doxysubsubsection{\texorpdfstring{update\_or\_add()}{update\_or\_add()}}
-{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565} 
-void update\+\_\+or\+\_\+add (\begin{DoxyParamCaption}\item[{const string \&}]{full}{}\end{DoxyParamCaption})}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_adbd569fc9bff2199fe17c1a98905233b} 
+void update\+\_\+or\+\_\+add (\begin{DoxyParamCaption}\item[{const string \&}]{full}{, }\item[{size\+\_\+t}]{root\+\_\+index}{}\end{DoxyParamCaption})}
 
-Here is the caller graph for this function\+:\nopagebreak
+Here is the caller graph for this function\+:
+\nopagebreak
 \begin{figure}[H]
 \begin{center}
 \leavevmode
-\includegraphics[width=350pt]{ffind-daemon_8cpp_ae0c07b995ce21a76ac28db67132a5565_icgraph}
+\includegraphics[width=350pt]{ffind-daemon_8cpp_adbd569fc9bff2199fe17c1a98905233b_icgraph}
 \end{center}
 \end{figure}
 
@@ -312,6 +906,24 @@ Here is the caller graph for this function\+:\nopagebreak
 \label{doc-var-members}
 \Hypertarget{ffind-daemon_8cpp_doc-var-members}
 \doxysubsection{Variable Documentation}
+\Hypertarget{ffind-daemon_8cpp_a1b1c042a59f8d4d2b52f9fea8373f486}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!COLOR\_BOLD@{COLOR\_BOLD}}
+\index{COLOR\_BOLD@{COLOR\_BOLD}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{COLOR\_BOLD}{COLOR\_BOLD}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a1b1c042a59f8d4d2b52f9fea8373f486} 
+const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+BOLD = "{}\textbackslash{}033\mbox{[}1m"{}}
+
+\Hypertarget{ffind-daemon_8cpp_ae842347a06b8acf6a90fdd737151afbf}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!COLOR\_CYAN@{COLOR\_CYAN}}
+\index{COLOR\_CYAN@{COLOR\_CYAN}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{COLOR\_CYAN}{COLOR\_CYAN}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae842347a06b8acf6a90fdd737151afbf} 
+const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+CYAN = "{}\textbackslash{}033\mbox{[}36m"{}}
+
+\Hypertarget{ffind-daemon_8cpp_a4e3254ec413da5406e1746c8428d319b}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!COLOR\_GREEN@{COLOR\_GREEN}}
+\index{COLOR\_GREEN@{COLOR\_GREEN}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{COLOR\_GREEN}{COLOR\_GREEN}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a4e3254ec413da5406e1746c8428d319b} 
+const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+GREEN = "{}\textbackslash{}033\mbox{[}1;32m"{}}
+
 \Hypertarget{ffind-daemon_8cpp_a53e54caf6eb975dec77f33e016bdb722}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!COLOR\_RED@{COLOR\_RED}}
 \index{COLOR\_RED@{COLOR\_RED}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
 \doxysubsubsection{\texorpdfstring{COLOR\_RED}{COLOR\_RED}}
@@ -330,11 +942,65 @@ const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+RESET = "{}\textbackslash{}033
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa90ffa37fb9eca85e39b9897569dab68} 
 const char\texorpdfstring{$\ast$}{*} COLOR\+\_\+\+YELLOW = "{}\textbackslash{}033\mbox{[}1;33m"{}}
 
+\Hypertarget{ffind-daemon_8cpp_a0335eb0660eedd2db3d7caa2acfba6d4}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!content\_search\_pool@{content\_search\_pool}}
+\index{content\_search\_pool@{content\_search\_pool}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{content\_search\_pool}{content\_search\_pool}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a0335eb0660eedd2db3d7caa2acfba6d4} 
+unique\+\_\+ptr$<$\mbox{\hyperlink{classThreadPool}{Thread\+Pool}}$>$ content\+\_\+search\+\_\+pool}
+
+\Hypertarget{ffind-daemon_8cpp_ad6e663497d2c934364b3bcf07496b30b}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!db@{db}}
+\index{db@{db}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{db}{db}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ad6e663497d2c934364b3bcf07496b30b} 
+sqlite3\texorpdfstring{$\ast$}{*} db = nullptr}
+
+\Hypertarget{ffind-daemon_8cpp_a1a0a1c2eb6c45b93c5a08900740589d6}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!db\_dirty@{db\_dirty}}
+\index{db\_dirty@{db\_dirty}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{db\_dirty}{db\_dirty}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a1a0a1c2eb6c45b93c5a08900740589d6} 
+atomic$<$bool$>$ db\+\_\+dirty \{false\}}
+
+\Hypertarget{ffind-daemon_8cpp_ae0923b8c9f0908d7a840b0f4606d1b91}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!db\_enabled@{db\_enabled}}
+\index{db\_enabled@{db\_enabled}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{db\_enabled}{db\_enabled}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae0923b8c9f0908d7a840b0f4606d1b91} 
+bool db\+\_\+enabled = false}
+
+\Hypertarget{ffind-daemon_8cpp_a5e26c0966c06e61a5557f279668d600b}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!db\_mtx@{db\_mtx}}
+\index{db\_mtx@{db\_mtx}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{db\_mtx}{db\_mtx}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a5e26c0966c06e61a5557f279668d600b} 
+mutex db\+\_\+mtx}
+
+\Hypertarget{ffind-daemon_8cpp_afd1edb12ca310364dcb2ffdc1a4d1e75}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!db\_path@{db\_path}}
+\index{db\_path@{db\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{db\_path}{db\_path}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_afd1edb12ca310364dcb2ffdc1a4d1e75} 
+string db\+\_\+path}
+
 \Hypertarget{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!entries@{entries}}
 \index{entries@{entries}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
 \doxysubsubsection{\texorpdfstring{entries}{entries}}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a5527b3d38e1a219f363b1b9d0e80addf} 
 vector$<$\mbox{\hyperlink{structEntry}{Entry}}$>$ entries}
+
+\Hypertarget{ffind-daemon_8cpp_ae60628f0cbcc3037cf3ec2e86d465b01}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!FLUSH\_INTERVAL\_SEC@{FLUSH\_INTERVAL\_SEC}}
+\index{FLUSH\_INTERVAL\_SEC@{FLUSH\_INTERVAL\_SEC}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{FLUSH\_INTERVAL\_SEC}{FLUSH\_INTERVAL\_SEC}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ae60628f0cbcc3037cf3ec2e86d465b01} 
+const int FLUSH\+\_\+\+INTERVAL\+\_\+\+SEC = 30}
+
+\Hypertarget{ffind-daemon_8cpp_aef935468d960b3a31186bbbb1e70f619}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!FLUSH\_THRESHOLD@{FLUSH\_THRESHOLD}}
+\index{FLUSH\_THRESHOLD@{FLUSH\_THRESHOLD}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{FLUSH\_THRESHOLD}{FLUSH\_THRESHOLD}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aef935468d960b3a31186bbbb1e70f619} 
+const int FLUSH\+\_\+\+THRESHOLD = 100}
+
+\Hypertarget{ffind-daemon_8cpp_a69046de9a005a9a1c5b898f0354c3637}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!foreground@{foreground}}
+\index{foreground@{foreground}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{foreground}{foreground}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a69046de9a005a9a1c5b898f0354c3637} 
+bool foreground = false}
 
 \Hypertarget{ffind-daemon_8cpp_a683029b96d4f70080d7f5d69d5144cd5}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!in\_fd@{in\_fd}}
 \index{in\_fd@{in\_fd}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
@@ -342,11 +1008,41 @@ vector$<$\mbox{\hyperlink{structEntry}{Entry}}$>$ entries}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a683029b96d4f70080d7f5d69d5144cd5} 
 int in\+\_\+fd = -\/1}
 
+\Hypertarget{ffind-daemon_8cpp_ad213aa40136d248d9289e0671c733132}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!last\_flush\_time@{last\_flush\_time}}
+\index{last\_flush\_time@{last\_flush\_time}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{last\_flush\_time}{last\_flush\_time}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ad213aa40136d248d9289e0671c733132} 
+chrono\+::steady\+\_\+clock\+::time\+\_\+point last\+\_\+flush\+\_\+time}
+
 \Hypertarget{ffind-daemon_8cpp_a29ac681ec3efa9e30e1ab1ab251b47f9}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!mtx@{mtx}}
 \index{mtx@{mtx}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
 \doxysubsubsection{\texorpdfstring{mtx}{mtx}}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a29ac681ec3efa9e30e1ab1ab251b47f9} 
 mutex mtx}
+
+\Hypertarget{ffind-daemon_8cpp_a67eae545b818fdaaefbdd25be353882a}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!path\_index@{path\_index}}
+\index{path\_index@{path\_index}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{path\_index}{path\_index}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a67eae545b818fdaaefbdd25be353882a} 
+\mbox{\hyperlink{structPathIndex}{Path\+Index}} path\+\_\+index}
+
+\Hypertarget{ffind-daemon_8cpp_aad04144130b2a01eda7d97301c7d4bd3}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!pending\_changes@{pending\_changes}}
+\index{pending\_changes@{pending\_changes}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{pending\_changes}{pending\_changes}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aad04144130b2a01eda7d97301c7d4bd3} 
+atomic$<$int$>$ pending\+\_\+changes \{0\}}
+
+\Hypertarget{ffind-daemon_8cpp_a6f14fc6fa1500d2e8777d81791cb2234}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!pending\_moves@{pending\_moves}}
+\index{pending\_moves@{pending\_moves}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{pending\_moves}{pending\_moves}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a6f14fc6fa1500d2e8777d81791cb2234} 
+unordered\+\_\+map$<$uint32\+\_\+t, pair$<$string, chrono\+::steady\+\_\+clock\+::time\+\_\+point$>$ $>$ pending\+\_\+moves}
+
+\Hypertarget{ffind-daemon_8cpp_ad5b8de30cb8dcb8672b1c258e2b7c7de}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!pending\_moves\_mtx@{pending\_moves\_mtx}}
+\index{pending\_moves\_mtx@{pending\_moves\_mtx}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{pending\_moves\_mtx}{pending\_moves\_mtx}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ad5b8de30cb8dcb8672b1c258e2b7c7de} 
+mutex pending\+\_\+moves\+\_\+mtx}
 
 \Hypertarget{ffind-daemon_8cpp_a99a7b197fcb106a59ca82ee82455928c}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!pid\_file\_path@{pid\_file\_path}}
 \index{pid\_file\_path@{pid\_file\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
@@ -360,11 +1056,11 @@ string pid\+\_\+file\+\_\+path}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_a84af1c8099c312bc575fd6a8814e3908} 
 char pid\+\_\+file\+\_\+path\+\_\+buf\mbox{[}256\mbox{]} = \{0\}}
 
-\Hypertarget{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!root\_path@{root\_path}}
-\index{root\_path@{root\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
-\doxysubsubsection{\texorpdfstring{root\_path}{root\_path}}
-{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a97aab085ad27a854898c48f24e3be9b4} 
-string root\+\_\+path}
+\Hypertarget{ffind-daemon_8cpp_ad076a9814f749e0f5ad0d730ce5e99da}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!root\_paths@{root\_paths}}
+\index{root\_paths@{root\_paths}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{root\_paths}{root\_paths}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_ad076a9814f749e0f5ad0d730ce5e99da} 
+vector$<$string$>$ root\+\_\+paths}
 
 \Hypertarget{ffind-daemon_8cpp_af3270a6e782fe74a057a44a74d4b29f9}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!running@{running}}
 \index{running@{running}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
@@ -372,11 +1068,35 @@ string root\+\_\+path}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_af3270a6e782fe74a057a44a74d4b29f9} 
 volatile sig\+\_\+atomic\+\_\+t running = 1}
 
+\Hypertarget{ffind-daemon_8cpp_aa460d55f25683acc1f8fde68dbf2b590}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!shutdown\_started@{shutdown\_started}}
+\index{shutdown\_started@{shutdown\_started}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{shutdown\_started}{shutdown\_started}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa460d55f25683acc1f8fde68dbf2b590} 
+atomic$<$bool$>$ shutdown\+\_\+started \{false\}}
+
 \Hypertarget{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!sock\_path@{sock\_path}}
 \index{sock\_path@{sock\_path}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
 \doxysubsubsection{\texorpdfstring{sock\_path}{sock\_path}}
 {\footnotesize\ttfamily \label{ffind-daemon_8cpp_afe5d10e37309d04ff0710b9707b4e4ae} 
 string sock\+\_\+path}
+
+\Hypertarget{ffind-daemon_8cpp_aa55665eebc11237ad6ed535ddd896b43}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!sock\_path\_buf@{sock\_path\_buf}}
+\index{sock\_path\_buf@{sock\_path\_buf}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{sock\_path\_buf}{sock\_path\_buf}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aa55665eebc11237ad6ed535ddd896b43} 
+char sock\+\_\+path\+\_\+buf\mbox{[}256\mbox{]} = \{0\}}
+
+\Hypertarget{ffind-daemon_8cpp_aff73d34ce32e0d14b70a401fc829f4b8}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!srv\_fd@{srv\_fd}}
+\index{srv\_fd@{srv\_fd}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{srv\_fd}{srv\_fd}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_aff73d34ce32e0d14b70a401fc829f4b8} 
+atomic$<$int$>$ srv\+\_\+fd \{-\/1\}}
+
+\Hypertarget{ffind-daemon_8cpp_a0096130a48fa1e8013c4aeb3e05ab047}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!VERSION@{VERSION}}
+\index{VERSION@{VERSION}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}
+\doxysubsubsection{\texorpdfstring{VERSION}{VERSION}}
+{\footnotesize\ttfamily \label{ffind-daemon_8cpp_a0096130a48fa1e8013c4aeb3e05ab047} 
+const char\texorpdfstring{$\ast$}{*} VERSION = "{}1.\+0"{}}
 
 \Hypertarget{ffind-daemon_8cpp_ac2fc5f87ca9b708edcf7dbd5da05ba24}\index{ffind-\/daemon.cpp@{ffind-\/daemon.cpp}!wd\_to\_dir@{wd\_to\_dir}}
 \index{wd\_to\_dir@{wd\_to\_dir}!ffind-\/daemon.cpp@{ffind-\/daemon.cpp}}

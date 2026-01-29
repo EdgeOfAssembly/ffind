@@ -1,0 +1,103 @@
+\doxysection{Thread\+Pool Class Reference}
+\hypertarget{classThreadPool}{}\label{classThreadPool}\index{ThreadPool@{ThreadPool}}
+
+
+Collaboration diagram for Thread\+Pool\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classThreadPool__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classThreadPool_ac34e07f77d584967ddbcff7b9cc89ebb}{Thread\+Pool}} (size\+\_\+t threads)
+\item 
+{\footnotesize template$<$class F, class... Args$>$ }\\auto \mbox{\hyperlink{classThreadPool_a21cd3ebbf89c9f3d972f7de417f48892}{enqueue}} (F \&\&f, Args \&\&... args) -\/$>$ future$<$ invoke\+\_\+result\+\_\+t$<$ F, Args... $>$ $>$
+\item 
+\mbox{\hyperlink{classThreadPool_a44d3d2ab618970605e684efc216655eb}{\texorpdfstring{$\sim$}{\string~}\+Thread\+Pool}} ()
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Private Attributes}
+\begin{DoxyCompactItemize}
+\item 
+vector$<$ thread $>$ \mbox{\hyperlink{classThreadPool_ab3c6e51204f129e2f111db9727b8a4c1}{workers}}
+\item 
+queue$<$ function$<$ void()$>$ $>$ \mbox{\hyperlink{classThreadPool_ab515703c9a5b9f38c2042ff80d935a99}{tasks}}
+\item 
+mutex \mbox{\hyperlink{classThreadPool_a985aee68e635cd44522b93d6d024edb0}{queue\+\_\+mutex}}
+\item 
+condition\+\_\+variable \mbox{\hyperlink{classThreadPool_a9baab9fcb651a2aee2f8c934e324b958}{condition}}
+\item 
+bool \mbox{\hyperlink{classThreadPool_a04e2cc4b3c979b4e054071436988d23d}{stop}}
+\end{DoxyCompactItemize}
+
+
+\label{doc-constructors}
+\Hypertarget{classThreadPool_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classThreadPool_ac34e07f77d584967ddbcff7b9cc89ebb}\index{ThreadPool@{ThreadPool}!ThreadPool@{ThreadPool}}
+\index{ThreadPool@{ThreadPool}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{ThreadPool()}{ThreadPool()}}
+{\footnotesize\ttfamily \label{classThreadPool_ac34e07f77d584967ddbcff7b9cc89ebb} 
+Thread\+Pool\+::\+Thread\+Pool (\begin{DoxyParamCaption}\item[{size\+\_\+t}]{threads}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{classThreadPool_a44d3d2ab618970605e684efc216655eb}\index{ThreadPool@{ThreadPool}!````~ThreadPool@{\texorpdfstring{$\sim$}{\string~}ThreadPool}}
+\index{````~ThreadPool@{\texorpdfstring{$\sim$}{\string~}ThreadPool}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{\texorpdfstring{$\sim$}{\string~}ThreadPool()}{\string~ThreadPool()}}
+{\footnotesize\ttfamily \label{classThreadPool_a44d3d2ab618970605e684efc216655eb} 
+Thread\+Pool\+::\texorpdfstring{$\sim$}{\string~}\+Thread\+Pool (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\label{doc-func-members}
+\Hypertarget{classThreadPool_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classThreadPool_a21cd3ebbf89c9f3d972f7de417f48892}\index{ThreadPool@{ThreadPool}!enqueue@{enqueue}}
+\index{enqueue@{enqueue}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{enqueue()}{enqueue()}}
+{\footnotesize\ttfamily \label{classThreadPool_a21cd3ebbf89c9f3d972f7de417f48892} 
+template$<$class F, class... Args$>$ \\
+auto Thread\+Pool\+::enqueue (\begin{DoxyParamCaption}\item[{F \&\&}]{f}{, }\item[{Args \&\&...}]{args}{}\end{DoxyParamCaption})-\/$>$future$<$ invoke\+\_\+result\+\_\+t$<$ F, Args... $>$ $>$\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\label{doc-variable-members}
+\Hypertarget{classThreadPool_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classThreadPool_a9baab9fcb651a2aee2f8c934e324b958}\index{ThreadPool@{ThreadPool}!condition@{condition}}
+\index{condition@{condition}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{condition}{condition}}
+{\footnotesize\ttfamily \label{classThreadPool_a9baab9fcb651a2aee2f8c934e324b958} 
+condition\+\_\+variable Thread\+Pool\+::condition\hspace{0.3cm}{\ttfamily [private]}}
+
+\Hypertarget{classThreadPool_a985aee68e635cd44522b93d6d024edb0}\index{ThreadPool@{ThreadPool}!queue\_mutex@{queue\_mutex}}
+\index{queue\_mutex@{queue\_mutex}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{queue\_mutex}{queue\_mutex}}
+{\footnotesize\ttfamily \label{classThreadPool_a985aee68e635cd44522b93d6d024edb0} 
+mutex Thread\+Pool\+::queue\+\_\+mutex\hspace{0.3cm}{\ttfamily [private]}}
+
+\Hypertarget{classThreadPool_a04e2cc4b3c979b4e054071436988d23d}\index{ThreadPool@{ThreadPool}!stop@{stop}}
+\index{stop@{stop}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{stop}{stop}}
+{\footnotesize\ttfamily \label{classThreadPool_a04e2cc4b3c979b4e054071436988d23d} 
+bool Thread\+Pool\+::stop\hspace{0.3cm}{\ttfamily [private]}}
+
+\Hypertarget{classThreadPool_ab515703c9a5b9f38c2042ff80d935a99}\index{ThreadPool@{ThreadPool}!tasks@{tasks}}
+\index{tasks@{tasks}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{tasks}{tasks}}
+{\footnotesize\ttfamily \label{classThreadPool_ab515703c9a5b9f38c2042ff80d935a99} 
+queue$<$function$<$void()$>$ $>$ Thread\+Pool\+::tasks\hspace{0.3cm}{\ttfamily [private]}}
+
+\Hypertarget{classThreadPool_ab3c6e51204f129e2f111db9727b8a4c1}\index{ThreadPool@{ThreadPool}!workers@{workers}}
+\index{workers@{workers}!ThreadPool@{ThreadPool}}
+\doxysubsubsection{\texorpdfstring{workers}{workers}}
+{\footnotesize\ttfamily \label{classThreadPool_ab3c6e51204f129e2f111db9727b8a4c1} 
+vector$<$thread$>$ Thread\+Pool\+::workers\hspace{0.3cm}{\ttfamily [private]}}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{ffind-daemon_8cpp}{ffind-\/daemon.\+cpp}}\end{DoxyCompactItemize}

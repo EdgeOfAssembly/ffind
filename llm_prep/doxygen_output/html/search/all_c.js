@@ -1,12 +1,18 @@
 var searchData=
 [
-  ['implemented_0',['Remaining / Not Implemented',['../md_TODO.html#autotoc_md33',1,'']]],
-  ['implemented_20current_20version_1',['Implemented (current version)',['../md_TODO.html#autotoc_md32',1,'']]],
-  ['in_5ffd_2',['in_fd',['../ffind-daemon_8cpp.html#a683029b96d4f70080d7f5d69d5144cd5',1,'ffind-daemon.cpp']]],
-  ['index_3',['Symbol Index',['../md_llm__prep_2codebase__overview.html#autotoc_md4',1,'']]],
-  ['initial_5fsetup_4',['initial_setup',['../ffind-daemon_8cpp.html#a59ef0737c0ccd8f244dee8a52d4c1e9b',1,'ffind-daemon.cpp']]],
-  ['install_5',['Install',['../md_README.html#autotoc_md15',1,'']]],
-  ['is_20ffind_6',['What is ffind?',['../md_README.html#autotoc_md11',1,'']]],
-  ['is_5fdir_7',['is_dir',['../structEntry.html#ae811cb807c2e44f08534d5a738a8c1d7',1,'Entry']]],
-  ['is_5fprocess_5frunning_8',['is_process_running',['../ffind-daemon_8cpp.html#a2e370751950e83a2c633a69dfe026e07',1,'ffind-daemon.cpp']]]
+  ['enqueue_0',['enqueue',['../classThreadPool.html#a21cd3ebbf89c9f3d972f7de417f48892',1,'ThreadPool']]],
+  ['entries_1',['entries',['../ffind-daemon_8cpp.html#a5527b3d38e1a219f363b1b9d0e80addf',1,'ffind-daemon.cpp']]],
+  ['entry_2',['Entry',['../structEntry.html',1,'']]],
+  ['environment_3',['Environment',['../md_BENCHMARK__RESULTS.html#autotoc_md70',1,'Test Environment'],['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md89',1,'Test Environment']]],
+  ['error_20categories_20and_20responses_4',['Error Categories and Responses',['../md_ARCHITECTURE.html#autotoc_md42',1,'']]],
+  ['error_20handling_5',['Error Handling',['../md_ARCHITECTURE.html#autotoc_md40',1,'']]],
+  ['error_20handling_20strategy_6',['Error Handling Strategy',['../md_ARCHITECTURE.html#autotoc_md41',1,'']]],
+  ['error_20logging_7',['Error Logging',['../md_ARCHITECTURE.html#autotoc_md43',1,'']]],
+  ['evidence_8',['Benchmark Execution Evidence',['../md_benchmarks_2EXECUTION__EVIDENCE.html',1,'']]],
+  ['examples_9',['Search examples',['../md_README.html#autotoc_md144',1,'']]],
+  ['execution_20date_10',['Execution Date',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md88',1,'']]],
+  ['execution_20evidence_11',['Benchmark Execution Evidence',['../md_benchmarks_2EXECUTION__EVIDENCE.html',1,'']]],
+  ['execution_5fevidence_2emd_12',['EXECUTION_EVIDENCE.md',['../EXECUTION__EVIDENCE_8md.html',1,'']]],
+  ['executive_20summary_13',['Executive Summary',['../md_BENCHMARK__RESULTS.html#autotoc_md69',1,'']]],
+  ['expect_14',['What to Expect',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md111',1,'']]]
 ];

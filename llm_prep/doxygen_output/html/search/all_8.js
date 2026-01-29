@@ -1,6 +1,27 @@
 var searchData=
 [
-  ['entries_0',['entries',['../ffind-daemon_8cpp.html#a5527b3d38e1a219f363b1b9d0e80addf',1,'ffind-daemon.cpp']]],
-  ['entry_1',['Entry',['../structEntry.html',1,'']]],
-  ['examples_2',['Search examples',['../md_README.html#autotoc_md18',1,'']]]
+  ['a_20lot_20of_20ram_0',['Q: Does it use a lot of RAM?',['../md_README.html#autotoc_md160',1,'']]],
+  ['about_20huge_20directory_20trees_1',['Q: What about huge directory trees?',['../md_README.html#autotoc_md161',1,'']]],
+  ['achievements_2',['Key Achievements',['../md_BENCHMARK__RESULTS.html#autotoc_md83',1,'']]],
+  ['actual_20benchmark_20results_3',['Actual Benchmark Results',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md91',1,'']]],
+  ['add_5fdirectory_5frecursive_4',['add_directory_recursive',['../ffind-daemon_8cpp.html#a3c6ea839f8269e1c879bece01b9d43a0',1,'ffind-daemon.cpp']]],
+  ['add_5fwatch_5',['add_watch',['../ffind-daemon_8cpp.html#a205ebedc5089e1667f29c6e01c934afc',1,'ffind-daemon.cpp']]],
+  ['affecting_20performance_6',['Factors Affecting Performance',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md112',1,'']]],
+  ['ahead_20logging_20wal_7',['7. SQLite Write-Ahead Logging (WAL)',['../md_ARCHITECTURE.html#autotoc_md58',1,'']]],
+  ['all_5fdirs_8',['all_dirs',['../structPathIndex.html#a4473702f7161b68ecd252dfdb2351e76',1,'PathIndex']]],
+  ['always_9',['ALWAYS',['../ffind_8cpp.html#a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962',1,'ffind.cpp']]],
+  ['analysis_10',['Analysis',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md92',1,'Analysis'],['../md_BENCHMARK__RESULTS.html#autotoc_md78',1,'Performance Analysis']]],
+  ['and_20development_11',['Appendix: Build and Development',['../md_ARCHITECTURE.html#autotoc_md62',1,'']]],
+  ['and_20g_12',['Q: What&apos;s the difference between &lt;span class=&quot;tt&quot;&gt;-c&lt;/span&gt; and &lt;span class=&quot;tt&quot;&gt;-g&lt;/span&gt;?',['../md_README.html#autotoc_md165',1,'']]],
+  ['and_20persistence_13',['Storage and Persistence',['../md_ARCHITECTURE.html#autotoc_md35',1,'']]],
+  ['and_20responses_14',['Error Categories and Responses',['../md_ARCHITECTURE.html#autotoc_md42',1,'']]],
+  ['any_20large_20source_20repository_15',['Option 4: Use Any Large Source Repository',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md103',1,'']]],
+  ['appendix_3a_20build_20and_20development_16',['Appendix: Build and Development',['../md_ARCHITECTURE.html#autotoc_md62',1,'']]],
+  ['architecture_17',['Architecture',['../md_ARCHITECTURE.html#autotoc_md30',1,'Security Architecture'],['../md_ARCHITECTURE.html#autotoc_md6',1,'System Architecture']]],
+  ['architecture_20documentation_18',['ffind Architecture Documentation',['../md_ARCHITECTURE.html',1,'']]],
+  ['architecture_2emd_19',['ARCHITECTURE.md',['../ARCHITECTURE_8md.html',1,'']]],
+  ['areas_20',['Strong Performance Areas',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md93',1,'']]],
+  ['areas_20for_20improvement_21',['Areas for Improvement',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md94',1,'']]],
+  ['author_22',['Author',['../md_README.html#autotoc_md167',1,'']]],
+  ['auto_23',['AUTO',['../ffind_8cpp.html#a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9',1,'ffind.cpp']]]
 ];

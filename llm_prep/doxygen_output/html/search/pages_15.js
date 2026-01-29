@@ -1,7 +1,26 @@
 var searchData=
 [
-  ['units_0',['Size units',['../md_README.html#autotoc_md19',1,'']]],
-  ['usage_1',['Usage',['../md_README.html#autotoc_md16',1,'']]],
-  ['use_2',['How to Use',['../md_llm__prep_2codebase__overview.html#autotoc_md6',1,'']]],
-  ['use_20ffind_3',['Why use ffind?',['../md_README.html#autotoc_md12',1,'']]]
+  ['of_2010x_0',['Why 4.2x instead of 10x?',['../md_BENCHMARK__RESULTS.html#autotoc_md79',1,'']]],
+  ['of_20contents_1',['of Contents',['../md_ARCHITECTURE.html#autotoc_md2',1,'Table of Contents'],['../md_README.html#autotoc_md124',1,'Table of Contents']]],
+  ['of_20ram_2',['Q: Does it use a lot of RAM?',['../md_README.html#autotoc_md160',1,'']]],
+  ['on_20network_20filesystems_20nfs_20cifs_3',['Q: Can I use it on network filesystems (NFS, CIFS)?',['../md_README.html#autotoc_md163',1,'']]],
+  ['openrc_4',['Gentoo (OpenRC)',['../md_README.html#autotoc_md157',1,'']]],
+  ['operators_5',['operators',['../md_README.html#autotoc_md146',1,'Size operators'],['../md_README.html#autotoc_md147',1,'Time operators']]],
+  ['optimization_20logic_6',['Query Optimization Logic',['../md_BENCHMARK__RESULTS.html#autotoc_md76',1,'']]],
+  ['optimizations_7',['Optimizations',['../md_BENCHMARK__RESULTS.html#autotoc_md85',1,'Future Optimizations'],['../md_ARCHITECTURE.html#autotoc_md45',1,'Performance Optimizations']]],
+  ['option_201_3a_20use_20local_20linux_20headers_20recommended_20for_20quick_20testing_8',['Option 1: Use Local Linux Headers (Recommended for Quick Testing)',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md100',1,'']]],
+  ['option_202_3a_20download_20gcc_20source_20code_20network_20required_9',['Option 2: Download GCC Source Code (Network Required)',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md101',1,'']]],
+  ['option_203_3a_20download_20linux_20kernel_20network_20required_10',['Option 3: Download Linux Kernel (Network Required)',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md102',1,'']]],
+  ['option_204_3a_20use_20any_20large_20source_20repository_11',['Option 4: Use Any Large Source Repository',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md103',1,'']]],
+  ['optional_12',['Optional',['../md_TODO.html#autotoc_md171',1,'Low Priority / Optional'],['../md_README.html#autotoc_md142',1,'SQLite Persistence (Optional)']]],
+  ['optional_20for_20benchmarking_13',['Build Cache-Flush Utility (Optional - for benchmarking)',['../md_README.html#autotoc_md138',1,'']]],
+  ['optional_20persistence_14',['SQLite Schema (Optional Persistence)',['../md_ARCHITECTURE.html#autotoc_md37',1,'']]],
+  ['or_20times_20out_15',['Benchmark hangs or times out',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md117',1,'']]],
+  ['other_20tools_16',['Comparison with Other Tools',['../md_README.html#autotoc_md129',1,'']]],
+  ['out_17',['Benchmark hangs or times out',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md117',1,'']]],
+  ['output_18',['Color output',['../md_README.html#autotoc_md154',1,'']]],
+  ['output_20format_19',['Output Format',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md107',1,'']]],
+  ['output_20format_20',['Output format',['../md_README.html#autotoc_md153',1,'']]],
+  ['overhead_21',['Memory Overhead',['../md_BENCHMARK__RESULTS.html#autotoc_md77',1,'']]],
+  ['overview_22',['Overview',['../md_ARCHITECTURE.html#autotoc_md4',1,'Overview'],['../md_ARCHITECTURE.html#autotoc_md27',1,'Overview']]]
 ];

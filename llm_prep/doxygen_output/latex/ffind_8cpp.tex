@@ -5,7 +5,7 @@
 {\ttfamily \#include $<$sys/un.\+h$>$}\newline
 {\ttfamily \#include $<$unistd.\+h$>$}\newline
 {\ttfamily \#include $<$arpa/inet.\+h$>$}\newline
-{\ttfamily \#include $<$regex$>$}\newline
+{\ttfamily \#include $<$re2/re2.\+h$>$}\newline
 Include dependency graph for ffind.\+cpp\+:
 \nopagebreak
 \begin{figure}[H]
@@ -24,6 +24,8 @@ enum class \mbox{\hyperlink{ffind_8cpp_a0e887cb85702e0dccbf34d7dbe40443f}{Color\
 \end{DoxyCompactItemize}
 \doxysubsubsection*{Functions}
 \begin{DoxyCompactItemize}
+\item 
+static bool \mbox{\hyperlink{ffind_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f}{safe\+\_\+write\+\_\+all}} (int fd, const void \texorpdfstring{$\ast$}{*}buf, size\+\_\+t count)
 \item 
 int \mbox{\hyperlink{ffind_8cpp_a3c04138a5bfe5d72780bb7e82a18e627}{main}} (int argc, char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}argv)
 \end{DoxyCompactItemize}
@@ -74,6 +76,66 @@ ALWAYS&\\
 {\footnotesize\ttfamily \label{ffind_8cpp_a3c04138a5bfe5d72780bb7e82a18e627} 
 int main (\begin{DoxyParamCaption}\item[{int}]{argc}{, }\item[{char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}}]{argv}{}\end{DoxyParamCaption})}
 
+Function\+: main (client) Purpose\+: Command-\/line client for ffind-\/daemon
+
+Flow\+:
+\begin{DoxyEnumerate}
+\item Parse command-\/line arguments into search criteria
+\item Connect to daemon\textquotesingle{}s Unix socket
+\item Send binary protocol message with search parameters
+\item Receive results and display with optional colorization
+\end{DoxyEnumerate}
+
+Command-\/\+Line Interface\+:
+\begin{DoxyItemize}
+\item Supports glob patterns, regex, fixed-\/string search
+\item Multiple filter types\+: name, path, content, size, mtime, type
+\item Context lines\+: -\/A, -\/B, -\/C (like grep)
+\item Color control\+: --color=auto\texorpdfstring{$\vert$}{|}always\texorpdfstring{$\vert$}{|}never
+\end{DoxyItemize}
+
+Protocol Details\+:
+\begin{DoxyItemize}
+\item Binary protocol with network byte order (big-\/endian) for integers
+\item Variable-\/length strings prefixed with 4-\/byte length
+\item Flags byte for case-\/insensitive, regex, content\+\_\+glob
+\item See \doxylink{ffind-daemon_8cpp_aa29c4f34a63bacc7d3bcd55e101133fd}{handle\+\_\+client()} in \doxylink{ffind-daemon_8cpp}{ffind-\/daemon.\+cpp} for protocol spec
+\end{DoxyItemize}
+
+Error Handling\+:
+\begin{DoxyItemize}
+\item Uses \doxylink{ffind_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f}{safe\+\_\+write\+\_\+all()} for all socket writes
+\item Handles daemon not running gracefully
+\item Validates all command-\/line arguments
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This is a simple synchronous client. It sends one request, receives results, and exits. No complex state management needed. Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=241pt]{ffind_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph}
+\end{center}
+\end{figure}
+\Hypertarget{ffind_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f}\index{ffind.cpp@{ffind.cpp}!safe\_write\_all@{safe\_write\_all}}
+\index{safe\_write\_all@{safe\_write\_all}!ffind.cpp@{ffind.cpp}}
+\doxysubsubsection{\texorpdfstring{safe\_write\_all()}{safe\_write\_all()}}
+{\footnotesize\ttfamily \label{ffind_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f} 
+bool safe\+\_\+write\+\_\+all (\begin{DoxyParamCaption}\item[{int}]{fd}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{buf}{, }\item[{size\+\_\+t}]{count}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+Function\+: safe\+\_\+write\+\_\+all Purpose\+: Writes all data to a file descriptor, handling partial writes and EINTR Parameters\+:
+\begin{DoxyItemize}
+\item fd\+: File descriptor to write to
+\item buf\+: Buffer containing data to write
+\item count\+: Number of bytes to write Returns\+: true on success, false on error Security\+: Handles EINTR and partial writes correctly Thread-\/safety\+: Thread-\/safe (operates on file descriptor) 
+\end{DoxyItemize}Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=241pt]{ffind_8cpp_adb67f2caafe3ae5a6a2a28def0468a9f_icgraph}
+\end{center}
+\end{figure}
 
 
 \label{doc-var-members}

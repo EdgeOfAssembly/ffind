@@ -1,25 +1,258 @@
 \chapter{ffind }
 \hypertarget{md_README}{}\label{md_README}\index{ffind@{ffind}}
-\label{md_README_autotoc_md10}%
-\Hypertarget{md_README_autotoc_md10}%
+\label{md_README_autotoc_md122}%
+\Hypertarget{md_README_autotoc_md122}%
 
 
-Fast daemon-\/based file finder with real-\/time inotify indexing.\hypertarget{md_README_autotoc_md11}{}\doxysection{\texorpdfstring{What is ffind?}{What is ffind?}}\label{md_README_autotoc_md11}
-{\ttfamily ffind} is an ultra-\/fast file search tool that combines the power of {\ttfamily find} and {\ttfamily grep}. It consists of a daemon that maintains an in-\/memory index of your filesystem using Linux inotify for real-\/time updates, and a client that performs instant searches against this index.\hypertarget{md_README_autotoc_md12}{}\doxysection{\texorpdfstring{Why use ffind?}{Why use ffind?}}\label{md_README_autotoc_md12}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\ \ \_\_\ \ \_\_\ \_\ \ \ \ \ \ \ \ \ \ \ \_\ }
+\DoxyCodeLine{\ /\ \_|/\ \_(\_)\_\ \_\_\ \ \ \_\_|\ |}
+\DoxyCodeLine{|\ |\_|\ |\_|\ |\ '\_\ \(\backslash\)\ /\ \_`\ |}
+\DoxyCodeLine{|\ \ \_|\ \ \_|\ |\ |\ |\ |\ (\_|\ |}
+\DoxyCodeLine{|\_|\ |\_|\ |\_|\_|\ |\_|\(\backslash\)\_\_,\_|}
+
+\end{DoxyCode}
+
+
+{\bfseries{Fast file finder with instant search}}
+
+\href{https://www.gnu.org/licenses/gpl-3.0}{\texttt{}}
+
+Fast daemon-\/based file finder with real-\/time inotify indexing.
+
+\DoxyHorRuler{0}
+\hypertarget{md_README_autotoc_md124}{}\doxysection{\texorpdfstring{Table of Contents}{Table of Contents}}\label{md_README_autotoc_md124}
+
+\begin{DoxyItemize}
+\item What is ffind?
+\item Why use ffind?
+\item Features
+\item Comparison with Other Tools
+\item Quick Start
+\item Requirements
+\item Build
+\item Install
+\item Usage
+\begin{DoxyItemize}
+\item Start the daemon
+\item SQLite Persistence
+\item Multiple Root Directories
+\item Search examples
+\item Size units
+\item Content search methods
+\item Context lines
+\item Color output
+\end{DoxyItemize}
+\item Directory Monitoring
+\item Service Management
+\item FAQ
+\item License
+\item Author
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_README_autotoc_md126}{}\doxysection{\texorpdfstring{What is ffind?}{What is ffind?}}\label{md_README_autotoc_md126}
+{\ttfamily ffind} is an ultra-\/fast file search tool that combines the power of {\ttfamily find} and {\ttfamily grep}. It consists of a daemon that maintains an in-\/memory index of your filesystem using Linux inotify for real-\/time updates, and a client that performs instant searches against this index.\hypertarget{md_README_autotoc_md127}{}\doxysection{\texorpdfstring{Why use ffind?}{Why use ffind?}}\label{md_README_autotoc_md127}
 
 \begin{DoxyItemize}
 \item {\bfseries{Instant searches}}\+: No more waiting for recursive directory traversal -\/ the index is always in memory
 \item {\bfseries{Real-\/time indexing}}\+: The daemon watches your filesystem and updates the index automatically as files are created, modified, or deleted
+\item {\bfseries{Parallel content search}}\+: Utilizes all CPU cores for 6x faster content search than ripgrep
 \item {\bfseries{Powerful filters}}\+: Search by name, path, content, size, modification time, and file type with glob patterns or regex
 \item {\bfseries{Content search}}\+: Search inside files with fixed-\/string or regex patterns
 \item {\bfseries{Combined filters}}\+: Mix multiple criteria for precise results
-\end{DoxyItemize}\hypertarget{md_README_autotoc_md13}{}\doxysection{\texorpdfstring{Requirements}{Requirements}}\label{md_README_autotoc_md13}
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md128}{}\doxysection{\texorpdfstring{Features}{Features}}\label{md_README_autotoc_md128}
+✅ {\bfseries{Real-\/time indexing}} with Linux inotify ~\newline
+ ✅ {\bfseries{Instant search}} from in-\/memory index ~\newline
+ ✅ {\bfseries{Parallel content search}} using thread pool (all CPU cores) ~\newline
+ ✅ {\bfseries{Content search}} with fixed-\/string, regex, or glob patterns ~\newline
+ ✅ {\bfseries{Context lines}} (grep-\/style -\/A/-\/\+B/-\/C) ~\newline
+ ✅ {\bfseries{Multiple filters}} (name, path, type, size, mtime) ~\newline
+ ✅ {\bfseries{Multiple root directories}} support ~\newline
+ ✅ {\bfseries{SQLite persistence}} for fast startup ~\newline
+ ✅ {\bfseries{Colored output}} with auto-\/detection ~\newline
+ ✅ {\bfseries{Glob and regex}} support ~\newline
+ ✅ {\bfseries{Graceful directory renames}} (no restart needed) ~\newline
+\hypertarget{md_README_autotoc_md129}{}\doxysection{\texorpdfstring{Comparison with Other Tools}{Comparison with Other Tools}}\label{md_README_autotoc_md129}
+
+\begin{DoxyTable}{6}{}{}{1}
+\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Feature  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}find  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}locate  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}ag  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}ripgrep  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}ffind  \\
+Real-\/time indexing  &❌  &❌  &❌  &❌  &✅  \\
+Content search  &❌  &❌  &✅  &✅  &✅  \\
+Regex support  &◑  &❌  &✅  &✅  &✅  \\
+Glob patterns  &✅  &✅  &❌  &✅  &✅  \\
+Context lines  &❌  &❌  &✅  &✅  &✅  \\
+Multiple roots  &✅  &❌  &❌  &❌  &✅  \\
+Persistence  &❌  &✅  &❌  &❌  &✅  \\
+Speed (indexed)  &Slow  &Fast  &Slow  &Fast  &{\bfseries{Instant}}  \\
+\end{DoxyTable}
+
+
+{\bfseries{Legend}}\+: ◑ = partial/limited support ~\newline
+ {\bfseries{Note}}\+: {\ttfamily find} has limited regex support ({\ttfamily -\/regex} for path matching). {\ttfamily find} and {\ttfamily ag}/{\ttfamily ripgrep} need to traverse the filesystem on every search. {\ttfamily locate} uses a pre-\/built index but doesn\textquotesingle{}t update in real-\/time. {\ttfamily ffind} combines the best of both\+: real-\/time updates with instant search.\hypertarget{md_README_autotoc_md130}{}\doxysection{\texorpdfstring{Performance Benchmarks}{Performance Benchmarks}}\label{md_README_autotoc_md130}
+Real-\/world benchmarks performed on Linux kernel headers (5,629 files, 44 directories, 28MB)\+:
+
+
+\begin{DoxyTable}{5}{}{}{1}
+\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Operation  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}find  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}grep -\/r  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}ffind  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Speedup  \\
+Find \texorpdfstring{$\ast$}{*}.c files  &0.\+008s  &-\/  &{\bfseries{0.\+003s}}  &{\bfseries{2.\+5x faster}}  \\
+Find \texorpdfstring{$\ast$}{*}.h files  &0.\+008s  &-\/  &{\bfseries{0.\+003s}}  &{\bfseries{2.\+5x faster}}  \\
+Find files in include/\texorpdfstring{$\ast$}{*}  &0.\+007s  &-\/  &{\bfseries{0.\+005s}}  &{\bfseries{1.\+4x faster}}  \\
+Find files \texorpdfstring{$>$}{>}100KB  &0.\+015s  &-\/  &{\bfseries{0.\+003s}}  &{\bfseries{5.\+2x faster}}  \\
+Content search "{}static"{}  &-\/  &0.\+044s  &{\bfseries{0.\+020s}}  &{\bfseries{2.\+2x faster}}  \\
+Regex search "{}\+EXPORT\+\_\+\+SYMBOL\textbackslash{}\texorpdfstring{$\vert$}{|}\+MODULE\+\_\+"{}  &-\/  &0.\+064s  &{\bfseries{0.\+039s}}  &{\bfseries{1.\+6x faster}}  \\
+List all files  &0.\+008s  &-\/  &{\bfseries{0.\+005s}}  &{\bfseries{1.\+6x faster}}  \\
+\end{DoxyTable}
+
+
+{\bfseries{System Specifications\+:}}
+\begin{DoxyItemize}
+\item CPU\+: AMD EPYC 7763 64-\/Core Processor (4 cores allocated)
+\item RAM\+: 16GB
+\item Disk\+: SSD (ext4 filesystem)
+\item OS\+: Ubuntu 24.\+04 LTS
+\item GNU find\+: 4.\+9.\+0
+\item GNU grep\+: 3.\+11
+\end{DoxyItemize}
+
+{\bfseries{Benchmark Methodology\+:}} Tests use fair cache management methodology\+:
+\begin{DoxyItemize}
+\item {\ttfamily find}/{\ttfamily grep} run with cold cache (caches flushed before each run when run with proper privileges)
+\item {\ttfamily ffind} runs with warm cache (data in daemon\textquotesingle{}s RAM index)
+\item Each benchmark runs 3 times, median time reported
+\item This represents real-\/world usage\+: {\ttfamily find}/{\ttfamily grep} read from disk, {\ttfamily ffind} serves from memory
+\end{DoxyItemize}
+
+{\bfseries{Why ffind is faster\+:}}
+\begin{DoxyItemize}
+\item {\bfseries{File metadata searches}}\+: No disk I/O -\/ results served instantly from in-\/memory index
+\item {\bfseries{Content searches}}\+: Parallel processing using all CPU cores with minimal disk latency
+\item {\bfseries{Real-\/time indexing}}\+: Index stays up-\/to-\/date automatically via inotify
+\end{DoxyItemize}
+
+For complete benchmark methodology and cache-\/flushing setup, see \doxylink{dir_13a41d9ad64fb9ae396cb953294783cf}{{\ttfamily benchmarks/\+README.md}}.\hypertarget{md_README_autotoc_md131}{}\doxysubsection{\texorpdfstring{Indexing Performance}{Indexing Performance}}\label{md_README_autotoc_md131}
+Initial indexing of test corpus (5,629 files, 44 directories, 28MB)\+:
+\begin{DoxyItemize}
+\item Time\+: \texorpdfstring{$\sim$}{\string~}1-\/2 seconds
+\item Memory\+: \texorpdfstring{$\sim$}{\string~}20-\/30 MB resident
+\item Rate\+: \texorpdfstring{$\sim$}{\string~}3,000-\/5,000 files/second
+\end{DoxyItemize}
+
+{\itshape Note\+: ffind times exclude initial indexing. Subsequent searches use the in-\/memory index for instant results. The daemon maintains the index in real-\/time as files change.}\hypertarget{md_README_autotoc_md132}{}\doxysubsection{\texorpdfstring{Benchmark Methodology}{Benchmark Methodology}}\label{md_README_autotoc_md132}
+The benchmark script ({\ttfamily benchmarks/run\+\_\+real\+\_\+benchmarks.\+sh}) uses scientifically sound methodology for fair comparisons\+:
+
+{\bfseries{Cache Management with Dedicated Binary\+:}}
+\begin{DoxyItemize}
+\item ✅ {\bfseries{Cache-\/flush utility}}\+: Minimal C binary requiring {\ttfamily sudo} for secure cache clearing
+\item ✅ {\bfseries{Security best practice}}\+: Only the tiny {\ttfamily cache-\/flush} binary runs with elevated privileges
+\item ✅ {\bfseries{Minimal sudo usage}}\+: Only cache-\/flush requires sudo, benchmark scripts run as normal user
+\item ✅ {\bfseries{Fair comparison}}\+: {\ttfamily find}/{\ttfamily grep} run with cold cache (disk reads), {\ttfamily ffind} with warm cache (RAM)
+\end{DoxyItemize}
+
+{\bfseries{Security Model\+:}}
+\begin{DoxyItemize}
+\item The {\ttfamily cache-\/flush} binary must run with {\ttfamily sudo} to write to {\ttfamily /proc/sys/vm/drop\+\_\+caches}
+\item Only this tiny, auditable C program (\texorpdfstring{$\sim$}{\string~}50 lines) needs elevated privileges
+\item All other components (ffind-\/daemon, ffind client, benchmark scripts) run as normal user
+\end{DoxyItemize}
+
+{\bfseries{Setup (one-\/time)\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ benchmarks}
+\DoxyCodeLine{make\ \ \ \ \ \ \#\ Build\ the\ cache-\/flush\ utility}
+
+\end{DoxyCode}
+
+
+{\bfseries{Statistical Rigor\+:}}
+\begin{DoxyItemize}
+\item Each benchmark runs {\bfseries{3 times}}
+\item Reports {\bfseries{median}} (reduces outlier impact), {\bfseries{min}}, {\bfseries{max}}, and {\bfseries{variance}}
+\item Warns if variance exceeds 20\% (indicates unreliable results)
+\item Warmup run discarded to eliminate cold start effects
+\end{DoxyItemize}
+
+{\bfseries{Fairness\+:}}
+\begin{DoxyItemize}
+\item {\ttfamily find}/{\ttfamily grep}\+: Cold cache (reads from disk) -\/ simulates real-\/world "{}first query"{} scenario
+\item {\ttfamily ffind}\+: Warm cache (data in RAM) -\/ simulates daemon\textquotesingle{}s persistent index
+\item This comparison is {\bfseries{fair}} because it shows the true benefit of ffind\textquotesingle{}s in-\/memory indexing
+\end{DoxyItemize}
+
+{\bfseries{Benchmark script available\+:}} {\ttfamily benchmarks/run\+\_\+real\+\_\+benchmarks.\+sh}
+
+To reproduce these benchmarks\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Build\ ffind}
+\DoxyCodeLine{make}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Build\ cache-\/flush\ utility\ (one-\/time)}
+\DoxyCodeLine{cd\ benchmarks}
+\DoxyCodeLine{make}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Run\ benchmarks\ (will\ prompt\ for\ sudo\ password\ for\ cache\ flushing)}
+\DoxyCodeLine{./run\_real\_benchmarks.sh}
+
+\end{DoxyCode}
+
+
+{\bfseries{Note on sudo}}\+: The benchmark script internally calls {\ttfamily sudo} for cache-\/flush only. The script itself should be run as a normal user, not with sudo. You will be prompted for your password when cache clearing is needed.
+
+{\bfseries{Note on Results Interpretation\+:}}
+\begin{DoxyItemize}
+\item {\bfseries{With cache flushing}}\+: Shows true speedup of in-\/memory index vs disk traversal
+\item {\bfseries{Without cache flushing}}\+: Results may be misleading if ffind runs first and warms the cache for find/grep
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md133}{}\doxysection{\texorpdfstring{Quick Start}{Quick Start}}\label{md_README_autotoc_md133}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ 1.\ Build}
+\DoxyCodeLine{make}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ 2.\ Install\ (optional)}
+\DoxyCodeLine{sudo\ make\ install}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ 3.\ Start\ the\ daemon\ in\ foreground\ to\ watch\ a\ directory}
+\DoxyCodeLine{./ffind-\/daemon\ -\/-\/foreground\ \string~/projects}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ 4.\ In\ another\ terminal,\ search\ for\ files}
+\DoxyCodeLine{./ffind\ "{}*.cpp"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Find\ all\ C++\ files}
+\DoxyCodeLine{./ffind\ -\/c\ "{}TODO"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Search\ for\ "{}TODO"{}\ in\ file\ contents}
+\DoxyCodeLine{./ffind\ -\/name\ "{}*.h"{}\ -\/mtime\ -\/7\ \ \ \ \ \ \#\ Header\ files\ modified\ in\ last\ 7\ days}
+
+\end{DoxyCode}
+
+
+That\textquotesingle{}s it! The daemon keeps the index updated in real-\/time as files change.\hypertarget{md_README_autotoc_md134}{}\doxysection{\texorpdfstring{Requirements}{Requirements}}\label{md_README_autotoc_md134}
 
 \begin{DoxyItemize}
 \item Linux (uses inotify for filesystem monitoring)
 \item g++ with C++20 support
 \item pthread library
-\end{DoxyItemize}\hypertarget{md_README_autotoc_md14}{}\doxysection{\texorpdfstring{Build}{Build}}\label{md_README_autotoc_md14}
+\item sqlite3 development libraries (for persistence feature)
+\item RE2 library (for regex support)
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md135}{}\doxysection{\texorpdfstring{Build}{Build}}\label{md_README_autotoc_md135}
+\hypertarget{md_README_autotoc_md136}{}\doxysubsection{\texorpdfstring{Install Dependencies}{Install Dependencies}}\label{md_README_autotoc_md136}
+On Ubuntu/\+Debian\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ apt-\/get\ install\ build-\/essential\ libsqlite3-\/dev\ libre2-\/dev}
+
+\end{DoxyCode}
+
+
+On Fedora/\+RHEL\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ dnf\ install\ gcc-\/c++\ sqlite-\/devel\ re2-\/devel}
+
+\end{DoxyCode}
+
+
+On Arch Linux\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ pacman\ -\/S\ base-\/devel\ sqlite\ re2}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md137}{}\doxysubsection{\texorpdfstring{Compile}{Compile}}\label{md_README_autotoc_md137}
 
 \begin{DoxyCode}{0}
 \DoxyCodeLine{make}
@@ -31,7 +264,20 @@ This produces two executables\+:
 \begin{DoxyItemize}
 \item {\ttfamily ffind-\/daemon} -\/ the indexing daemon
 \item {\ttfamily ffind} -\/ the search client
-\end{DoxyItemize}\hypertarget{md_README_autotoc_md15}{}\doxysection{\texorpdfstring{Install}{Install}}\label{md_README_autotoc_md15}
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md138}{}\doxysubsection{\texorpdfstring{Build Cache-\/\+Flush Utility (Optional -\/ for benchmarking)}{Build Cache-\/\+Flush Utility (Optional -\/ for benchmarking)}}\label{md_README_autotoc_md138}
+For fair benchmark comparisons with cache flushing\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ benchmarks}
+\DoxyCodeLine{make}
+
+\end{DoxyCode}
+
+
+This creates a minimal helper (\texorpdfstring{$\sim$}{\string~}50 lines of C) that flushes filesystem caches. The helper requires {\ttfamily sudo} to run because writing to {\ttfamily /proc/sys/vm/drop\+\_\+caches} requires elevated privileges.
+
+{\bfseries{Security Note}}\+: Only this tiny, auditable binary needs elevated privileges -\/ never run ffind-\/daemon or the main ffind client as root.\hypertarget{md_README_autotoc_md139}{}\doxysection{\texorpdfstring{Install}{Install}}\label{md_README_autotoc_md139}
 
 \begin{DoxyCode}{0}
 \DoxyCodeLine{sudo\ make\ install}
@@ -39,8 +285,8 @@ This produces two executables\+:
 \end{DoxyCode}
 
 
-This installs the binaries to {\ttfamily /usr/local/bin/} and man pages to {\ttfamily /usr/local/share/man/}.\hypertarget{md_README_autotoc_md16}{}\doxysection{\texorpdfstring{Usage}{Usage}}\label{md_README_autotoc_md16}
-\hypertarget{md_README_autotoc_md17}{}\doxysubsection{\texorpdfstring{Start the daemon}{Start the daemon}}\label{md_README_autotoc_md17}
+This installs the binaries to {\ttfamily /usr/local/bin/} and man pages to {\ttfamily /usr/local/share/man/}.\hypertarget{md_README_autotoc_md140}{}\doxysection{\texorpdfstring{Usage}{Usage}}\label{md_README_autotoc_md140}
+\hypertarget{md_README_autotoc_md141}{}\doxysubsection{\texorpdfstring{Start the daemon}{Start the daemon}}\label{md_README_autotoc_md141}
 The daemon needs to be running before you can search. It will index the specified directory tree\+:
 
 
@@ -54,7 +300,72 @@ The daemon needs to be running before you can search. It will index the specifie
 \end{DoxyCode}
 
 
-The daemon creates a Unix socket at {\ttfamily /run/user/\$UID/ffind.\+sock} for client communication.\hypertarget{md_README_autotoc_md18}{}\doxysubsection{\texorpdfstring{Search examples}{Search examples}}\label{md_README_autotoc_md18}
+The daemon creates a Unix socket at {\ttfamily /run/user/\$UID/ffind.\+sock} for client communication.\hypertarget{md_README_autotoc_md142}{}\doxysubsection{\texorpdfstring{SQLite Persistence (Optional)}{SQLite Persistence (Optional)}}\label{md_README_autotoc_md142}
+For faster startup on large directory trees, enable SQLite persistence\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Enable\ persistence\ with\ -\/-\/db\ flag}
+\DoxyCodeLine{ffind-\/daemon\ -\/-\/db\ \string~/.cache/ffind.db\ \string~/projects}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ With\ foreground\ mode}
+\DoxyCodeLine{ffind-\/daemon\ -\/-\/foreground\ -\/-\/db\ \string~/.cache/ffind.db\ \string~/projects}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Multiple\ roots\ with\ persistence}
+\DoxyCodeLine{ffind-\/daemon\ -\/-\/db\ /var/cache/ffind/index.db\ /home/user/projects\ /var/log}
+
+\end{DoxyCode}
+
+
+{\bfseries{Benefits\+:}}
+\begin{DoxyItemize}
+\item {\bfseries{Fast startup}}\+: Loads index from database instead of full filesystem scan
+\item {\bfseries{Crash-\/safe}}\+: Atomic writes with WAL mode ensure database consistency
+\item {\bfseries{Automatic reconciliation}}\+: Detects filesystem changes between runs
+\item {\bfseries{Periodic sync}}\+: Database updated every 30 seconds or after 100 changes
+\end{DoxyItemize}
+
+{\bfseries{How it works\+:}}
+\begin{DoxyEnumerate}
+\item On first run, creates SQLite database and indexes filesystem
+\item Changes are tracked in memory and periodically flushed to database
+\item On restart, loads entries from database and reconciles with actual filesystem
+\item Graceful shutdown ensures all pending changes are written
+\end{DoxyEnumerate}
+
+{\bfseries{Notes\+:}}
+\begin{DoxyItemize}
+\item Database file is created if it doesn\textquotesingle{}t exist
+\item Database uses WAL (Write-\/\+Ahead Logging) mode for better performance and safety
+\item Parent directories must exist for the database path
+\item If root paths change, full reconciliation is triggered automatically
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md143}{}\doxysubsection{\texorpdfstring{Multiple Root Directories}{Multiple Root Directories}}\label{md_README_autotoc_md143}
+Monitor multiple directories simultaneously by specifying them as additional arguments\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Monitor\ multiple\ directories}
+\DoxyCodeLine{ffind-\/daemon\ /home/user/projects\ /var/log\ /etc/config}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ With\ foreground\ mode}
+\DoxyCodeLine{ffind-\/daemon\ -\/-\/foreground\ \string~/code\ \string~/documents\ \string~/Downloads}
+
+\end{DoxyCode}
+
+
+When searching with multiple roots\+:
+\begin{DoxyItemize}
+\item Search results include files from all monitored directories
+\item Path globs ({\ttfamily -\/path}) are matched relative to each root\textquotesingle{}s base directory
+\item All filters and features work seamlessly across all roots
+\end{DoxyItemize}
+
+{\bfseries{Notes\+:}}
+\begin{DoxyItemize}
+\item Overlapping roots (e.\+g., {\ttfamily /home} and {\ttfamily /home/user}) are detected and warned about
+\item Duplicate paths are automatically deduplicated
+\item Each root is indexed and monitored independently
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md144}{}\doxysubsection{\texorpdfstring{Search examples}{Search examples}}\label{md_README_autotoc_md144}
 All features are fully implemented\+:
 
 
@@ -135,7 +446,7 @@ All features are fully implemented\+:
 \DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}\ -\/-\/color=auto}
 
 \end{DoxyCode}
-\hypertarget{md_README_autotoc_md19}{}\doxysubsection{\texorpdfstring{Size units}{Size units}}\label{md_README_autotoc_md19}
+\hypertarget{md_README_autotoc_md145}{}\doxysubsection{\texorpdfstring{Size units}{Size units}}\label{md_README_autotoc_md145}
 
 \begin{DoxyItemize}
 \item {\ttfamily c} -\/ bytes (default if no unit specified)
@@ -143,27 +454,27 @@ All features are fully implemented\+:
 \item {\ttfamily k} -\/ kilobytes (1024 bytes)
 \item {\ttfamily M} -\/ megabytes (1024\texorpdfstring{$\ast$}{*}1024 bytes)
 \item {\ttfamily G} -\/ gigabytes (1024\texorpdfstring{$\ast$}{*}1024\texorpdfstring{$\ast$}{*}1024 bytes)
-\end{DoxyItemize}\hypertarget{md_README_autotoc_md20}{}\doxysubsection{\texorpdfstring{Size operators}{Size operators}}\label{md_README_autotoc_md20}
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md146}{}\doxysubsection{\texorpdfstring{Size operators}{Size operators}}\label{md_README_autotoc_md146}
 
 \begin{DoxyItemize}
 \item {\ttfamily +SIZE} -\/ greater than SIZE
 \item {\ttfamily -\/SIZE} -\/ less than SIZE
 \item {\ttfamily SIZE} -\/ exactly SIZE (rarely used)
-\end{DoxyItemize}\hypertarget{md_README_autotoc_md21}{}\doxysubsection{\texorpdfstring{Time operators}{Time operators}}\label{md_README_autotoc_md21}
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md147}{}\doxysubsection{\texorpdfstring{Time operators}{Time operators}}\label{md_README_autotoc_md147}
 
 \begin{DoxyItemize}
 \item {\ttfamily -\/N} -\/ modified within last N days
 \item {\ttfamily +N} -\/ modified more than N days ago
 \item {\ttfamily N} -\/ modified exactly N days ago (rarely used)
-\end{DoxyItemize}\hypertarget{md_README_autotoc_md22}{}\doxysubsection{\texorpdfstring{Content search methods}{Content search methods}}\label{md_README_autotoc_md22}
-ffind provides three ways to search file contents, each suited for different use cases\+:\hypertarget{md_README_autotoc_md23}{}\doxysubsubsection{\texorpdfstring{Fixed string search ({\ttfamily -\/c})}{Fixed string search ({\ttfamily -\/c})}}\label{md_README_autotoc_md23}
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md148}{}\doxysubsection{\texorpdfstring{Content search methods}{Content search methods}}\label{md_README_autotoc_md148}
+ffind provides three ways to search file contents, each suited for different use cases\+:\hypertarget{md_README_autotoc_md149}{}\doxysubsubsection{\texorpdfstring{Fixed string search ({\ttfamily -\/c})}{Fixed string search ({\ttfamily -\/c})}}\label{md_README_autotoc_md149}
 Fast substring matching -\/ searches for exact text within lines\+: 
 \begin{DoxyCode}{0}
 \DoxyCodeLine{ffind\ -\/c\ "{}TODO"{}\ \ \ \ \ \ \ \ \ \ \ \#\ Find\ lines\ containing\ "{}TODO"{}}
 \DoxyCodeLine{ffind\ -\/c\ "{}error"{}\ -\/i\ \ \ \ \ \ \ \#\ Case-\/insensitive\ search}
 
 \end{DoxyCode}
-\hypertarget{md_README_autotoc_md24}{}\doxysubsubsection{\texorpdfstring{Regex search ({\ttfamily -\/c} + {\ttfamily -\/r})}{Regex search ({\ttfamily -\/c} + {\ttfamily -\/r})}}\label{md_README_autotoc_md24}
+\hypertarget{md_README_autotoc_md150}{}\doxysubsubsection{\texorpdfstring{Regex search ({\ttfamily -\/c} + {\ttfamily -\/r})}{Regex search ({\ttfamily -\/c} + {\ttfamily -\/r})}}\label{md_README_autotoc_md150}
 Powerful pattern matching using ECMAScript regular expressions\+: 
 \begin{DoxyCode}{0}
 \DoxyCodeLine{ffind\ -\/c\ "{}TODO.*fix"{}\ -\/r\ \ \ \ \ \ \ \ \ \ \ \#\ Match\ TODO\ followed\ by\ fix}
@@ -171,7 +482,7 @@ Powerful pattern matching using ECMAScript regular expressions\+:
 \DoxyCodeLine{ffind\ -\/c\ "{}\string^[0-\/9]+"{}\ -\/r\ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Lines\ starting\ with\ digits}
 
 \end{DoxyCode}
-\hypertarget{md_README_autotoc_md25}{}\doxysubsubsection{\texorpdfstring{Glob search ({\ttfamily -\/g})}{Glob search ({\ttfamily -\/g})}}\label{md_README_autotoc_md25}
+\hypertarget{md_README_autotoc_md151}{}\doxysubsubsection{\texorpdfstring{Glob search ({\ttfamily -\/g})}{Glob search ({\ttfamily -\/g})}}\label{md_README_autotoc_md151}
 Shell-\/style wildcard patterns for intuitive matching\+: 
 \begin{DoxyCode}{0}
 \DoxyCodeLine{ffind\ -\/g\ "{}TODO*"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Lines\ starting\ with\ TODO}
@@ -190,7 +501,7 @@ Glob patterns support\+:
 \item {\ttfamily \mbox{[}a-\/z\mbox{]}} -\/ matches any character in the range
 \end{DoxyItemize}
 
-{\bfseries{Note}}\+: {\ttfamily -\/g} is mutually exclusive with {\ttfamily -\/c} and {\ttfamily -\/r}. Use {\ttfamily -\/c} for fixed string search, {\ttfamily -\/c} with {\ttfamily -\/r} for regex search, or {\ttfamily -\/g} for glob pattern search.\hypertarget{md_README_autotoc_md26}{}\doxysubsection{\texorpdfstring{Context lines}{Context lines}}\label{md_README_autotoc_md26}
+{\bfseries{Note}}\+: {\ttfamily -\/g} is mutually exclusive with {\ttfamily -\/c} and {\ttfamily -\/r}. Use {\ttfamily -\/c} for fixed string search, {\ttfamily -\/c} with {\ttfamily -\/r} for regex search, or {\ttfamily -\/g} for glob pattern search.\hypertarget{md_README_autotoc_md152}{}\doxysubsection{\texorpdfstring{Context lines}{Context lines}}\label{md_README_autotoc_md152}
 Context lines work just like grep\textquotesingle{}s {\ttfamily -\/A}, {\ttfamily -\/B}, and {\ttfamily -\/C} options, showing surrounding lines for better context when searching file contents. These flags require {\ttfamily -\/c} or {\ttfamily -\/g} (content search).
 
 
@@ -198,7 +509,7 @@ Context lines work just like grep\textquotesingle{}s {\ttfamily -\/A}, {\ttfamil
 \item {\ttfamily -\/A N} -\/ Show N lines {\bfseries{after}} each match
 \item {\ttfamily -\/B N} -\/ Show N lines {\bfseries{before}} each match
 \item {\ttfamily -\/C N} -\/ Show N lines {\bfseries{before and after}} each match (shorthand for {\ttfamily -\/A N -\/B N})
-\end{DoxyItemize}\hypertarget{md_README_autotoc_md27}{}\doxysubsubsection{\texorpdfstring{Output format}{Output format}}\label{md_README_autotoc_md27}
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md153}{}\doxysubsubsection{\texorpdfstring{Output format}{Output format}}\label{md_README_autotoc_md153}
 Context lines use the same grep-\/style format\+:
 \begin{DoxyItemize}
 \item {\bfseries{Match lines}}\+: {\ttfamily path\+:lineno\+:content} (colon before content)
@@ -223,7 +534,7 @@ Example\+:
 \DoxyCodeLine{ffind\ -\/c\ "{}bug|error"{}\ -\/r\ -\/A\ 3\ -\/B\ 1\ -\/name\ "{}*.cpp"{}}
 
 \end{DoxyCode}
-\hypertarget{md_README_autotoc_md28}{}\doxysubsection{\texorpdfstring{Color output}{Color output}}\label{md_README_autotoc_md28}
+\hypertarget{md_README_autotoc_md154}{}\doxysubsection{\texorpdfstring{Color output}{Color output}}\label{md_README_autotoc_md154}
 The {\ttfamily -\/-\/color} option controls colored output for better readability\+:
 
 
@@ -252,12 +563,167 @@ Example\+:
 \DoxyCodeLine{ffind\ -\/c\ "{}warning"{}\ -\/-\/color=never\ >\ results.txt}
 
 \end{DoxyCode}
-\hypertarget{md_README_autotoc_md29}{}\doxysection{\texorpdfstring{License}{License}}\label{md_README_autotoc_md29}
+\hypertarget{md_README_autotoc_md155}{}\doxysection{\texorpdfstring{Directory Monitoring}{Directory Monitoring}}\label{md_README_autotoc_md155}
+The daemon handles directory renames gracefully using inotify with cookie-\/based rename tracking -\/ no restart needed. When a directory is renamed within the watched tree\+:
+
+
+\begin{DoxyItemize}
+\item All file paths are automatically updated to reflect the new location
+\item Internal watch descriptors are updated
+\item Files remain searchable at their new paths immediately
+\end{DoxyItemize}
+
+In foreground mode ({\ttfamily -\/-\/\doxylink{ffind-daemon_8cpp_a69046de9a005a9a1c5b898f0354c3637}{foreground}}), directory changes are logged to stderr with color-\/coded INFO messages\+:
+\begin{DoxyItemize}
+\item Directory created/deleted events
+\item Directory rename events with old and new paths
+\item Number of entries updated during renames
+\end{DoxyItemize}
+
+The implementation uses modern inotify (not DNOTIFY) for reliable filesystem event monitoring.\hypertarget{md_README_autotoc_md156}{}\doxysection{\texorpdfstring{Service Management}{Service Management}}\label{md_README_autotoc_md156}
+\hypertarget{md_README_autotoc_md157}{}\doxysubsection{\texorpdfstring{Gentoo (Open\+RC)}{Gentoo (Open\+RC)}}\label{md_README_autotoc_md157}
+For Gentoo systems using Open\+RC, you can run ffind-\/daemon as a system service\+:
+
+
+\begin{DoxyEnumerate}
+\item Copy the init script\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ cp\ ffind-\/daemon.openrc\ /etc/init.d/ffind-\/daemon}
+\DoxyCodeLine{sudo\ chmod\ +x\ /etc/init.d/ffind-\/daemon}
+
+\end{DoxyCode}
+
+\item Copy and configure the service settings\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ cp\ etc-\/conf.d-\/ffind-\/daemon.example\ /etc/conf.d/ffind-\/daemon}
+\DoxyCodeLine{sudo\ nano\ /etc/conf.d/ffind-\/daemon}
+
+\end{DoxyCode}
+
+
+Edit {\ttfamily FFIND\+\_\+\+ROOTS} to specify which directories to index\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{FFIND\_ROOTS="{}/home\ /var/www"{}}
+
+\end{DoxyCode}
+
+
+Optionally enable SQLite persistence\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{FFIND\_OPTS="{}-\/-\/db\ /var/cache/ffind/index.db"{}}
+
+\end{DoxyCode}
+
+\item Start the service\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ rc-\/service\ ffind-\/daemon\ start}
+
+\end{DoxyCode}
+
+\item Enable at boot (optional)\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ rc-\/update\ add\ ffind-\/daemon\ default}
+
+\end{DoxyCode}
+
+\item Check service status\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ rc-\/service\ ffind-\/daemon\ status}
+
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+{\bfseries{Note}}\+: If using {\ttfamily -\/-\/\doxylink{ffind-daemon_8cpp_ad6e663497d2c934364b3bcf07496b30b}{db}} option, ensure the parent directory exists and is writable\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ mkdir\ -\/p\ /var/cache/ffind}
+\DoxyCodeLine{sudo\ chown\ root:root\ /var/cache/ffind}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md158}{}\doxysection{\texorpdfstring{FAQ}{FAQ}}\label{md_README_autotoc_md158}
+\hypertarget{md_README_autotoc_md159}{}\doxysubsection{\texorpdfstring{Q\+: How fast is it?}{Q\+: How fast is it?}}\label{md_README_autotoc_md159}
+{\bfseries{A\+:}} For indexed searches, ffind is nearly instantaneous. Once the daemon has indexed your directories, searches complete in milliseconds regardless of directory size. Traditional tools like {\ttfamily find} need to traverse the filesystem on every search, which can take seconds or minutes on large directory trees.
+
+The initial indexing time depends on the size of your directory tree. On modern hardware\+:
+\begin{DoxyItemize}
+\item Small directories (\texorpdfstring{$<$}{<} 10,000 files)\+: \texorpdfstring{$<$}{<} 1 second
+\item Medium directories (10,000 -\/ 100,000 files)\+: 1-\/5 seconds ~\newline
+
+\item Large directories (100,000+ files)\+: 5-\/30 seconds
+\end{DoxyItemize}
+
+After initial indexing, the daemon maintains the index in real-\/time with negligible overhead.\hypertarget{md_README_autotoc_md160}{}\doxysubsection{\texorpdfstring{Q\+: Does it use a lot of RAM?}{Q\+: Does it use a lot of RAM?}}\label{md_README_autotoc_md160}
+{\bfseries{A\+:}} Memory usage is proportional to the number of indexed files. On average\+:
+\begin{DoxyItemize}
+\item Small directories (\texorpdfstring{$<$}{<} 10,000 files)\+: \texorpdfstring{$<$}{<} 10 MB
+\item Medium directories (10,000 -\/ 100,000 files)\+: 10-\/50 MB
+\item Large directories (100,000+ files)\+: 50-\/200 MB
+\end{DoxyItemize}
+
+Each indexed entry stores the file path, size, modification time, and metadata. For most use cases, memory usage is minimal compared to modern system RAM.\hypertarget{md_README_autotoc_md161}{}\doxysubsection{\texorpdfstring{Q\+: What about huge directory trees?}{Q\+: What about huge directory trees?}}\label{md_README_autotoc_md161}
+{\bfseries{A\+:}} ffind handles large directory trees efficiently\+:
+
+
+\begin{DoxyEnumerate}
+\item {\bfseries{Indexing}}\+: Initial indexing shows progress every 10,000 entries (in foreground mode)
+\item {\bfseries{Memory}}\+: Uses efficient C++ data structures to minimize memory overhead
+\item {\bfseries{Persistence}}\+: Use {\ttfamily -\/-\/\doxylink{ffind-daemon_8cpp_ad6e663497d2c934364b3bcf07496b30b}{db}} option to save the index to SQLite for fast startup
+\item {\bfseries{Multiple roots}}\+: Index only the directories you need, not the entire filesystem
+\end{DoxyEnumerate}
+
+For very large trees (\texorpdfstring{$>$}{>} 1 million files), consider\+:
+\begin{DoxyItemize}
+\item Using SQLite persistence ({\ttfamily -\/-\/\doxylink{ffind-daemon_8cpp_ad6e663497d2c934364b3bcf07496b30b}{db}}) for faster restarts
+\item Splitting into multiple daemons with different roots
+\item Excluding large binary directories you don\textquotesingle{}t need to search
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md162}{}\doxysubsection{\texorpdfstring{Q\+: How does persistence work?}{Q\+: How does persistence work?}}\label{md_README_autotoc_md162}
+{\bfseries{A\+:}} When you enable SQLite persistence with {\ttfamily -\/-\/\doxylink{ffind-daemon_8cpp_ad6e663497d2c934364b3bcf07496b30b}{db} /path/to/db}\+:
+
+
+\begin{DoxyEnumerate}
+\item {\bfseries{First run}}\+: The daemon indexes your filesystem and saves entries to the database
+\item {\bfseries{Subsequent runs}}\+: The daemon loads the index from the database (much faster than re-\/scanning)
+\item {\bfseries{Reconciliation}}\+: The daemon automatically detects and handles changes since last run
+\item {\bfseries{Updates}}\+: Changes are batched and saved periodically (every 30 seconds or 100 changes)
+\item {\bfseries{Crash safety}}\+: Uses WAL (Write-\/\+Ahead Logging) mode for atomic writes
+\end{DoxyEnumerate}
+
+This means\+:
+\begin{DoxyItemize}
+\item ✅ Fast startup even after system reboot
+\item ✅ No data loss on crashes or power failures ~\newline
+
+\item ✅ Automatic sync between database and filesystem
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md163}{}\doxysubsection{\texorpdfstring{Q\+: Can I use it on network filesystems (NFS, CIFS)?}{Q\+: Can I use it on network filesystems (NFS, CIFS)?}}\label{md_README_autotoc_md163}
+{\bfseries{A\+:}} inotify (which ffind uses for real-\/time monitoring) only works on local filesystems. For network filesystems\+:
+\begin{DoxyItemize}
+\item ❌ Real-\/time monitoring won\textquotesingle{}t work
+\item ✅ You can still use ffind, but you\textquotesingle{}ll need to restart the daemon to pick up changes
+\item 💡 Consider using {\ttfamily locate} or scheduled rescans for network shares
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md164}{}\doxysubsection{\texorpdfstring{Q\+: How do I search multiple directories?}{Q\+: How do I search multiple directories?}}\label{md_README_autotoc_md164}
+{\bfseries{A\+:}} Just specify multiple directories when starting the daemon\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{ffind-\/daemon\ /home/user/projects\ /var/www\ /etc/config}
+
+\end{DoxyCode}
+
+
+The client will search across all monitored directories automatically.\hypertarget{md_README_autotoc_md165}{}\doxysubsection{\texorpdfstring{Q\+: What\textquotesingle{}s the difference between {\ttfamily -\/c} and {\ttfamily -\/g}?}{Q\+: What\textquotesingle{}s the difference between {\ttfamily -\/c} and {\ttfamily -\/g}?}}\label{md_README_autotoc_md165}
+{\bfseries{A\+:}} Both search file contents, but differently\+:
+\begin{DoxyItemize}
+\item {\ttfamily -\/c "{}TODO"{}}\+: Fixed-\/string substring search (fastest)
+\item {\ttfamily -\/c "{}TODO.\texorpdfstring{$\ast$}{*}fix"{} -\/r}\+: Regex pattern search (powerful)
+\item {\ttfamily -\/g "{}TODO\texorpdfstring{$\ast$}{*}"{}}\+: Shell-\/style glob pattern search (intuitive)
+\end{DoxyItemize}
+
+Use {\ttfamily -\/c} for simple text, {\ttfamily -\/c -\/r} for complex patterns, and {\ttfamily -\/g} for wildcard patterns.\hypertarget{md_README_autotoc_md166}{}\doxysection{\texorpdfstring{License}{License}}\label{md_README_autotoc_md166}
 Dual-\/licensed under GPLv3 and Commercial license.
 
 This program is free software\+: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See the LICENSE file for details.
 
-{\bfseries{Commercial licenses}} are available for proprietary use, embedded systems, and enterprise deployments. Contact Edge\+Of\+Assembly for commercial licensing inquiries.\hypertarget{md_README_autotoc_md30}{}\doxysection{\texorpdfstring{Author}{Author}}\label{md_README_autotoc_md30}
+{\bfseries{Commercial licenses}} are available for proprietary use, embedded systems, and enterprise deployments. Contact Edge\+Of\+Assembly for commercial licensing inquiries.\hypertarget{md_README_autotoc_md167}{}\doxysection{\texorpdfstring{Author}{Author}}\label{md_README_autotoc_md167}
 {\bfseries{Edge\+Of\+Assembly}} -\/ \href{https://github.com/EdgeOfAssembly}{\texttt{Git\+Hub}}
 
 For commercial licensing inquiries\+: \href{mailto:haxbox2000@gmail.com}{\texttt{haxbox2000@gmail.\+com}} 

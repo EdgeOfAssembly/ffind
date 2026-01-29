@@ -1,0 +1,147 @@
+\doxysection{Mapped\+File Struct Reference}
+\hypertarget{structMappedFile}{}\label{structMappedFile}\index{MappedFile@{MappedFile}}
+
+
+Collaboration diagram for Mapped\+File\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=172pt]{structMappedFile__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{structMappedFile_ad7fe23fe3b709f737aa6b42330e911c3}{Mapped\+File}} (const string \&path)
+\item 
+\mbox{\hyperlink{structMappedFile_af8cf6f323dfd170cf7bf30e391eda648}{\texorpdfstring{$\sim$}{\string~}\+Mapped\+File}} ()
+\item 
+bool \mbox{\hyperlink{structMappedFile_a8f27c871b170e71849fc6284b06c80d6}{is\+\_\+valid}} () const
+\item 
+\mbox{\hyperlink{structMappedFile_ab8d488f113c75bd9eec3daa5e50f803a}{Mapped\+File}} (const \mbox{\hyperlink{structMappedFile}{Mapped\+File}} \&)=delete
+\item 
+\mbox{\hyperlink{structMappedFile}{Mapped\+File}} \& \mbox{\hyperlink{structMappedFile_a96f683f0b2dce6467f4018cfb2f22288}{operator=}} (const \mbox{\hyperlink{structMappedFile}{Mapped\+File}} \&)=delete
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+char \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{structMappedFile_a083dfb7ed3e45c978a6d04770a2fd58d}{data}}
+\item 
+size\+\_\+t \mbox{\hyperlink{structMappedFile_a5ce863beecf953de1f6d17e00dbc37ff}{size}}
+\item 
+int \mbox{\hyperlink{structMappedFile_ae6804bbeedc9241173b41d25e16c742d}{fd}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class\+: \doxylink{structMappedFile}{Mapped\+File} Purpose\+: RAII wrapper for memory-\/mapped files used in content search
+
+Security Considerations\+:
+\begin{DoxyItemize}
+\item Uses MAP\+\_\+\+PRIVATE to prevent modifications from affecting original file
+\item Handles errors gracefully (returns invalid on any failure)
+\item Empty files are handled correctly (valid but no data)
+\item madvise() failure is non-\/fatal (advisory only)
+\end{DoxyItemize}
+
+Memory Safety\+:
+\begin{DoxyItemize}
+\item RAII\+: Automatically unmaps and closes on destruction
+\item Copy-\/prevention\+: Deleted copy constructor and assignment
+\item Move semantics\+: Not implemented (each thread creates its own)
+\end{DoxyItemize}
+
+Thread-\/safety\+: Not thread-\/safe (each thread creates its own instance)
+
+Implementation Notes\+:
+\begin{DoxyItemize}
+\item Uses mmap() for efficient file reading without copying to userspace
+\item MADV\+\_\+\+SEQUENTIAL hints kernel for better readahead
+\item Fallback gracefully if mmap() fails (returns invalid)
+\end{DoxyItemize}
+
+REVIEWER\+\_\+\+NOTE\+: This is the core of efficient content search. By using mmap(), we avoid copying file contents into userspace buffers. The kernel provides the pages directly from its page cache. 
+
+\label{doc-constructors}
+\Hypertarget{structMappedFile_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{structMappedFile_ad7fe23fe3b709f737aa6b42330e911c3}\index{MappedFile@{MappedFile}!MappedFile@{MappedFile}}
+\index{MappedFile@{MappedFile}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{MappedFile()}{MappedFile()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{structMappedFile_ad7fe23fe3b709f737aa6b42330e911c3} 
+Mapped\+File\+::\+Mapped\+File (\begin{DoxyParamCaption}\item[{const string \&}]{path}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=215pt]{structMappedFile_ad7fe23fe3b709f737aa6b42330e911c3_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=215pt]{structMappedFile_ad7fe23fe3b709f737aa6b42330e911c3_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{structMappedFile_af8cf6f323dfd170cf7bf30e391eda648}\index{MappedFile@{MappedFile}!````~MappedFile@{\texorpdfstring{$\sim$}{\string~}MappedFile}}
+\index{````~MappedFile@{\texorpdfstring{$\sim$}{\string~}MappedFile}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{\texorpdfstring{$\sim$}{\string~}MappedFile()}{\string~MappedFile()}}
+{\footnotesize\ttfamily \label{structMappedFile_af8cf6f323dfd170cf7bf30e391eda648} 
+Mapped\+File\+::\texorpdfstring{$\sim$}{\string~}\+Mapped\+File (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{structMappedFile_ab8d488f113c75bd9eec3daa5e50f803a}\index{MappedFile@{MappedFile}!MappedFile@{MappedFile}}
+\index{MappedFile@{MappedFile}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{MappedFile()}{MappedFile()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{structMappedFile_ab8d488f113c75bd9eec3daa5e50f803a} 
+Mapped\+File\+::\+Mapped\+File (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{structMappedFile}{Mapped\+File}} \&}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [delete]}}
+
+
+
+\label{doc-func-members}
+\Hypertarget{structMappedFile_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{structMappedFile_a8f27c871b170e71849fc6284b06c80d6}\index{MappedFile@{MappedFile}!is\_valid@{is\_valid}}
+\index{is\_valid@{is\_valid}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{is\_valid()}{is\_valid()}}
+{\footnotesize\ttfamily \label{structMappedFile_a8f27c871b170e71849fc6284b06c80d6} 
+bool Mapped\+File\+::is\+\_\+valid (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{structMappedFile_a96f683f0b2dce6467f4018cfb2f22288}\index{MappedFile@{MappedFile}!operator=@{operator=}}
+\index{operator=@{operator=}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{operator=()}{operator=()}}
+{\footnotesize\ttfamily \label{structMappedFile_a96f683f0b2dce6467f4018cfb2f22288} 
+\mbox{\hyperlink{structMappedFile}{Mapped\+File}} \& Mapped\+File\+::operator= (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{structMappedFile}{Mapped\+File}} \&}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [delete]}}
+
+
+
+\label{doc-variable-members}
+\Hypertarget{structMappedFile_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{structMappedFile_a083dfb7ed3e45c978a6d04770a2fd58d}\index{MappedFile@{MappedFile}!data@{data}}
+\index{data@{data}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{data}{data}}
+{\footnotesize\ttfamily \label{structMappedFile_a083dfb7ed3e45c978a6d04770a2fd58d} 
+char\texorpdfstring{$\ast$}{*} Mapped\+File\+::data}
+
+\Hypertarget{structMappedFile_ae6804bbeedc9241173b41d25e16c742d}\index{MappedFile@{MappedFile}!fd@{fd}}
+\index{fd@{fd}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{fd}{fd}}
+{\footnotesize\ttfamily \label{structMappedFile_ae6804bbeedc9241173b41d25e16c742d} 
+int Mapped\+File\+::fd}
+
+\Hypertarget{structMappedFile_a5ce863beecf953de1f6d17e00dbc37ff}\index{MappedFile@{MappedFile}!size@{size}}
+\index{size@{size}!MappedFile@{MappedFile}}
+\doxysubsubsection{\texorpdfstring{size}{size}}
+{\footnotesize\ttfamily \label{structMappedFile_a5ce863beecf953de1f6d17e00dbc37ff} 
+size\+\_\+t Mapped\+File\+::size}
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{ffind-daemon_8cpp}{ffind-\/daemon.\+cpp}}\end{DoxyCompactItemize}

@@ -1,4 +1,4 @@
-# Project Guidance for ffind-1.0
+# Project Guidance for ffind
 
 
 ## C/C++ Best Practices

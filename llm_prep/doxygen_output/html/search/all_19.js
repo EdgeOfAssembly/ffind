@@ -1,4 +1,29 @@
 var searchData=
 [
-  ['—_202026_2001_2027_0',['LLM-Ready Codebase Overview — 2026-01-27',['../md_llm__prep_2codebase__overview.html',1,'']]]
+  ['r_0',['Regex search (&lt;span class=&quot;tt&quot;&gt;-c&lt;/span&gt; + &lt;span class=&quot;tt&quot;&gt;-r&lt;/span&gt;)',['../md_README.html#autotoc_md150',1,'']]],
+  ['ram_1',['Q: Does it use a lot of RAM?',['../md_README.html#autotoc_md160',1,'']]],
+  ['readiness_2',['Production Readiness',['../md_BENCHMARK__RESULTS.html#autotoc_md84',1,'']]],
+  ['reading_20mmap_3',['4. Zero-Copy File Reading (mmap)',['../md_ARCHITECTURE.html#autotoc_md52',1,'']]],
+  ['readme_2emd_4',['README.md',['../benchmarks_2README_8md.html',1,'(Global Namespace)'],['../README_8md.html',1,'(Global Namespace)']]],
+  ['real_20time_20updates_5',['6. inotify for Real-Time Updates',['../md_ARCHITECTURE.html#autotoc_md56',1,'']]],
+  ['recommendation_6',['Recommendation',['../md_BENCHMARK__RESULTS.html#autotoc_md86',1,'']]],
+  ['recommended_20for_20quick_20testing_7',['Option 1: Use Local Linux Headers (Recommended for Quick Testing)',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md100',1,'']]],
+  ['reconcile_5fdb_5fwith_5ffilesystem_8',['reconcile_db_with_filesystem',['../ffind-daemon_8cpp.html#a09d220bcc638f3d7f76e2c424b095129',1,'ffind-daemon.cpp']]],
+  ['regex_20search_20c_20r_9',['Regex search (&lt;span class=&quot;tt&quot;&gt;-c&lt;/span&gt; + &lt;span class=&quot;tt&quot;&gt;-r&lt;/span&gt;)',['../md_README.html#autotoc_md150',1,'']]],
+  ['remaining_20not_20implemented_10',['Remaining / Not Implemented',['../md_TODO.html#autotoc_md170',1,'']]],
+  ['remove_5fpath_11',['remove_path',['../ffind-daemon_8cpp.html#aef341a13753571130f788a38d2ce3b6f',1,'ffind-daemon.cpp']]],
+  ['repository_12',['Option 4: Use Any Large Source Repository',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md103',1,'']]],
+  ['required_13',['Required',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md101',1,'Option 2: Download GCC Source Code (Network Required)'],['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md102',1,'Option 3: Download Linux Kernel (Network Required)']]],
+  ['requirements_14',['Requirements',['../md_README.html#autotoc_md134',1,'Requirements'],['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md108',1,'System Requirements']]],
+  ['reset_15',['RESET',['../ffind_8cpp.html#a38539b87442fcd1eec6f7e5496fec18b',1,'ffind.cpp']]],
+  ['resident_20index_16',['1. Memory-Resident Index',['../md_ARCHITECTURE.html#autotoc_md46',1,'']]],
+  ['response_20format_17',['Daemon-to-Client Response Format',['../md_ARCHITECTURE.html#autotoc_md24',1,'']]],
+  ['responses_18',['Error Categories and Responses',['../md_ARCHITECTURE.html#autotoc_md42',1,'']]],
+  ['result_20transmission_19',['3. Batched Result Transmission',['../md_ARCHITECTURE.html#autotoc_md50',1,'']]],
+  ['results_20',['Results',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md91',1,'Actual Benchmark Results'],['../md_BENCHMARK__RESULTS.html#autotoc_md71',1,'Benchmark Results'],['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md110',1,'Interpreting Results'],['../md_BENCHMARK__RESULTS.html',1,'Path Component Index - Benchmark Results'],['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md109',1,'Performance Results']]],
+  ['results_21',['Inconsistent results',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md118',1,'']]],
+  ['root_20directories_22',['Multiple Root Directories',['../md_README.html#autotoc_md143',1,'']]],
+  ['root_5findex_23',['root_index',['../structEntry.html#af0ea65da47971b9190a886de9724dbc3',1,'Entry']]],
+  ['root_5fpaths_24',['root_paths',['../ffind-daemon_8cpp.html#ad076a9814f749e0f5ad0d730ce5e99da',1,'ffind-daemon.cpp']]],
+  ['running_25',['running',['../ffind-daemon_8cpp.html#af3270a6e782fe74a057a44a74d4b29f9',1,'ffind-daemon.cpp']]]
 ];

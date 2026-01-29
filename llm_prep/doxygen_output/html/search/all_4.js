@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['add_5fwatch_0',['add_watch',['../ffind-daemon_8cpp.html#a205ebedc5089e1667f29c6e01c934afc',1,'ffind-daemon.cpp']]],
-  ['always_1',['ALWAYS',['../ffind_8cpp.html#a0e887cb85702e0dccbf34d7dbe40443faf3fc827ade4b968e50406496907ef962',1,'ffind.cpp']]],
-  ['author_2',['Author',['../md_README.html#autotoc_md30',1,'']]],
-  ['auto_3',['AUTO',['../ffind_8cpp.html#a0e887cb85702e0dccbf34d7dbe40443fae1f2d5134ed2543d38a0de9751cf75d9',1,'ffind.cpp']]]
+  ['5_20path_20index_20for_20directory_20queries_0',['5. Path Index for Directory Queries',['../md_ARCHITECTURE.html#autotoc_md54',1,'']]],
+  ['5_20sqlite_20persistence_1',['5. SQLite Persistence',['../md_ARCHITECTURE.html#autotoc_md16',1,'']]]
 ];

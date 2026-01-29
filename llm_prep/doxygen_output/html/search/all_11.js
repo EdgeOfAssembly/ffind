@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['operators_0',['operators',['../md_README.html#autotoc_md20',1,'Size operators'],['../md_README.html#autotoc_md21',1,'Time operators']]],
-  ['optional_1',['Low Priority / Optional',['../md_TODO.html#autotoc_md34',1,'']]],
-  ['output_2',['Color output',['../md_README.html#autotoc_md28',1,'']]],
-  ['output_20format_3',['Output format',['../md_README.html#autotoc_md27',1,'']]],
-  ['overview_20—_202026_2001_2027_4',['LLM-Ready Codebase Overview — 2026-01-27',['../md_llm__prep_2codebase__overview.html',1,'']]]
+  ['january_202026_0',['ffind TODO Summary - January 2026',['../md_TODO.html',1,'']]],
+  ['json_5fescape_1',['json_escape',['../ffind-daemon_8cpp.html#aeabf8cc7dee40eed4a5d59eb8c8c3c4e',1,'ffind-daemon.cpp']]],
+  ['json_5funescape_2',['json_unescape',['../ffind-daemon_8cpp.html#a7da495f44c4f9dc3771245fee9943ef0',1,'ffind-daemon.cpp']]]
 ];

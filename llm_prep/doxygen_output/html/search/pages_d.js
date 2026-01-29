@@ -1,9 +1,10 @@
 var searchData=
 [
-  ['license_0',['License',['../md_README.html#autotoc_md29',1,'']]],
-  ['lines_1',['Context lines',['../md_README.html#autotoc_md26',1,'']]],
-  ['llm_20context_20files_2',['LLM Context Files',['../md_llm__prep_2codebase__overview.html#autotoc_md5',1,'']]],
-  ['llm_20ready_20codebase_20overview_20—_202026_2001_2027_3',['LLM-Ready Codebase Overview — 2026-01-27',['../md_llm__prep_2codebase__overview.html',1,'']]],
-  ['llm_5fsystem_5fprompt_4',['llm_system_prompt',['../md_llm__prep_2llm__system__prompt.html',1,'']]],
-  ['low_20priority_20optional_5',['Low Priority / Optional',['../md_TODO.html#autotoc_md34',1,'']]]
+  ['g_0',['g',['../md_README.html#autotoc_md151',1,'Glob search (&lt;span class=&quot;tt&quot;&gt;-g&lt;/span&gt;)'],['../md_README.html#autotoc_md165',1,'Q: What&apos;s the difference between &lt;span class=&quot;tt&quot;&gt;-c&lt;/span&gt; and &lt;span class=&quot;tt&quot;&gt;-g&lt;/span&gt;?']]],
+  ['gcc_20source_20code_20network_20required_1',['Option 2: Download GCC Source Code (Network Required)',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md101',1,'']]],
+  ['gentoo_20openrc_2',['Gentoo (OpenRC)',['../md_README.html#autotoc_md157',1,'']]],
+  ['glob_20search_20g_3',['Glob search (&lt;span class=&quot;tt&quot;&gt;-g&lt;/span&gt;)',['../md_README.html#autotoc_md151',1,'']]],
+  ['glossary_4',['Glossary',['../md_ARCHITECTURE.html#autotoc_md66',1,'']]],
+  ['guarantees_5',['Thread Safety Guarantees',['../md_ARCHITECTURE.html#autotoc_md28',1,'']]],
+  ['guidelines_6',['Development Guidelines',['../md_ARCHITECTURE.html#autotoc_md64',1,'']]]
 ];

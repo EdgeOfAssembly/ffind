@@ -1,4 +1,8 @@
 var annotated_dup =
 [
-    [ "Entry", "structEntry.html", "structEntry" ]
+    [ "Config", "structConfig.html", "structConfig" ],
+    [ "Entry", "structEntry.html", "structEntry" ],
+    [ "MappedFile", "structMappedFile.html", "structMappedFile" ],
+    [ "PathIndex", "structPathIndex.html", "structPathIndex" ],
+    [ "ThreadPool", "classThreadPool.html", "classThreadPool" ]
 ];

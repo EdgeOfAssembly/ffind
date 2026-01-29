@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>ffind-1.0: ffind</title>
+<title>ffind: ffind</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">ffind-1.0
+   <div id="projectname">ffind
    </div>
   </td>
  </tr>
@@ -91,41 +91,240 @@ $(function(){initNavTree('md_README.html','',''); });
   <div class="headertitle"><div class="title">ffind </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md10"></a></p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md122"></a></p>
+<div class="fragment"><div class="line">  __  __ _           _ </div>
+<div class="line"> / _|/ _(_)_ __   __| |</div>
+<div class="line">| |_| |_| | &#39;_ \ / _` |</div>
+<div class="line">|  _|  _| | | | | (_| |</div>
+<div class="line">|_| |_| |_|_| |_|\__,_|</div>
+</div><!-- fragment --><p><b>Fast file finder with instant search</b></p>
+<p><a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" style="pointer-events: none;" class="inline"/></a></p>
 <p>Fast daemon-based file finder with real-time inotify indexing.</p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md11"></a>
+<hr  />
+<h1 class="doxsection"><a class="anchor" id="autotoc_md124"></a>
+Table of Contents</h1>
+<ul>
+<li>What is ffind?</li>
+<li>Why use ffind?</li>
+<li>Features</li>
+<li>Comparison with Other Tools</li>
+<li>Quick Start</li>
+<li>Requirements</li>
+<li>Build</li>
+<li>Install</li>
+<li>Usage<ul>
+<li>Start the daemon</li>
+<li>SQLite Persistence</li>
+<li>Multiple Root Directories</li>
+<li>Search examples</li>
+<li>Size units</li>
+<li>Content search methods</li>
+<li>Context lines</li>
+<li>Color output</li>
+</ul>
+</li>
+<li>Directory Monitoring</li>
+<li>Service Management</li>
+<li>FAQ</li>
+<li>License</li>
+<li>Author</li>
+</ul>
+<hr  />
+<h1 class="doxsection"><a class="anchor" id="autotoc_md126"></a>
 What is ffind?</h1>
 <p><span class="tt">ffind</span> is an ultra-fast file search tool that combines the power of <span class="tt">find</span> and <span class="tt">grep</span>. It consists of a daemon that maintains an in-memory index of your filesystem using Linux inotify for real-time updates, and a client that performs instant searches against this index.</p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md12"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md127"></a>
 Why use ffind?</h1>
 <ul>
 <li><b>Instant searches</b>: No more waiting for recursive directory traversal - the index is always in memory</li>
 <li><b>Real-time indexing</b>: The daemon watches your filesystem and updates the index automatically as files are created, modified, or deleted</li>
+<li><b>Parallel content search</b>: Utilizes all CPU cores for 6x faster content search than ripgrep</li>
 <li><b>Powerful filters</b>: Search by name, path, content, size, modification time, and file type with glob patterns or regex</li>
 <li><b>Content search</b>: Search inside files with fixed-string or regex patterns</li>
 <li><b>Combined filters</b>: Mix multiple criteria for precise results</li>
 </ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md13"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md128"></a>
+Features</h1>
+<p>✅ <b>Real-time indexing</b> with Linux inotify <br  />
+ ✅ <b>Instant search</b> from in-memory index <br  />
+ ✅ <b>Parallel content search</b> using thread pool (all CPU cores) <br  />
+ ✅ <b>Content search</b> with fixed-string, regex, or glob patterns <br  />
+ ✅ <b>Context lines</b> (grep-style -A/-B/-C) <br  />
+ ✅ <b>Multiple filters</b> (name, path, type, size, mtime) <br  />
+ ✅ <b>Multiple root directories</b> support <br  />
+ ✅ <b>SQLite persistence</b> for fast startup <br  />
+ ✅ <b>Colored output</b> with auto-detection <br  />
+ ✅ <b>Glob and regex</b> support <br  />
+ ✅ <b>Graceful directory renames</b> (no restart needed) <br  />
+</p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md129"></a>
+Comparison with Other Tools</h1>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Feature  </th><th class="markdownTableHeadNone">find  </th><th class="markdownTableHeadNone">locate  </th><th class="markdownTableHeadNone">ag  </th><th class="markdownTableHeadNone">ripgrep  </th><th class="markdownTableHeadNone">ffind  </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Real-time indexing  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Content search  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Regex support  </td><td class="markdownTableBodyNone">◑  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Glob patterns  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Context lines  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">✅  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Multiple roots  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Persistence  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">❌  </td><td class="markdownTableBodyNone">✅  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Speed (indexed)  </td><td class="markdownTableBodyNone">Slow  </td><td class="markdownTableBodyNone">Fast  </td><td class="markdownTableBodyNone">Slow  </td><td class="markdownTableBodyNone">Fast  </td><td class="markdownTableBodyNone"><b>Instant</b>  </td></tr>
+</table>
+<p><b>Legend</b>: ◑ = partial/limited support <br  />
+ <b>Note</b>: <span class="tt">find</span> has limited regex support (<span class="tt">-regex</span> for path matching). <span class="tt">find</span> and <span class="tt">ag</span>/<span class="tt">ripgrep</span> need to traverse the filesystem on every search. <span class="tt">locate</span> uses a pre-built index but doesn't update in real-time. <span class="tt">ffind</span> combines the best of both: real-time updates with instant search.</p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md130"></a>
+Performance Benchmarks</h1>
+<p>Real-world benchmarks performed on Linux kernel headers (5,629 files, 44 directories, 28MB):</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Operation  </th><th class="markdownTableHeadNone">find  </th><th class="markdownTableHeadNone">grep -r  </th><th class="markdownTableHeadNone">ffind  </th><th class="markdownTableHeadNone">Speedup  </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Find *.c files  </td><td class="markdownTableBodyNone">0.008s  </td><td class="markdownTableBodyNone">-  </td><td class="markdownTableBodyNone"><b>0.003s</b>  </td><td class="markdownTableBodyNone"><b>2.5x faster</b>  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Find *.h files  </td><td class="markdownTableBodyNone">0.008s  </td><td class="markdownTableBodyNone">-  </td><td class="markdownTableBodyNone"><b>0.003s</b>  </td><td class="markdownTableBodyNone"><b>2.5x faster</b>  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Find files in include/*  </td><td class="markdownTableBodyNone">0.007s  </td><td class="markdownTableBodyNone">-  </td><td class="markdownTableBodyNone"><b>0.005s</b>  </td><td class="markdownTableBodyNone"><b>1.4x faster</b>  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Find files &gt;100KB  </td><td class="markdownTableBodyNone">0.015s  </td><td class="markdownTableBodyNone">-  </td><td class="markdownTableBodyNone"><b>0.003s</b>  </td><td class="markdownTableBodyNone"><b>5.2x faster</b>  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">Content search "static"  </td><td class="markdownTableBodyNone">-  </td><td class="markdownTableBodyNone">0.044s  </td><td class="markdownTableBodyNone"><b>0.020s</b>  </td><td class="markdownTableBodyNone"><b>2.2x faster</b>  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Regex search "EXPORT_SYMBOL\|MODULE_"  </td><td class="markdownTableBodyNone">-  </td><td class="markdownTableBodyNone">0.064s  </td><td class="markdownTableBodyNone"><b>0.039s</b>  </td><td class="markdownTableBodyNone"><b>1.6x faster</b>  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">List all files  </td><td class="markdownTableBodyNone">0.008s  </td><td class="markdownTableBodyNone">-  </td><td class="markdownTableBodyNone"><b>0.005s</b>  </td><td class="markdownTableBodyNone"><b>1.6x faster</b>  </td></tr>
+</table>
+<p><b>System Specifications:</b></p><ul>
+<li>CPU: AMD EPYC 7763 64-Core Processor (4 cores allocated)</li>
+<li>RAM: 16GB</li>
+<li>Disk: SSD (ext4 filesystem)</li>
+<li>OS: Ubuntu 24.04 LTS</li>
+<li>GNU find: 4.9.0</li>
+<li>GNU grep: 3.11</li>
+</ul>
+<p><b>Benchmark Methodology:</b> Tests use fair cache management methodology:</p><ul>
+<li><span class="tt">find</span>/<span class="tt">grep</span> run with cold cache (caches flushed before each run when run with proper privileges)</li>
+<li><span class="tt">ffind</span> runs with warm cache (data in daemon's RAM index)</li>
+<li>Each benchmark runs 3 times, median time reported</li>
+<li>This represents real-world usage: <span class="tt">find</span>/<span class="tt">grep</span> read from disk, <span class="tt">ffind</span> serves from memory</li>
+</ul>
+<p><b>Why ffind is faster:</b></p><ul>
+<li><b>File metadata searches</b>: No disk I/O - results served instantly from in-memory index</li>
+<li><b>Content searches</b>: Parallel processing using all CPU cores with minimal disk latency</li>
+<li><b>Real-time indexing</b>: Index stays up-to-date automatically via inotify</li>
+</ul>
+<p>For complete benchmark methodology and cache-flushing setup, see <a class="el" href="dir_13a41d9ad64fb9ae396cb953294783cf.html"><span class="tt">benchmarks/README.md</span></a>.</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md131"></a>
+Indexing Performance</h2>
+<p>Initial indexing of test corpus (5,629 files, 44 directories, 28MB):</p><ul>
+<li>Time: ~1-2 seconds</li>
+<li>Memory: ~20-30 MB resident</li>
+<li>Rate: ~3,000-5,000 files/second</li>
+</ul>
+<p><em>Note: ffind times exclude initial indexing. Subsequent searches use the in-memory index for instant results. The daemon maintains the index in real-time as files change.</em></p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md132"></a>
+Benchmark Methodology</h2>
+<p>The benchmark script (<span class="tt">benchmarks/run_real_benchmarks.sh</span>) uses scientifically sound methodology for fair comparisons:</p>
+<p><b>Cache Management with Dedicated Binary:</b></p><ul>
+<li>✅ <b>Cache-flush utility</b>: Minimal C binary requiring <span class="tt">sudo</span> for secure cache clearing</li>
+<li>✅ <b>Security best practice</b>: Only the tiny <span class="tt">cache-flush</span> binary runs with elevated privileges</li>
+<li>✅ <b>Minimal sudo usage</b>: Only cache-flush requires sudo, benchmark scripts run as normal user</li>
+<li>✅ <b>Fair comparison</b>: <span class="tt">find</span>/<span class="tt">grep</span> run with cold cache (disk reads), <span class="tt">ffind</span> with warm cache (RAM)</li>
+</ul>
+<p><b>Security Model:</b></p><ul>
+<li>The <span class="tt">cache-flush</span> binary must run with <span class="tt">sudo</span> to write to <span class="tt">/proc/sys/vm/drop_caches</span></li>
+<li>Only this tiny, auditable C program (~50 lines) needs elevated privileges</li>
+<li>All other components (ffind-daemon, ffind client, benchmark scripts) run as normal user</li>
+</ul>
+<p><b>Setup (one-time):</b> </p><div class="fragment"><div class="line">cd benchmarks</div>
+<div class="line">make      # Build the cache-flush utility</div>
+</div><!-- fragment --><p><b>Statistical Rigor:</b></p><ul>
+<li>Each benchmark runs <b>3 times</b></li>
+<li>Reports <b>median</b> (reduces outlier impact), <b>min</b>, <b>max</b>, and <b>variance</b></li>
+<li>Warns if variance exceeds 20% (indicates unreliable results)</li>
+<li>Warmup run discarded to eliminate cold start effects</li>
+</ul>
+<p><b>Fairness:</b></p><ul>
+<li><span class="tt">find</span>/<span class="tt">grep</span>: Cold cache (reads from disk) - simulates real-world "first query" scenario</li>
+<li><span class="tt">ffind</span>: Warm cache (data in RAM) - simulates daemon's persistent index</li>
+<li>This comparison is <b>fair</b> because it shows the true benefit of ffind's in-memory indexing</li>
+</ul>
+<p><b>Benchmark script available:</b> <span class="tt">benchmarks/run_real_benchmarks.sh</span></p>
+<p>To reproduce these benchmarks: </p><div class="fragment"><div class="line"># Build ffind</div>
+<div class="line">make</div>
+<div class="line"> </div>
+<div class="line"># Build cache-flush utility (one-time)</div>
+<div class="line">cd benchmarks</div>
+<div class="line">make</div>
+<div class="line"> </div>
+<div class="line"># Run benchmarks (will prompt for sudo password for cache flushing)</div>
+<div class="line">./run_real_benchmarks.sh</div>
+</div><!-- fragment --><p><b>Note on sudo</b>: The benchmark script internally calls <span class="tt">sudo</span> for cache-flush only. The script itself should be run as a normal user, not with sudo. You will be prompted for your password when cache clearing is needed.</p>
+<p><b>Note on Results Interpretation:</b></p><ul>
+<li><b>With cache flushing</b>: Shows true speedup of in-memory index vs disk traversal</li>
+<li><b>Without cache flushing</b>: Results may be misleading if ffind runs first and warms the cache for find/grep</li>
+</ul>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md133"></a>
+Quick Start</h1>
+<div class="fragment"><div class="line"># 1. Build</div>
+<div class="line">make</div>
+<div class="line"> </div>
+<div class="line"># 2. Install (optional)</div>
+<div class="line">sudo make install</div>
+<div class="line"> </div>
+<div class="line"># 3. Start the daemon in foreground to watch a directory</div>
+<div class="line">./ffind-daemon --foreground ~/projects</div>
+<div class="line"> </div>
+<div class="line"># 4. In another terminal, search for files</div>
+<div class="line">./ffind &quot;*.cpp&quot;                    # Find all C++ files</div>
+<div class="line">./ffind -c &quot;TODO&quot;                  # Search for &quot;TODO&quot; in file contents</div>
+<div class="line">./ffind -name &quot;*.h&quot; -mtime -7      # Header files modified in last 7 days</div>
+</div><!-- fragment --><p>That's it! The daemon keeps the index updated in real-time as files change.</p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md134"></a>
 Requirements</h1>
 <ul>
 <li>Linux (uses inotify for filesystem monitoring)</li>
 <li>g++ with C++20 support</li>
 <li>pthread library</li>
+<li>sqlite3 development libraries (for persistence feature)</li>
+<li>RE2 library (for regex support)</li>
 </ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md14"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md135"></a>
 Build</h1>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md136"></a>
+Install Dependencies</h2>
+<p>On Ubuntu/Debian: </p><div class="fragment"><div class="line">sudo apt-get install build-essential libsqlite3-dev libre2-dev</div>
+</div><!-- fragment --><p>On Fedora/RHEL: </p><div class="fragment"><div class="line">sudo dnf install gcc-c++ sqlite-devel re2-devel</div>
+</div><!-- fragment --><p>On Arch Linux: </p><div class="fragment"><div class="line">sudo pacman -S base-devel sqlite re2</div>
+</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md137"></a>
+Compile</h2>
 <div class="fragment"><div class="line">make</div>
 </div><!-- fragment --><p>This produces two executables:</p><ul>
 <li><span class="tt">ffind-daemon</span> - the indexing daemon</li>
 <li><span class="tt">ffind</span> - the search client</li>
 </ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md15"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md138"></a>
+Build Cache-Flush Utility (Optional - for benchmarking)</h2>
+<p>For fair benchmark comparisons with cache flushing:</p>
+<div class="fragment"><div class="line">cd benchmarks</div>
+<div class="line">make</div>
+</div><!-- fragment --><p>This creates a minimal helper (~50 lines of C) that flushes filesystem caches. The helper requires <span class="tt">sudo</span> to run because writing to <span class="tt">/proc/sys/vm/drop_caches</span> requires elevated privileges.</p>
+<p><b>Security Note</b>: Only this tiny, auditable binary needs elevated privileges - never run ffind-daemon or the main ffind client as root.</p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md139"></a>
 Install</h1>
 <div class="fragment"><div class="line">sudo make install</div>
 </div><!-- fragment --><p>This installs the binaries to <span class="tt">/usr/local/bin/</span> and man pages to <span class="tt">/usr/local/share/man/</span>.</p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md16"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md140"></a>
 Usage</h1>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md17"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md141"></a>
 Start the daemon</h2>
 <p>The daemon needs to be running before you can search. It will index the specified directory tree:</p>
 <div class="fragment"><div class="line"># Run in background (daemonize)</div>
@@ -134,7 +333,54 @@ Start the daemon</h2>
 <div class="line"># Run in foreground (useful for debugging)</div>
 <div class="line">ffind-daemon --foreground /path/to/index</div>
 </div><!-- fragment --><p>The daemon creates a Unix socket at <span class="tt">/run/user/$UID/ffind.sock</span> for client communication.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md18"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md142"></a>
+SQLite Persistence (Optional)</h2>
+<p>For faster startup on large directory trees, enable SQLite persistence:</p>
+<div class="fragment"><div class="line"># Enable persistence with --db flag</div>
+<div class="line">ffind-daemon --db ~/.cache/ffind.db ~/projects</div>
+<div class="line"> </div>
+<div class="line"># With foreground mode</div>
+<div class="line">ffind-daemon --foreground --db ~/.cache/ffind.db ~/projects</div>
+<div class="line"> </div>
+<div class="line"># Multiple roots with persistence</div>
+<div class="line">ffind-daemon --db /var/cache/ffind/index.db /home/user/projects /var/log</div>
+</div><!-- fragment --><p><b>Benefits:</b></p><ul>
+<li><b>Fast startup</b>: Loads index from database instead of full filesystem scan</li>
+<li><b>Crash-safe</b>: Atomic writes with WAL mode ensure database consistency</li>
+<li><b>Automatic reconciliation</b>: Detects filesystem changes between runs</li>
+<li><b>Periodic sync</b>: Database updated every 30 seconds or after 100 changes</li>
+</ul>
+<p><b>How it works:</b></p><ol type="1">
+<li>On first run, creates SQLite database and indexes filesystem</li>
+<li>Changes are tracked in memory and periodically flushed to database</li>
+<li>On restart, loads entries from database and reconciles with actual filesystem</li>
+<li>Graceful shutdown ensures all pending changes are written</li>
+</ol>
+<p><b>Notes:</b></p><ul>
+<li>Database file is created if it doesn't exist</li>
+<li>Database uses WAL (Write-Ahead Logging) mode for better performance and safety</li>
+<li>Parent directories must exist for the database path</li>
+<li>If root paths change, full reconciliation is triggered automatically</li>
+</ul>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md143"></a>
+Multiple Root Directories</h2>
+<p>Monitor multiple directories simultaneously by specifying them as additional arguments:</p>
+<div class="fragment"><div class="line"># Monitor multiple directories</div>
+<div class="line">ffind-daemon /home/user/projects /var/log /etc/config</div>
+<div class="line"> </div>
+<div class="line"># With foreground mode</div>
+<div class="line">ffind-daemon --foreground ~/code ~/documents ~/Downloads</div>
+</div><!-- fragment --><p>When searching with multiple roots:</p><ul>
+<li>Search results include files from all monitored directories</li>
+<li>Path globs (<span class="tt">-path</span>) are matched relative to each root's base directory</li>
+<li>All filters and features work seamlessly across all roots</li>
+</ul>
+<p><b>Notes:</b></p><ul>
+<li>Overlapping roots (e.g., <span class="tt">/home</span> and <span class="tt">/home/user</span>) are detected and warned about</li>
+<li>Duplicate paths are automatically deduplicated</li>
+<li>Each root is indexed and monitored independently</li>
+</ul>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md144"></a>
 Search examples</h2>
 <p>All features are fully implemented:</p>
 <div class="fragment"><div class="line"># Basic glob search (searches file names)</div>
@@ -211,7 +457,7 @@ Search examples</h2>
 <div class="line"> </div>
 <div class="line"># Color output (auto-detect TTY, default behavior)</div>
 <div class="line">ffind -c &quot;TODO&quot; --color=auto</div>
-</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md19"></a>
+</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md145"></a>
 Size units</h2>
 <ul>
 <li><span class="tt">c</span> - bytes (default if no unit specified)</li>
@@ -220,33 +466,33 @@ Size units</h2>
 <li><span class="tt">M</span> - megabytes (1024*1024 bytes)</li>
 <li><span class="tt">G</span> - gigabytes (1024*1024*1024 bytes)</li>
 </ul>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md20"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md146"></a>
 Size operators</h2>
 <ul>
 <li><span class="tt">+SIZE</span> - greater than SIZE</li>
 <li><span class="tt">-SIZE</span> - less than SIZE</li>
 <li><span class="tt">SIZE</span> - exactly SIZE (rarely used)</li>
 </ul>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md21"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md147"></a>
 Time operators</h2>
 <ul>
 <li><span class="tt">-N</span> - modified within last N days</li>
 <li><span class="tt">+N</span> - modified more than N days ago</li>
 <li><span class="tt">N</span> - modified exactly N days ago (rarely used)</li>
 </ul>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md22"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md148"></a>
 Content search methods</h2>
 <p>ffind provides three ways to search file contents, each suited for different use cases:</p>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md23"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md149"></a>
 Fixed string search (<span class="tt">-c</span>)</h3>
 <p>Fast substring matching - searches for exact text within lines: </p><div class="fragment"><div class="line">ffind -c &quot;TODO&quot;           # Find lines containing &quot;TODO&quot;</div>
 <div class="line">ffind -c &quot;error&quot; -i       # Case-insensitive search</div>
-</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md24"></a>
+</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md150"></a>
 Regex search (<span class="tt">-c</span> + <span class="tt">-r</span>)</h3>
 <p>Powerful pattern matching using ECMAScript regular expressions: </p><div class="fragment"><div class="line">ffind -c &quot;TODO.*fix&quot; -r           # Match TODO followed by fix</div>
 <div class="line">ffind -c &quot;bug|error&quot; -r -i        # Match bug OR error (case-insensitive)</div>
 <div class="line">ffind -c &quot;^[0-9]+&quot; -r             # Lines starting with digits</div>
-</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md25"></a>
+</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md151"></a>
 Glob search (<span class="tt">-g</span>)</h3>
 <p>Shell-style wildcard patterns for intuitive matching: </p><div class="fragment"><div class="line">ffind -g &quot;TODO*&quot;                  # Lines starting with TODO</div>
 <div class="line">ffind -g &quot;*error*&quot; -i             # Lines containing error (case-insensitive)</div>
@@ -259,7 +505,7 @@ Glob search (<span class="tt">-g</span>)</h3>
 <li><span class="tt">[a-z]</span> - matches any character in the range</li>
 </ul>
 <p><b>Note</b>: <span class="tt">-g</span> is mutually exclusive with <span class="tt">-c</span> and <span class="tt">-r</span>. Use <span class="tt">-c</span> for fixed string search, <span class="tt">-c</span> with <span class="tt">-r</span> for regex search, or <span class="tt">-g</span> for glob pattern search.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md26"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md152"></a>
 Context lines</h2>
 <p>Context lines work just like grep's <span class="tt">-A</span>, <span class="tt">-B</span>, and <span class="tt">-C</span> options, showing surrounding lines for better context when searching file contents. These flags require <span class="tt">-c</span> or <span class="tt">-g</span> (content search).</p>
 <ul>
@@ -267,7 +513,7 @@ Context lines</h2>
 <li><span class="tt">-B N</span> - Show N lines <b>before</b> each match</li>
 <li><span class="tt">-C N</span> - Show N lines <b>before and after</b> each match (shorthand for <span class="tt">-A N -B N</span>)</li>
 </ul>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md27"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md153"></a>
 Output format</h3>
 <p>Context lines use the same grep-style format:</p><ul>
 <li><b>Match lines</b>: <span class="tt">path:lineno:content</span> (colon before content)</li>
@@ -286,7 +532,7 @@ Output format</h3>
 <div class="line"> </div>
 <div class="line"># Combine with regex and other filters</div>
 <div class="line">ffind -c &quot;bug|error&quot; -r -A 3 -B 1 -name &quot;*.cpp&quot;</div>
-</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md28"></a>
+</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md154"></a>
 Color output</h2>
 <p>The <span class="tt">--color</span> option controls colored output for better readability:</p>
 <ul>
@@ -307,12 +553,119 @@ Color output</h2>
 <div class="line"> </div>
 <div class="line"># Disable colors for scripting</div>
 <div class="line">ffind -c &quot;warning&quot; --color=never &gt; results.txt</div>
-</div><!-- fragment --><h1 class="doxsection"><a class="anchor" id="autotoc_md29"></a>
+</div><!-- fragment --><h1 class="doxsection"><a class="anchor" id="autotoc_md155"></a>
+Directory Monitoring</h1>
+<p>The daemon handles directory renames gracefully using inotify with cookie-based rename tracking - no restart needed. When a directory is renamed within the watched tree:</p>
+<ul>
+<li>All file paths are automatically updated to reflect the new location</li>
+<li>Internal watch descriptors are updated</li>
+<li>Files remain searchable at their new paths immediately</li>
+</ul>
+<p>In foreground mode (<span class="tt">--<a class="el" href="ffind-daemon_8cpp.html#a69046de9a005a9a1c5b898f0354c3637">foreground</a></span>), directory changes are logged to stderr with color-coded INFO messages:</p><ul>
+<li>Directory created/deleted events</li>
+<li>Directory rename events with old and new paths</li>
+<li>Number of entries updated during renames</li>
+</ul>
+<p>The implementation uses modern inotify (not DNOTIFY) for reliable filesystem event monitoring.</p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md156"></a>
+Service Management</h1>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md157"></a>
+Gentoo (OpenRC)</h2>
+<p>For Gentoo systems using OpenRC, you can run ffind-daemon as a system service:</p>
+<ol type="1">
+<li>Copy the init script: <div class="fragment"><div class="line">sudo cp ffind-daemon.openrc /etc/init.d/ffind-daemon</div>
+<div class="line">sudo chmod +x /etc/init.d/ffind-daemon</div>
+</div><!-- fragment --></li>
+<li><p class="startli">Copy and configure the service settings: </p><div class="fragment"><div class="line">sudo cp etc-conf.d-ffind-daemon.example /etc/conf.d/ffind-daemon</div>
+<div class="line">sudo nano /etc/conf.d/ffind-daemon</div>
+</div><!-- fragment --><p class="startli">Edit <span class="tt">FFIND_ROOTS</span> to specify which directories to index: </p><div class="fragment"><div class="line">FFIND_ROOTS=&quot;/home /var/www&quot;</div>
+</div><!-- fragment --><p class="startli">Optionally enable SQLite persistence: </p><div class="fragment"><div class="line">FFIND_OPTS=&quot;--db /var/cache/ffind/index.db&quot;</div>
+</div><!-- fragment --></li>
+<li>Start the service: <div class="fragment"><div class="line">sudo rc-service ffind-daemon start</div>
+</div><!-- fragment --></li>
+<li>Enable at boot (optional): <div class="fragment"><div class="line">sudo rc-update add ffind-daemon default</div>
+</div><!-- fragment --></li>
+<li>Check service status: <div class="fragment"><div class="line">sudo rc-service ffind-daemon status</div>
+</div><!-- fragment --></li>
+</ol>
+<p><b>Note</b>: If using <span class="tt">--<a class="el" href="ffind-daemon_8cpp.html#ad6e663497d2c934364b3bcf07496b30b">db</a></span> option, ensure the parent directory exists and is writable: </p><div class="fragment"><div class="line">sudo mkdir -p /var/cache/ffind</div>
+<div class="line">sudo chown root:root /var/cache/ffind</div>
+</div><!-- fragment --><h1 class="doxsection"><a class="anchor" id="autotoc_md158"></a>
+FAQ</h1>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md159"></a>
+Q: How fast is it?</h2>
+<p><b>A:</b> For indexed searches, ffind is nearly instantaneous. Once the daemon has indexed your directories, searches complete in milliseconds regardless of directory size. Traditional tools like <span class="tt">find</span> need to traverse the filesystem on every search, which can take seconds or minutes on large directory trees.</p>
+<p>The initial indexing time depends on the size of your directory tree. On modern hardware:</p><ul>
+<li>Small directories (&lt; 10,000 files): &lt; 1 second</li>
+<li>Medium directories (10,000 - 100,000 files): 1-5 seconds <br  />
+</li>
+<li>Large directories (100,000+ files): 5-30 seconds</li>
+</ul>
+<p>After initial indexing, the daemon maintains the index in real-time with negligible overhead.</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md160"></a>
+Q: Does it use a lot of RAM?</h2>
+<p><b>A:</b> Memory usage is proportional to the number of indexed files. On average:</p><ul>
+<li>Small directories (&lt; 10,000 files): &lt; 10 MB</li>
+<li>Medium directories (10,000 - 100,000 files): 10-50 MB</li>
+<li>Large directories (100,000+ files): 50-200 MB</li>
+</ul>
+<p>Each indexed entry stores the file path, size, modification time, and metadata. For most use cases, memory usage is minimal compared to modern system RAM.</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md161"></a>
+Q: What about huge directory trees?</h2>
+<p><b>A:</b> ffind handles large directory trees efficiently:</p>
+<ol type="1">
+<li><b>Indexing</b>: Initial indexing shows progress every 10,000 entries (in foreground mode)</li>
+<li><b>Memory</b>: Uses efficient C++ data structures to minimize memory overhead</li>
+<li><b>Persistence</b>: Use <span class="tt">--<a class="el" href="ffind-daemon_8cpp.html#ad6e663497d2c934364b3bcf07496b30b">db</a></span> option to save the index to SQLite for fast startup</li>
+<li><b>Multiple roots</b>: Index only the directories you need, not the entire filesystem</li>
+</ol>
+<p>For very large trees (&gt; 1 million files), consider:</p><ul>
+<li>Using SQLite persistence (<span class="tt">--<a class="el" href="ffind-daemon_8cpp.html#ad6e663497d2c934364b3bcf07496b30b">db</a></span>) for faster restarts</li>
+<li>Splitting into multiple daemons with different roots</li>
+<li>Excluding large binary directories you don't need to search</li>
+</ul>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md162"></a>
+Q: How does persistence work?</h2>
+<p><b>A:</b> When you enable SQLite persistence with <span class="tt">--<a class="el" href="ffind-daemon_8cpp.html#ad6e663497d2c934364b3bcf07496b30b">db</a> /path/to/db</span>:</p>
+<ol type="1">
+<li><b>First run</b>: The daemon indexes your filesystem and saves entries to the database</li>
+<li><b>Subsequent runs</b>: The daemon loads the index from the database (much faster than re-scanning)</li>
+<li><b>Reconciliation</b>: The daemon automatically detects and handles changes since last run</li>
+<li><b>Updates</b>: Changes are batched and saved periodically (every 30 seconds or 100 changes)</li>
+<li><b>Crash safety</b>: Uses WAL (Write-Ahead Logging) mode for atomic writes</li>
+</ol>
+<p>This means:</p><ul>
+<li>✅ Fast startup even after system reboot</li>
+<li>✅ No data loss on crashes or power failures <br  />
+</li>
+<li>✅ Automatic sync between database and filesystem</li>
+</ul>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md163"></a>
+Q: Can I use it on network filesystems (NFS, CIFS)?</h2>
+<p><b>A:</b> inotify (which ffind uses for real-time monitoring) only works on local filesystems. For network filesystems:</p><ul>
+<li>❌ Real-time monitoring won't work</li>
+<li>✅ You can still use ffind, but you'll need to restart the daemon to pick up changes</li>
+<li>💡 Consider using <span class="tt">locate</span> or scheduled rescans for network shares</li>
+</ul>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md164"></a>
+Q: How do I search multiple directories?</h2>
+<p><b>A:</b> Just specify multiple directories when starting the daemon:</p>
+<div class="fragment"><div class="line">ffind-daemon /home/user/projects /var/www /etc/config</div>
+</div><!-- fragment --><p>The client will search across all monitored directories automatically.</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md165"></a>
+Q: What's the difference between <span class="tt">-c</span> and <span class="tt">-g</span>?</h2>
+<p><b>A:</b> Both search file contents, but differently:</p><ul>
+<li><span class="tt">-c "TODO"</span>: Fixed-string substring search (fastest)</li>
+<li><span class="tt">-c "TODO.*fix" -r</span>: Regex pattern search (powerful)</li>
+<li><span class="tt">-g "TODO*"</span>: Shell-style glob pattern search (intuitive)</li>
+</ul>
+<p>Use <span class="tt">-c</span> for simple text, <span class="tt">-c -r</span> for complex patterns, and <span class="tt">-g</span> for wildcard patterns.</p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md166"></a>
 License</h1>
 <p>Dual-licensed under GPLv3 and Commercial license.</p>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See the LICENSE file for details.</p>
 <p><b>Commercial licenses</b> are available for proprietary use, embedded systems, and enterprise deployments. Contact EdgeOfAssembly for commercial licensing inquiries.</p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md30"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md167"></a>
 Author</h1>
 <p><b>EdgeOfAssembly</b> - <a href="https://github.com/EdgeOfAssembly">GitHub</a></p>
 <p>For commercial licensing inquiries: <a href="#" onclick="location.href='mai'+'lto:'+'hax'+'bo'+'x20'+'00'+'@gm'+'ai'+'l.c'+'om'; return false;">haxbo<span class="obfuscator">.nosp@m.</span>x200<span class="obfuscator">.nosp@m.</span>0@gma<span class="obfuscator">.nosp@m.</span>il.c<span class="obfuscator">.nosp@m.</span>om</a> </p>

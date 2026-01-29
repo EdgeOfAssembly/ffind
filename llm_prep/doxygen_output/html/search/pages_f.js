@@ -1,4 +1,30 @@
 var searchData=
 [
-  ['not_20implemented_0',['Remaining / Not Implemented',['../md_TODO.html#autotoc_md33',1,'']]]
+  ['i_20search_20multiple_20directories_0',['Q: How do I search multiple directories?',['../md_README.html#autotoc_md164',1,'']]],
+  ['i_20use_20it_20on_20network_20filesystems_20nfs_20cifs_1',['Q: Can I use it on network filesystems (NFS, CIFS)?',['../md_README.html#autotoc_md163',1,'']]],
+  ['implementation_20details_2',['Implementation Details',['../md_BENCHMARK__RESULTS.html#autotoc_md74',1,'']]],
+  ['implemented_3',['Remaining / Not Implemented',['../md_TODO.html#autotoc_md170',1,'']]],
+  ['implemented_20current_20version_4',['Implemented (current version)',['../md_TODO.html#autotoc_md169',1,'']]],
+  ['improvement_5',['Areas for Improvement',['../md_benchmarks_2EXECUTION__EVIDENCE.html#autotoc_md94',1,'']]],
+  ['in_20memory_20index_20structure_6',['In-Memory Index Structure',['../md_ARCHITECTURE.html#autotoc_md36',1,'']]],
+  ['inconsistent_20results_7',['Inconsistent results',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md118',1,'']]],
+  ['index_8',['1. Memory-Resident Index',['../md_ARCHITECTURE.html#autotoc_md46',1,'']]],
+  ['index_20benchmark_20results_9',['Path Component Index - Benchmark Results',['../md_BENCHMARK__RESULTS.html',1,'']]],
+  ['index_20for_20directory_20queries_10',['5. Path Index for Directory Queries',['../md_ARCHITECTURE.html#autotoc_md54',1,'']]],
+  ['index_20management_11',['1. Index Management',['../md_ARCHITECTURE.html#autotoc_md12',1,'']]],
+  ['index_20structure_12',['Index Structure',['../md_ARCHITECTURE.html#autotoc_md36',1,'In-Memory Index Structure'],['../md_BENCHMARK__RESULTS.html#autotoc_md75',1,'Path Index Structure']]],
+  ['indexing_20performance_13',['Indexing Performance',['../md_README.html#autotoc_md131',1,'']]],
+  ['inotify_20for_20real_20time_20updates_14',['6. inotify for Real-Time Updates',['../md_ARCHITECTURE.html#autotoc_md56',1,'']]],
+  ['inotify_20integration_15',['2. inotify Integration',['../md_ARCHITECTURE.html#autotoc_md13',1,'']]],
+  ['install_16',['Install',['../md_README.html#autotoc_md139',1,'']]],
+  ['install_20dependencies_17',['Install Dependencies',['../md_README.html#autotoc_md136',1,'']]],
+  ['instead_20of_2010x_18',['Why 4.2x instead of 10x?',['../md_BENCHMARK__RESULTS.html#autotoc_md79',1,'']]],
+  ['integration_19',['2. inotify Integration',['../md_ARCHITECTURE.html#autotoc_md13',1,'']]],
+  ['interpreting_20results_20',['Interpreting Results',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md110',1,'']]],
+  ['is_20ffind_21',['What is ffind?',['../md_README.html#autotoc_md126',1,'']]],
+  ['is_20it_22',['Q: How fast is it?',['../md_README.html#autotoc_md159',1,'']]],
+  ['it_23',['Q: How fast is it?',['../md_README.html#autotoc_md159',1,'']]],
+  ['it_20on_20network_20filesystems_20nfs_20cifs_24',['Q: Can I use it on network filesystems (NFS, CIFS)?',['../md_README.html#autotoc_md163',1,'']]],
+  ['it_20tests_25',['What It Tests',['../dir_13a41d9ad64fb9ae396cb953294783cf.html#autotoc_md105',1,'']]],
+  ['it_20use_20a_20lot_20of_20ram_26',['Q: Does it use a lot of RAM?',['../md_README.html#autotoc_md160',1,'']]]
 ];

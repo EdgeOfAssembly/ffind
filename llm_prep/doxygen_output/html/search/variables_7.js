@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['size_0',['size',['../structEntry.html#a45376b4fa084dbfcce738372fa018aa9',1,'Entry']]],
-  ['sock_5fpath_1',['sock_path',['../ffind-daemon_8cpp.html#afe5d10e37309d04ff0710b9707b4e4ae',1,'ffind-daemon.cpp']]]
+  ['last_5fflush_5ftime_0',['last_flush_time',['../ffind-daemon_8cpp.html#ad213aa40136d248d9289e0671c733132',1,'ffind-daemon.cpp']]],
+  ['loaded_1',['loaded',['../structConfig.html#acc1a9ceffa9508b3440054f6e747e56f',1,'Config']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['wd_5fto_5fdir_0',['wd_to_dir',['../ffind-daemon_8cpp.html#ac2fc5f87ca9b708edcf7dbd5da05ba24',1,'ffind-daemon.cpp']]]
+  ['mtime_0',['mtime',['../structEntry.html#a7c953b65196958fa8e9530c2eaabd0ca',1,'Entry']]],
+  ['mtx_1',['mtx',['../ffind-daemon_8cpp.html#a29ac681ec3efa9e30e1ab1ab251b47f9',1,'ffind-daemon.cpp']]]
 ];

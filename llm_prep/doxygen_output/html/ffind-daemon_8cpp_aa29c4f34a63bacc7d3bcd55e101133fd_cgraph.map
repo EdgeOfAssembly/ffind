@@ -1,0 +1,9 @@
+<map id="handle_client" name="handle_client">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,57,114,85"/>
+<area shape="rect" id="Node000002" href="$ffind-daemon_8cpp.html#affd557bc34b0546314dc6394d0ba6219" title=" " alt="" coords="189,5,297,33"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="110,54,179,36,175,39,112,59"/>
+<area shape="rect" id="Node000003" href="$ffind-daemon_8cpp.html#adb67f2caafe3ae5a6a2a28def0468a9f" title=" " alt="" coords="187,57,299,85"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="114,69,174,70,169,72,114,74"/>
+<area shape="rect" id="Node000004" href="$ffind-daemon_8cpp.html#a7b04429420875e5e02ebc2893cfa8d6f" title=" " alt="" coords="162,109,324,137"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="111,83,179,104,174,106,111,88"/>
+</map>

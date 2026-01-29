@@ -1,0 +1,262 @@
+\doxysection{benchmarks Directory Reference}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf}{}\label{dir_13a41d9ad64fb9ae396cb953294783cf}\index{benchmarks Directory Reference@{benchmarks Directory Reference}}
+\doxysubsubsection*{Files}
+\begin{DoxyCompactItemize}
+\item 
+file \mbox{\hyperlink{cache__flush_8c}{cache\+\_\+flush.\+c}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md97}{}\doxysubsection{\texorpdfstring{ffind Benchmarks}{ffind Benchmarks}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md97}
+This directory contains real-\/world benchmarking scripts for ffind performance testing.\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md98}{}\doxysubsection{\texorpdfstring{Quick Start}{Quick Start}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md98}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ 1.\ Set\ up\ test\ corpus}
+\DoxyCodeLine{cp\ -\/r\ /usr/src/linux-\/headers-\/*\ /tmp/test-\/corpus}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ 2.\ Build\ ffind\ (from\ repository\ root)}
+\DoxyCodeLine{cd\ ..}
+\DoxyCodeLine{make}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ 3.\ Build\ cache-\/flush\ utility}
+\DoxyCodeLine{cd\ benchmarks}
+\DoxyCodeLine{make}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ 4.\ Run\ benchmarks\ (will\ prompt\ for\ sudo\ password\ for\ cache\ clearing)}
+\DoxyCodeLine{./run\_real\_benchmarks.sh}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md99}{}\doxysubsection{\texorpdfstring{Test Corpus Setup}{Test Corpus Setup}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md99}
+The benchmark script expects a test corpus at {\ttfamily /tmp/test-\/corpus}. You have several options\+:\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md100}{}\doxysubsubsection{\texorpdfstring{Option 1\+: Use Local Linux Headers (Recommended for Quick Testing)}{Option 1\+: Use Local Linux Headers (Recommended for Quick Testing)}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md100}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Copy\ existing\ Linux\ kernel\ headers\ (\string~130MB,\ \string~16K\ files)}
+\DoxyCodeLine{cp\ -\/r\ /usr/src/linux-\/headers-\/*\ /tmp/test-\/corpus}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md101}{}\doxysubsubsection{\texorpdfstring{Option 2\+: Download GCC Source Code (Network Required)}{Option 2\+: Download GCC Source Code (Network Required)}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md101}
+{\bfseries{For larger corpus (\texorpdfstring{$\sim$}{\string~}790\+MB)\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ /tmp}
+\DoxyCodeLine{wget\ http://ftp.gnu.org/gnu/gcc/gcc-\/9.5.0/gcc-\/9.5.0.tar.xz}
+\DoxyCodeLine{tar\ -\/xf\ gcc-\/9.5.0.tar.xz}
+\DoxyCodeLine{mv\ gcc-\/9.5.0\ test-\/corpus}
+
+\end{DoxyCode}
+
+
+{\bfseries{For smaller corpus (\texorpdfstring{$\sim$}{\string~}180\+MB)\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ /tmp}
+\DoxyCodeLine{wget\ http://ftp.gnu.org/gnu/gcc/gcc-\/3.4.6/gcc-\/3.4.6.tar.gz}
+\DoxyCodeLine{tar\ -\/xzf\ gcc-\/3.4.6.tar.gz}
+\DoxyCodeLine{mv\ gcc-\/3.4.6\ test-\/corpus}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md102}{}\doxysubsubsection{\texorpdfstring{Option 3\+: Download Linux Kernel (Network Required)}{Option 3\+: Download Linux Kernel (Network Required)}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md102}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ /tmp}
+\DoxyCodeLine{wget\ https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-\/5.10.1.tar.xz}
+\DoxyCodeLine{tar\ -\/xf\ linux-\/5.10.1.tar.xz}
+\DoxyCodeLine{mv\ linux-\/5.10.1\ test-\/corpus}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md103}{}\doxysubsubsection{\texorpdfstring{Option 4\+: Use Any Large Source Repository}{Option 4\+: Use Any Large Source Repository}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md103}
+Any C/\+C++/\+Java project with 10,000+ files will work\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cp\ -\/r\ \string~/projects/large-\/codebase\ /tmp/test-\/corpus}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md104}{}\doxysubsection{\texorpdfstring{Benchmark Script}{Benchmark Script}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md104}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md105}{}\doxysubsubsection{\texorpdfstring{What It Tests}{What It Tests}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md105}
+The {\ttfamily run\+\_\+real\+\_\+benchmarks.\+sh} script performs the following benchmarks\+:
+
+
+\begin{DoxyEnumerate}
+\item {\bfseries{File name searches}} ({\itshape .c, \texorpdfstring{$\ast$}{*}.h files)}
+\item {\itshape {\bfseries{File metadata searches}} (files \texorpdfstring{$>$}{>}100KB)}
+\item {\itshape {\bfseries{Path pattern searches}} (include/} directory)
+\item {\bfseries{Content searches}} (fixed string\+: "{}static"{})
+\item {\bfseries{Regex content searches}} ("{}\+EXPORT\+\_\+\+SYMBOL\texorpdfstring{$\vert$}{|}\+MODULE\+\_\+"{})
+\item {\bfseries{File listing}} (all files)
+\end{DoxyEnumerate}\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md106}{}\doxysubsubsection{\texorpdfstring{Methodology}{Methodology}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md106}
+
+\begin{DoxyItemize}
+\item Each benchmark runs {\bfseries{3 times}}, median time reported
+\item Compares against standard tools\+: {\ttfamily find}, {\ttfamily grep}
+\item Optionally tests against {\ttfamily ag} and {\ttfamily ripgrep} if available
+\item All output redirected to {\ttfamily /dev/null} to measure pure execution time
+\item Uses real filesystem (no artificial test data)
+\end{DoxyItemize}\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md107}{}\doxysubsubsection{\texorpdfstring{Output Format}{Output Format}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md107}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{===\ Benchmark\ X:\ Description\ ===}
+\DoxyCodeLine{\ \ find:\ 0.067s}
+\DoxyCodeLine{\ \ ffind:\ 0.004s}
+\DoxyCodeLine{\ \ Speedup:\ 15.9x\ faster}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md108}{}\doxysubsection{\texorpdfstring{System Requirements}{System Requirements}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md108}
+
+\begin{DoxyItemize}
+\item Linux (for inotify filesystem monitoring)
+\item Bash shell
+\item bc (basic calculator) for speedup calculations
+\item At least 1GB free space in /tmp
+\item GNU find and grep (standard on most Linux systems)
+\end{DoxyItemize}\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md109}{}\doxysubsection{\texorpdfstring{Performance Results}{Performance Results}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md109}
+Current benchmark results (Linux kernel headers, 16,548 files)\+:
+
+
+\begin{DoxyTable}{4}{}{}{1}
+\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Operation  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}find/grep  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}ffind  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Speedup  \\
+Find \texorpdfstring{$\ast$}{*}.c files  &0.\+067s  &0.\+004s  &{\bfseries{15.\+9x}}  \\
+Find \texorpdfstring{$\ast$}{*}.h files  &0.\+068s  &0.\+018s  &{\bfseries{3.\+8x}}  \\
+Files \texorpdfstring{$>$}{>}100KB  &0.\+090s  &0.\+003s  &{\bfseries{28.\+4x}}  \\
+List all files  &0.\+063s  &0.\+025s  &{\bfseries{2.\+5x}}  \\
+\end{DoxyTable}
+
+
+{\bfseries{Note\+:}} Content search performance is currently slower than grep, but file/metadata searches show significant speedups.
+
+See main \href{../README.md\#performance-benchmarks}{\texttt{README.\+md}} for complete benchmark results.\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md110}{}\doxysubsection{\texorpdfstring{Interpreting Results}{Interpreting Results}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md110}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md111}{}\doxysubsubsection{\texorpdfstring{What to Expect}{What to Expect}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md111}
+{\bfseries{ffind should be faster for\+:}}
+\begin{DoxyItemize}
+\item File name searches (glob patterns)
+\item File metadata queries (size, mtime, type)
+\item Path-\/based searches
+\item Repeated queries on the same dataset
+\end{DoxyItemize}
+
+{\bfseries{ffind may be slower for\+:}}
+\begin{DoxyItemize}
+\item Content searches (current implementation)
+\item Single-\/use queries where index building overhead isn\textquotesingle{}t amortized
+\end{DoxyItemize}\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md112}{}\doxysubsubsection{\texorpdfstring{Factors Affecting Performance}{Factors Affecting Performance}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md112}
+
+\begin{DoxyItemize}
+\item {\bfseries{Corpus size\+:}} Larger file trees show bigger speedups
+\item {\bfseries{Disk type\+:}} SSD vs HDD affects initial indexing
+\item {\bfseries{Query type\+:}} Indexed attributes (name, size) vs content search
+\item {\bfseries{System load\+:}} Other processes competing for I/O
+\end{DoxyItemize}\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md113}{}\doxysubsection{\texorpdfstring{Customizing Benchmarks}{Customizing Benchmarks}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md113}
+To test with different patterns or operations, edit {\ttfamily run\+\_\+real\+\_\+benchmarks.\+sh}\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Add\ a\ new\ benchmark}
+\DoxyCodeLine{echo\ "{}===\ Benchmark\ X:\ My\ custom\ test\ ==="{}}
+\DoxyCodeLine{echo\ -\/n\ "{}\ \ find:\ "{}}
+\DoxyCodeLine{FIND\_TIME=\$(run\_benchmark\ "{}description"{}\ "{}find\ '\$CORPUS\_DIR'\ -\/name\ 'pattern'"{})}
+\DoxyCodeLine{echo\ "{}\$\{FIND\_TIME\}s"{}}
+\DoxyCodeLine{echo\ -\/n\ "{}\ \ ffind:\ "{}}
+\DoxyCodeLine{FFIND\_TIME=\$(run\_benchmark\ "{}description"{}\ "{}./ffind\ 'pattern'"{})}
+\DoxyCodeLine{echo\ "{}\$\{FFIND\_TIME\}s"{}}
+\DoxyCodeLine{SPEEDUP=\$(echo\ "{}scale=1;\ \$FIND\_TIME\ /\ \$FFIND\_TIME"{}\ |\ bc)}
+\DoxyCodeLine{echo\ "{}\ \ Speedup:\ \$\{SPEEDUP\}x\ faster"{}}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md114}{}\doxysubsection{\texorpdfstring{Troubleshooting}{Troubleshooting}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md114}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md115}{}\doxysubsubsection{\texorpdfstring{"{}\+Test corpus not found"{}}{"{}\+Test corpus not found"{}}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md115}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Verify\ corpus\ exists}
+\DoxyCodeLine{ls\ -\/la\ /tmp/test-\/corpus}
+\DoxyCodeLine{\#\ If\ not,\ set\ it\ up\ (see\ options\ above)}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md116}{}\doxysubsubsection{\texorpdfstring{"{}ffind binaries not found"{}}{"{}ffind binaries not found"{}}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md116}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Build\ from\ repository\ root}
+\DoxyCodeLine{cd\ /home/runner/work/ffind/ffind\ \ \#\ adjust\ to\ your\ path}
+\DoxyCodeLine{make}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md117}{}\doxysubsubsection{\texorpdfstring{Benchmark hangs or times out}{Benchmark hangs or times out}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md117}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Kill\ any\ existing\ daemon}
+\DoxyCodeLine{ps\ aux\ |\ grep\ ffind-\/daemon}
+\DoxyCodeLine{kill\ <PID>}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Remove\ socket}
+\DoxyCodeLine{rm\ -\/f\ /run/user/\$(id\ -\/u)/ffind.sock}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Try\ again}
+\DoxyCodeLine{./benchmarks/run\_real\_benchmarks.sh}
+
+\end{DoxyCode}
+\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md118}{}\doxysubsubsection{\texorpdfstring{Inconsistent results}{Inconsistent results}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md118}
+
+\begin{DoxyItemize}
+\item Clear filesystem caches between runs using the cache-\/flush utility (see below)
+\item Ensure no other heavy I/O processes are running
+\item Run benchmarks multiple times and average results
+\end{DoxyItemize}\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md119}{}\doxysubsection{\texorpdfstring{Cache-\/\+Flush Utility}{Cache-\/\+Flush Utility}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md119}
+The {\ttfamily cache-\/flush} C binary provides a secure, minimal utility for clearing Linux filesystem caches\+:
+
+{\bfseries{Build and Setup (one-\/time)\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Build\ the\ binary}
+\DoxyCodeLine{make}
+
+\end{DoxyCode}
+
+
+{\bfseries{Usage\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ The\ benchmark\ script\ calls\ this\ automatically\ with\ sudo}
+\DoxyCodeLine{\#\ For\ manual\ usage:}
+\DoxyCodeLine{sudo\ ./cache-\/flush}
+
+\end{DoxyCode}
+
+
+{\bfseries{Security Model\+:}}
+\begin{DoxyItemize}
+\item {\bfseries{Why sudo is required}}\+: Linux requires elevated privileges to write to {\ttfamily /proc/sys/vm/drop\+\_\+caches}
+\item {\bfseries{Security benefit}}\+: Only minimal auditable C code (\texorpdfstring{$\sim$}{\string~}50 lines) runs with elevated privileges
+\item {\bfseries{Our approach}}\+: Benchmark script calls sudo internally for cache-\/flush only
+\end{DoxyItemize}
+
+{\bfseries{Features\+:}}
+\begin{DoxyItemize}
+\item {\bfseries{Security best practice}}\+: Minimal C code (\texorpdfstring{$\sim$}{\string~}50 lines) with elevated privileges
+\item {\bfseries{Explicit privilege control}}\+: Requires sudo each time (no permanent capabilities)
+\item {\bfseries{Portable}}\+: Simple C with no external dependencies
+\item {\bfseries{Easy to audit}}\+: Small, focused code that\textquotesingle{}s easy to security review
+\end{DoxyItemize}
+
+{\bfseries{Manual usage\+:}} 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\#\ Flush\ caches\ before\ a\ benchmark}
+\DoxyCodeLine{sudo\ ./cache-\/flush}
+\DoxyCodeLine{time\ find\ /usr\ -\/name\ "{}*.so"{}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\#\ Compare\ warm\ vs\ cold\ cache}
+\DoxyCodeLine{time\ find\ /usr\ -\/name\ "{}*.so"{}\ \ \#\ Warm\ cache}
+\DoxyCodeLine{sudo\ ./cache-\/flush}
+\DoxyCodeLine{time\ find\ /usr\ -\/name\ "{}*.so"{}\ \ \#\ Cold\ cache}
+
+\end{DoxyCode}
+
+
+{\bfseries{Technical details\+:}}
+\begin{DoxyItemize}
+\item Calls {\ttfamily sync()} to flush dirty pages to disk
+\item Writes "{}3"{} to {\ttfamily /proc/sys/vm/drop\+\_\+caches} to clear page cache, dentries, and inodes
+\item Returns 0 on success, 1 on error
+\end{DoxyItemize}
+
+The benchmark script ({\ttfamily run\+\_\+real\+\_\+benchmarks.\+sh}) automatically uses this utility with sudo when running benchmarks.\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md120}{}\doxysubsection{\texorpdfstring{Contributing}{Contributing}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md120}
+Found a performance issue or have optimization suggestions? Please\+:
+\begin{DoxyEnumerate}
+\item Run benchmarks with your changes
+\item Include before/after results in PR description
+\item Document test environment and corpus used
+\end{DoxyEnumerate}\hypertarget{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md121}{}\doxysubsection{\texorpdfstring{License}{License}}\label{dir_13a41d9ad64fb9ae396cb953294783cf_autotoc_md121}
+Same as main ffind project (GPL v3 / Commercial dual-\/license). 

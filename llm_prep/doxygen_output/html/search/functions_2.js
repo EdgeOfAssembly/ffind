@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['daemonize_0',['daemonize',['../ffind-daemon_8cpp.html#a869452f0c0952acd39230fcf0ef89c1e',1,'ffind-daemon.cpp']]]
+  ['build_5fpath_5findex_0',['build_path_index',['../ffind-daemon_8cpp.html#ab69d236a01aa6689b1c7709979bf0262',1,'ffind-daemon.cpp']]]
 ];
