@@ -2,6 +2,9 @@
 ffind
 ffind-daemon
 
+# Distribution tarballs
+ffind-*.tar.gz
+
 # Test artifacts
 tests/temp_test_*/
 

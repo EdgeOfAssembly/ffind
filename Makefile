@@ -124,6 +124,86 @@ uninstall-systemd:
 clean:
 	rm -f $(TARGETS)
 
+# ============================================================================
+# Distribution tarball
+# ============================================================================
+
+VERSION = 1.0
+DISTNAME = ffind-$(VERSION)
+
+# Files to include in distribution (intentionally excludes .git and llm_prep)
+DISTFILES = \
+    ffind.cpp \
+    ffind-daemon.cpp \
+    Makefile \
+    README.md \
+    LICENSE \
+    ffind.1 \
+    ffind-daemon.8 \
+    ffind-daemon.openrc \
+    etc-conf.d-ffind-daemon.example
+
+# Optional files (included if they exist)
+DISTFILES_OPTIONAL = \
+    ARCHITECTURE.md \
+    BENCHMARK_RESULTS.md \
+    TODO.md \
+    Doxyfile \
+    ffind-daemon.service \
+    config.yaml.example
+
+# Directories to include (excluding .git and llm_prep)
+DISTDIRS = tests benchmarks
+
+dist: clean
+	@echo "Creating $(DISTNAME).tar.gz..."
+	@echo ""
+	rm -rf $(DISTNAME)
+	mkdir -p $(DISTNAME)
+	@echo "Copying source files..."
+	@for f in $(DISTFILES); do \
+		if [ -f "$$f" ]; then \
+			cp "$$f" $(DISTNAME)/; \
+			echo "  + $$f"; \
+		else \
+			echo "  ! Missing required file: $$f" >&2; \
+			exit 1; \
+		fi \
+	done
+	@echo "Copying optional files..."
+	@for f in $(DISTFILES_OPTIONAL); do \
+		if [ -f "$$f" ]; then \
+			cp "$$f" $(DISTNAME)/; \
+			echo "  + $$f"; \
+		fi \
+	done
+	@echo "Copying directories..."
+	@for dir in $(DISTDIRS); do \
+		if [ -d "$$dir" ]; then \
+			cp -r "$$dir" $(DISTNAME)/; \
+			echo "  + $$dir/"; \
+		fi \
+	done
+	@echo ""
+	@echo "Creating tarball..."
+	tar -czvf $(DISTNAME).tar.gz $(DISTNAME)
+	rm -rf $(DISTNAME)
+	@echo ""
+	@echo "========================================"
+	@echo "Created: $(DISTNAME).tar.gz"
+	@ls -lh $(DISTNAME).tar.gz
+	@echo "========================================"
+	@echo ""
+	@echo "To verify contents:"
+	@echo "  tar -tzvf $(DISTNAME).tar.gz"
+	@echo ""
+	@echo "To test the tarball:"
+	@echo "  tar -xzf $(DISTNAME).tar.gz"
+	@echo "  cd $(DISTNAME) && make"
+
+distclean: clean
+	rm -f ffind-*.tar.gz
+
 help:
 	@echo "ffind Makefile targets:"
 	@echo ""
@@ -135,6 +215,8 @@ help:
 	@echo "  make uninstall-openrc - Remove OpenRC service files"
 	@echo "  make uninstall-systemd - Remove systemd service files"
 	@echo "  make clean        - Remove build artifacts"
+	@echo "  make dist         - Create release tarball (ffind-$(VERSION).tar.gz)"
+	@echo "  make distclean    - Remove tarballs and build artifacts"
 	@echo "  make help         - Show this help"
 	@echo ""
 	@echo "Installation paths (override with make VAR=value):"
@@ -147,4 +229,4 @@ help:
 	@echo "  make PREFIX=/usr install          # Install to /usr instead of /usr/local"
 	@echo "  make DESTDIR=/tmp/pkg install     # Stage for packaging"
 
-.PHONY: all install install-openrc install-systemd uninstall uninstall-openrc uninstall-systemd clean help
+.PHONY: all install install-openrc install-systemd uninstall uninstall-openrc uninstall-systemd clean dist distclean help
