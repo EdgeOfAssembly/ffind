@@ -26,7 +26,7 @@ SYSCONFDIR ?= /etc
 # Service directories
 OPENRC_INITDIR ?= $(SYSCONFDIR)/init.d
 OPENRC_CONFDIR ?= $(SYSCONFDIR)/conf.d
-SYSTEMD_UNITDIR ?= $(PREFIX)/lib/systemd/system
+SYSTEMD_UNITDIR ?= /usr/lib/systemd/system
 
 TARGETS = ffind-daemon ffind
 

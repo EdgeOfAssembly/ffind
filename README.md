@@ -105,7 +105,7 @@ Real-world benchmarks on SSD showing ffind's advantages over traditional tools:
 |-----------|-----------|---------|-------|---------------------|-------------------|
 | Find *.c files | 0.536s | - | **0.009s** | **59.6x faster** | - |
 | Find *.h files | 0.547s | - | **0.039s** | **14.0x faster** | - |
-| Find files &gt;100KB | 2.958s | - | **0.019s** | **155.8x faster** | - |
+| Find files >100KB | 2.958s | - | **0.019s** | **155.8x faster** | - |
 | Content search "static" | 17.1s | 4.02s | **0.69s** | **24.7x faster** | **5.8x faster** |
 | Regex search | 16.7s | 4.00s | **1.89s** | **8.8x faster** | **2.1x faster** |
 | List all files | 0.568s | - | **0.029s** | **19.5x faster** | - |
@@ -626,7 +626,6 @@ For systems using systemd (Ubuntu, Fedora, Debian, Arch, etc.):
 
 4. Start the service:
    ```bash
-   sudo systemctl daemon-reload
    sudo systemctl start ffind-daemon
    ```
 

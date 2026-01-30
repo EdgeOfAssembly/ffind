@@ -11,12 +11,12 @@ RestartSec=5
 
 # Security hardening
 NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=read-only
+ProtectSystem=full
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
+ReadWritePaths=/var/cache/ffind
 
 # Uncomment and modify for your needs:
 # ExecStart=/usr/local/bin/ffind-daemon --foreground --db /var/cache/ffind/index.db /home /var/www
