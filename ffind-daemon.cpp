@@ -79,6 +79,51 @@ const char* COLOR_CYAN = "\033[36m";
 const char* COLOR_BOLD = "\033[1m";
 const char* COLOR_RESET = "\033[0m";
 
+// Connection limiting to prevent DoS attacks
+constexpr int MAX_CONCURRENT_CLIENTS = 100;
+atomic<int> active_connections{0};
+
+/**
+ * ScopedFd: RAII wrapper for file descriptors
+ * Automatically closes file descriptor on scope exit, preventing resource leaks
+ * Useful in functions with multiple return paths
+ */
+struct ScopedFd {
+    int fd;
+    
+    explicit ScopedFd(int f) : fd(f) {}
+    
+    ~ScopedFd() { 
+        if (fd >= 0) close(fd); 
+    }
+    
+    // Delete copy operations to prevent double-close
+    ScopedFd(const ScopedFd&) = delete;
+    ScopedFd& operator=(const ScopedFd&) = delete;
+    
+    // Allow move operations for flexibility
+    ScopedFd(ScopedFd&& other) noexcept : fd(other.fd) {
+        other.fd = -1;
+    }
+    
+    ScopedFd& operator=(ScopedFd&& other) noexcept {
+        if (this != &other) {
+            if (fd >= 0) close(fd);
+            fd = other.fd;
+            other.fd = -1;
+        }
+        return *this;
+    }
+    
+    int get() const { return fd; }
+    
+    int release() { 
+        int tmp = fd; 
+        fd = -1; 
+        return tmp; 
+    }
+};
+
 void show_usage() {
     cout << "Usage: ffind-daemon [OPTIONS] DIR [DIR2 ...]\n\n";
     cout << "Options:\n";
@@ -2068,56 +2113,56 @@ void send_results_batched(int fd, const vector<string>& results) {
  *   8. Read context lines: before_ctx, after_ctx (1 + 1 bytes)
  */
 void handle_client(int fd) {
+    // Use RAII to ensure fd is always closed and connection count decremented
+    ScopedFd scoped_fd(fd);
+    
+    // Track active connections - will be decremented when function returns
+    // This is already incremented before calling this function
+    
     // SECURITY: Maximum pattern size to prevent memory exhaustion attacks
     constexpr uint32_t MAX_PATTERN_SIZE = 1024 * 1024;  // 1MB limit
     
     uint32_t net_nlen, net_plen, net_clen;
     
     // Read name pattern length and validate
-    if (!safe_read_all(fd, &net_nlen, 4)) { close(fd); return; }
+    if (!safe_read_all(fd, &net_nlen, 4)) { return; }
     uint32_t name_len = ntohl(net_nlen);
     // SECURITY: Validate name pattern length
     if (name_len > MAX_PATTERN_SIZE) { 
         const char* err = "Name pattern too large\n";
         safe_write_all(fd, err, strlen(err));
-        close(fd); 
         return; 
     }
     string name_pat(name_len, '\0');
     if (name_len > 0 && !safe_read_all(fd, name_pat.data(), name_len)) { 
-        close(fd); 
         return; 
     }
 
     // Read path pattern length and validate
-    if (!safe_read_all(fd, &net_plen, 4)) { close(fd); return; }
+    if (!safe_read_all(fd, &net_plen, 4)) { return; }
     uint32_t path_len = ntohl(net_plen);
     // SECURITY: Validate path pattern length
     if (path_len > MAX_PATTERN_SIZE) { 
         const char* err = "Path pattern too large\n";
         safe_write_all(fd, err, strlen(err));
-        close(fd); 
         return; 
     }
     string path_pat(path_len, '\0');
     if (path_len > 0 && !safe_read_all(fd, path_pat.data(), path_len)) { 
-        close(fd); 
         return; 
     }
 
     // Read content pattern length and validate
-    if (!safe_read_all(fd, &net_clen, 4)) { close(fd); return; }
+    if (!safe_read_all(fd, &net_clen, 4)) { return; }
     uint32_t content_len = ntohl(net_clen);
     // SECURITY: Validate content pattern length
     if (content_len > MAX_PATTERN_SIZE) { 
         const char* err = "Content pattern too large\n";
         safe_write_all(fd, err, strlen(err));
-        close(fd); 
         return; 
     }
     string content_pat(content_len, '\0');
     if (content_len > 0 && !safe_read_all(fd, content_pat.data(), content_len)) { 
-        close(fd); 
         return; 
     }
 
@@ -2138,7 +2183,6 @@ void handle_client(int fd) {
     if (read(fd, &size_op, 1) == 1 && size_op) {
         // Only read value if operator is present
         if (!safe_read_all(fd, &size_val, 8)) {
-            close(fd);
             return;
         }
     }
@@ -2149,7 +2193,6 @@ void handle_client(int fd) {
     if (read(fd, &mtime_op, 1) == 1 && mtime_op) {
         // Only read days if operator is present
         if (!safe_read_all(fd, &mtime_days, 4)) {
-            close(fd);
             return;
         }
     }
@@ -2174,7 +2217,6 @@ void handle_client(int fd) {
         if (!re->ok()) {
             const char* err = "Invalid regex pattern\n";
             safe_write_all(fd, err, strlen(err));
-            close(fd);
             return;
         }
     }
@@ -2356,7 +2398,6 @@ void handle_client(int fd) {
         if (!content_search_pool) {
             const char* err = "Internal error: thread pool not initialized\n";
             safe_write_all(fd, err, strlen(err));
-            close(fd);
             return;
         }
         
@@ -2568,8 +2609,8 @@ void handle_client(int fd) {
             }
         }
     }
-
-    close(fd);
+    
+    // ScopedFd will automatically close fd when function returns
 }
 
 // Helper functions for root path validation
@@ -2927,7 +2968,27 @@ int main(int argc, char** argv) {
         while (running) {
             int c = accept(srv, nullptr, nullptr);
             if (c > 0) {
-                thread(handle_client, c).detach();
+                // Check connection limit before spawning thread
+                int current_connections = active_connections.load();
+                if (current_connections >= MAX_CONCURRENT_CLIENTS) {
+                    // Connection limit reached - reject new connection
+                    if (foreground) {
+                        cerr << COLOR_YELLOW << "[WARN]" << COLOR_RESET 
+                             << " Connection limit reached (" << MAX_CONCURRENT_CLIENTS 
+                             << "), rejecting connection\n";
+                    }
+                    const char* err = "Server busy: too many concurrent connections\n";
+                    safe_write_all(c, err, strlen(err));
+                    close(c);
+                } else {
+                    // Increment connection counter and spawn handler thread
+                    active_connections++;
+                    thread([c]() {
+                        handle_client(c);
+                        // Decrement connection counter when handler completes
+                        active_connections--;
+                    }).detach();
+                }
             } else if (c < 0) {
                 // Save errno immediately after accept() fails
                 int saved_errno = errno;
