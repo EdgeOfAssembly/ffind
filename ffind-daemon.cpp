@@ -53,7 +53,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <signal.h>
-#include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
@@ -2113,11 +2112,12 @@ void send_results_batched(int fd, const vector<string>& results) {
  *   8. Read context lines: before_ctx, after_ctx (1 + 1 bytes)
  */
 void handle_client(int fd) {
-    // Use RAII to ensure fd is always closed and connection count decremented
+    // Use RAII to ensure fd is always closed for this client connection
     ScopedFd scoped_fd(fd);
     
     // Connection count was incremented in the accept loop before calling this function
-    // It will be automatically decremented when the thread exits (after this function returns)
+    // It will be decremented by the spawning lambda after this function returns
+    // (see the accept loop around line 2993)
     
     // SECURITY: Maximum pattern size to prevent memory exhaustion attacks
     constexpr uint32_t MAX_PATTERN_SIZE = 1024 * 1024;  // 1MB limit

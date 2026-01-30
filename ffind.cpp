@@ -27,6 +27,7 @@
 #include <stdexcept>
 #include <cctype>
 #include <cstring>
+#include <cerrno>
 
 // POSIX headers
 #include <sys/socket.h>
