@@ -2116,8 +2116,8 @@ void handle_client(int fd) {
     // Use RAII to ensure fd is always closed and connection count decremented
     ScopedFd scoped_fd(fd);
     
-    // Track active connections - will be decremented when function returns
-    // This is already incremented before calling this function
+    // Connection count was incremented in the accept loop before calling this function
+    // It will be automatically decremented when the thread exits (after this function returns)
     
     // SECURITY: Maximum pattern size to prevent memory exhaustion attacks
     constexpr uint32_t MAX_PATTERN_SIZE = 1024 * 1024;  // 1MB limit
@@ -2968,10 +2968,14 @@ int main(int argc, char** argv) {
         while (running) {
             int c = accept(srv, nullptr, nullptr);
             if (c > 0) {
-                // Check connection limit before spawning thread
-                int current_connections = active_connections.load();
-                if (current_connections >= MAX_CONCURRENT_CLIENTS) {
-                    // Connection limit reached - reject new connection
+                // Atomically check and increment connection counter
+                // Use fetch_add to increment, then check if we exceeded the limit
+                int previous_count = active_connections.fetch_add(1);
+                
+                if (previous_count >= MAX_CONCURRENT_CLIENTS) {
+                    // Connection limit was already reached - reject and rollback
+                    active_connections.fetch_sub(1);  // Rollback the increment
+                    
                     if (foreground) {
                         cerr << COLOR_YELLOW << "[WARN]" << COLOR_RESET 
                              << " Connection limit reached (" << MAX_CONCURRENT_CLIENTS 
@@ -2981,12 +2985,12 @@ int main(int argc, char** argv) {
                     safe_write_all(c, err, strlen(err));
                     close(c);
                 } else {
-                    // Increment connection counter and spawn handler thread
-                    active_connections++;
+                    // Accepted - spawn handler thread
+                    // Connection counter already incremented above
                     thread([c]() {
                         handle_client(c);
                         // Decrement connection counter when handler completes
-                        active_connections--;
+                        active_connections.fetch_sub(1);
                     }).detach();
                 }
             } else if (c < 0) {

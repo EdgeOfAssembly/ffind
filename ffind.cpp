@@ -196,6 +196,10 @@ int main(int argc, char** argv) {
                         cerr << "Size value too large\n";
                         return 1;
                     }
+                    if (num < 0 && num < INT64_MIN / multiplier) {
+                        cerr << "Size value too small (overflow)\n";
+                        return 1;
+                    }
                     
                     num *= multiplier;
                     size_op = sign == '+' ? 3 : sign == '-' ? 1 : 2;
