@@ -18,11 +18,24 @@
 // Protocol: Binary protocol with network byte order for integers
 // See handle_client() in ffind-daemon.cpp for protocol details
 
-#include <bits/stdc++.h>
+// Standard C++ headers
+#include <iostream>
+#include <vector>
+#include <string>
+#include <memory>
+#include <algorithm>
+#include <stdexcept>
+#include <cctype>
+#include <cstring>
+#include <cerrno>
+
+// POSIX headers
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+
+// External libraries
 #include <re2/re2.h>
 
 using namespace std;
@@ -165,17 +178,40 @@ int main(int argc, char** argv) {
                 if (s[0] == '+' || s[0] == '-') { sign = s[0]; s = s.substr(1); }
                 char unit = s.back();
                 if (!isdigit(unit)) s.pop_back(); else unit = 'c';
-                int64_t num = stoll(s);
-                switch (unit) {
-                    case 'c': break;
-                    case 'b': num *= 512; break;
-                    case 'k': num *= 1024; break;
-                    case 'M': num *= 1024*1024; break;
-                    case 'G': num *= 1024*1024*1024; break;
-                    default: cerr << "Bad unit\n"; return 1;
+                
+                try {
+                    int64_t num = stoll(s);
+                    int64_t multiplier = 1;
+                    
+                    switch (unit) {
+                        case 'c': multiplier = 1; break;
+                        case 'b': multiplier = 512; break;
+                        case 'k': multiplier = 1024; break;
+                        case 'M': multiplier = 1024LL * 1024; break;
+                        case 'G': multiplier = 1024LL * 1024 * 1024; break;
+                        default: cerr << "Bad unit\n"; return 1;
+                    }
+                    
+                    // Check for overflow before multiplication
+                    if (num > 0 && num > INT64_MAX / multiplier) {
+                        cerr << "Size value too large\n";
+                        return 1;
+                    }
+                    if (num < 0 && num < INT64_MIN / multiplier) {
+                        cerr << "Size value too small (overflow)\n";
+                        return 1;
+                    }
+                    
+                    num *= multiplier;
+                    size_op = sign == '+' ? 3 : sign == '-' ? 1 : 2;
+                    size_val = num;
+                } catch (const invalid_argument&) {
+                    cerr << "Invalid size value: " << s << "\n";
+                    return 1;
+                } catch (const out_of_range&) {
+                    cerr << "Size value out of range: " << s << "\n";
+                    return 1;
                 }
-                size_op = sign == '+' ? 3 : sign == '-' ? 1 : 2;
-                size_val = num;
             } else if (arg == "-mtime") {
                 if (++i >= argc) { cerr << "Missing -mtime arg\n"; return 1; }
                 string s = argv[i];
@@ -281,6 +317,11 @@ int main(int argc, char** argv) {
     string sock_path = "/run/user/" + to_string(getuid()) + "/ffind.sock";
 
     int c = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (c < 0) {
+        cerr << "Failed to create socket: " << strerror(errno) << "\n";
+        return 1;
+    }
+    
     sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, sock_path.c_str(), sizeof(addr.sun_path)-1);
@@ -515,7 +556,14 @@ int main(int argc, char** argv) {
     };
     
     // Stream processing: read chunks and process complete lines immediately
-    while ((n = read(c, buf, sizeof(buf))) > 0) {
+    while (true) {
+        n = read(c, buf, sizeof(buf));
+        if (n < 0) {
+            if (errno == EINTR) continue;  // Interrupted by signal, retry
+            break;  // Real error
+        }
+        if (n == 0) break;  // EOF
+        
         for (ssize_t i = 0; i < n; ++i) {
             if (buf[i] == '\n') {
                 // Complete line found - process it immediately
