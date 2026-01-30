@@ -697,7 +697,7 @@ This means:
 **A:** inotify (which ffind uses for real-time monitoring) only works on local filesystems. For network filesystems:
 - ✗ Real-time monitoring won't work
 - ✓ You can still use ffind, but you'll need to restart the daemon to pick up changes
-- → Consider using `locate` or scheduled rescans for network shares
+- **Tip:** Consider using `locate` or scheduled rescans for network shares
 
 ### Q: How do I search multiple directories?
 
