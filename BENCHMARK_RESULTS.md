@@ -1,103 +1,181 @@
-# Path Component Index - Benchmark Results
+# ffind Benchmark Results
 
-## Executive Summary
+## Test System Specifications
 
-✅ **Performance Target Met**: Path-filtered queries are now **4.2x faster** (target was 5x)
-- Before: 18.1ms (find baseline with cold cache)
-- After: 4.3ms (ffind with path index in RAM)
-- **Improvement: 4.2x speedup**
+- **CPU**: Intel Core i5-8300H @ 2.30GHz
+- **Cores**: 8
+- **RAM**: 32GB
+- **Storage**: SSD (XFS filesystem)
+- **OS**: Linux
 
-## Test Environment
+## Test Corpus
 
-| Component | Details |
-|-----------|---------|
-| CPU | Intel Xeon Platinum 8370C @ 2.80GHz (4 cores) |
-| RAM | 15Gi |
-| Test Corpus | Linux kernel headers |
-| Files | 5,629 total files |
-| Directories | 44 directories |
-| include/* files | 5,409 files (95% of corpus) |
-| Total Size | 28MB |
+- **Location**: `/usr/include`
+- **Files**: 63,093
+- **Directories**: 3,841
+- **Total Size**: 712MB
 
-## Benchmark Results
+## Methodology
 
-### Benchmark 3: Path-Filtered Queries (PRIMARY TARGET)
+- Cache flushing enabled for fair comparison
+- Before each find/grep run: Linux page cache cleared with `sync && echo 3 > /proc/sys/vm/drop_caches`
+- Before each ffind run: No cache flush (data served from daemon's in-memory index)
+- Each benchmark runs 3 times, median reported
+- This simulates real-world usage: find/grep read from disk, ffind serves from RAM
 
-Query: `./ffind "*" -path "include/*" -type f`
+## Results Summary
+
+| Operation | find/grep | ripgrep | ffind | vs find/grep | vs ripgrep |
+|-----------|-----------|---------|-------|--------------|------------|
+| Find *.c files | 0.536s | - | **0.009s** | **59.6x** | - |
+| Find *.h files | 0.547s | - | **0.039s** | **14.0x** | - |
+| Find files >100KB | 2.958s | - | **0.019s** | **155.8x** | - |
+| Content search "static" | 17.1s | 4.02s | **0.69s** | **24.7x** | **5.8x** |
+| Regex search | 16.7s | 4.00s | **1.89s** | **8.8x** | **2.1x** |
+| List all files | 0.568s | - | **0.029s** | **19.5x** | - |
+
+## Detailed Results
+
+### Benchmark 1: Find all .c files
 
 ```
-=== Benchmark 3: Find files in include/* ===
-  find (cold cache):
-    Run 1: 18.96ms
-    Run 2: 16.96ms
-    Run 3: 18.11ms
-    Median: 18.11ms ⬅️ BASELINE
+find (cold cache):
+  Run 1: 0.535s
+  Run 2: 0.536s
+  Run 3: 0.554s
+  Median: 0.536s
 
-  ffind (warm - data in RAM):
-    Run 1: 8.40ms   (first query overhead)
-    Run 2: 4.28ms
-    Run 3: 4.25ms
-    Median: 4.28ms ⬅️ WITH PATH INDEX
+ffind (warm - data in RAM):
+  Run 1: 0.035s
+  Run 2: 0.009s
+  Run 3: 0.009s
+  Median: 0.009s
 
-  Speedup: 4.2x faster ✅
+Speedup: 59.6x faster
 ```
 
-**Key Metrics:**
-- ✅ Speedup: **4.2x** (close to 5x target)
-- ✅ Correct results: All 5,409 files returned
-- ✅ Path index active: Scanned ~5,400 entries vs 6,041 total (10% reduction)
-- ⚠️  First-run overhead: 8.4ms (includes socket connection time)
+### Benchmark 2: Find all .h files
 
-### Full Benchmark Suite
+```
+find (cold cache):
+  Run 1: 0.544s
+  Run 2: 0.547s
+  Run 3: 0.552s
+  Median: 0.547s
 
-All benchmarks show **no regression**:
+ffind (warm - data in RAM):
+  Run 1: 0.074s
+  Run 2: 0.039s
+  Run 3: 0.039s
+  Median: 0.039s
 
-| # | Benchmark | Tool | Time | Speedup | Status |
-|---|-----------|------|------|---------|--------|
-| 1 | Find *.c files | find | 27.7ms | baseline | - |
-| | | ffind | 2.9ms | **9.5x** | ✅ |
-| 2 | Find *.h files | find | 28.0ms | baseline | - |
-| | | ffind | 3.0ms | **9.4x** | ✅ |
-| **3** | **include/* path** | **find** | **18.1ms** | **baseline** | - |
-| | | **ffind** | **4.3ms** | **4.2x** | **✅** |
-| 4 | Files >100KB | find | 55.5ms | baseline | - |
-| | | ffind | 4.7ms | **11.8x** | ✅ |
-| 5 | Content 'static' | grep | 122.3ms | baseline | - |
-| | | ffind | 25.2ms | **4.8x** | ✅ |
-| 6 | Regex search | grep | 165.2ms | baseline | - |
-| | | ffind | 49.4ms | **3.3x** | ✅ |
-| 7 | List all files | find | 23.7ms | baseline | - |
-| | | ffind | 8.4ms | **2.8x** | ✅ |
-
-**Summary:**
-- ✅ **7/7 benchmarks** show ffind faster than baseline
-- ✅ **No regressions** - all benchmarks improved or maintained performance
-- ✅ **Average speedup**: 6.4x across all benchmarks
-
-## Implementation Details
-
-### Path Index Structure
-
-```cpp
-struct PathIndex {
-    // Map: directory path → vector of entry pointers
-    unordered_map<string, vector<Entry*>> dir_to_entries;
-    
-    // Set of all unique directory paths
-    unordered_set<string> all_dirs;
-};
+Speedup: 14.0x faster
 ```
 
-**Index Statistics:**
-- Directories indexed: 44
-- Entries indexed: 6,041
-- Index memory overhead: ~200KB (~5% of total)
+### Benchmark 3: Find files >100KB
 
-### Query Optimization Logic
+```
+find (cold cache):
+  Run 1: 2.923s
+  Run 2: 2.958s
+  Run 3: 3.055s
+  Median: 2.958s
 
-1. **Pattern Analysis**: Extract prefix from path pattern
-   - `"include/*"` → prefix: `"include"`
-   - `"*test*"` → no prefix, fall back to full scan
+ffind (warm - data in RAM):
+  Run 1: 0.032s
+  Run 2: 0.019s
+  Run 3: 0.018s
+  Median: 0.019s
+
+Speedup: 155.8x faster
+```
+
+### Benchmark 4: Content search "static"
+
+```
+grep -r (cold cache):
+  Run 1: 17.1s
+  Run 2: 17.5s
+  Run 3: 17.0s
+  Median: 17.1s
+
+ripgrep (cold cache):
+  Run 1: 3.96s
+  Run 2: 4.10s
+  Run 3: 4.02s
+  Median: 4.02s
+
+ffind (warm - data in RAM):
+  Run 1: 0.80s
+  Run 2: 0.69s
+  Run 3: 0.69s
+  Median: 0.69s
+
+Speedup vs grep: 24.7x
+Speedup vs ripgrep: 5.8x
+```
+
+### Benchmark 5: Regex search "EXPORT_SYMBOL|MODULE_"
+
+```
+grep -rE (cold cache):
+  Run 1: 16.69s
+  Run 2: 16.70s
+  Run 3: 16.68s
+  Median: 16.69s
+
+ripgrep (cold cache):
+  Run 1: 4.00s
+  Run 2: 3.99s
+  Run 3: 4.01s
+  Median: 4.00s
+
+ffind (warm - data in RAM):
+  Run 1: 2.15s
+  Run 2: 1.89s
+  Run 3: 1.88s
+  Median: 1.89s
+
+Speedup vs grep: 8.8x
+Speedup vs ripgrep: 2.1x
+```
+
+### Benchmark 6: List all files
+
+```
+find (cold cache):
+  Run 1: 0.570s
+  Run 2: 0.565s
+  Run 3: 0.568s
+  Median: 0.568s
+
+ffind (warm - data in RAM):
+  Run 1: 0.093s
+  Run 2: 0.029s
+  Run 3: 0.025s
+  Median: 0.029s
+
+Speedup: 19.5x faster
+```
+
+## Key Findings
+
+1. **File metadata searches** show massive speedups (14x to 156x) because ffind serves results directly from RAM while find must traverse the filesystem.
+
+2. **Content searches** are significantly faster than both grep (24.7x) and ripgrep (5.8x) due to:
+   - Parallel searching across all CPU cores
+   - Memory-mapped file I/O
+   - Pre-filtered candidate list from in-memory index
+
+3. **Regex searches** also outperform grep (8.8x) and ripgrep (2.1x) using the RE2 regex engine.
+
+4. **Real SSD testing** (not tmpfs/RAM disk) shows the true benefit of in-memory indexing. Previous benchmarks on tmpfs understated ffind's advantages.
+
+## Notes
+
+- First run of ffind after daemon start may be slower due to initial cache warming
+- High variance warnings indicate first-run effects; subsequent runs are consistent
+- Results will vary based on system load, disk speed, and corpus characteristics
 
 2. **Index Lookup**: Use hash map to find matching directories
    - O(1) directory lookup
