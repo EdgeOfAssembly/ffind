@@ -1,0 +1,17 @@
+# ffind-daemon configuration file
+# Location: /etc/ffind/config.yaml or ~/.config/ffind/config.yaml
+#
+# Command-line arguments override these settings.
+
+# Run in foreground (don't daemonize)
+# Useful for debugging or when running under a service manager
+foreground: false
+
+# SQLite database path for persistent index
+# Speeds up startup by loading index from disk instead of re-scanning
+# Leave empty to disable persistence
+db: ""
+
+# Examples:
+#   db: "/var/cache/ffind/index.db"
+#   db: "~/.cache/ffind/index.db"

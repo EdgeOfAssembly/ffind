@@ -58,55 +58,62 @@ Fast daemon-based file finder with real-time inotify indexing.
 
 ## Features
 
-✅ **Real-time indexing** with Linux inotify  
-✅ **Instant search** from in-memory index  
-✅ **Parallel content search** using thread pool (all CPU cores)  
-✅ **Content search** with fixed-string, regex, or glob patterns  
-✅ **Context lines** (grep-style -A/-B/-C)  
-✅ **Multiple filters** (name, path, type, size, mtime)  
-✅ **Multiple root directories** support  
-✅ **SQLite persistence** for fast startup  
-✅ **Colored output** with auto-detection  
-✅ **Glob and regex** support  
-✅ **Graceful directory renames** (no restart needed)  
+:white_check_mark: **Real-time indexing** with Linux inotify  
+:white_check_mark: **Instant search** from in-memory index  
+:white_check_mark: **Parallel content search** using thread pool (all CPU cores)  
+:white_check_mark: **Content search** with fixed-string, regex, or glob patterns  
+:white_check_mark: **Context lines** (grep-style -A/-B/-C)  
+:white_check_mark: **Multiple filters** (name, path, type, size, mtime)  
+:white_check_mark: **Multiple root directories** support  
+:white_check_mark: **SQLite persistence** for fast startup  
+:white_check_mark: **Colored output** with auto-detection  
+:white_check_mark: **Glob and regex** support  
+:white_check_mark: **Graceful directory renames** (no restart needed)  
 
 ## Comparison with Other Tools
 
 | Feature | find | locate | ag | ripgrep | ffind |
 |---------|------|--------|----|---------| ------|
-| Real-time indexing | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Content search | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Regex support | ◑ | ❌ | ✅ | ✅ | ✅ |
-| Glob patterns | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Context lines | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Multiple roots | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Persistence | ❌ | ✅ | ❌ | ❌ | ✅ |
+| Real-time indexing | :x: | :x: | :x: | :x: | :white_check_mark: |
+| Content search | :x: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Regex support | :radio_button: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Glob patterns | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
+| Context lines | :x: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Multiple roots | :white_check_mark: | :x: | :x: | :x: | :white_check_mark: |
+| Persistence | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: |
 | Speed (indexed) | Slow | Fast | Slow | Fast | **Instant** |
 
-**Legend**: ◑ = partial/limited support  
+**Legend**: :radio_button: = partial/limited support  
 **Note**: `find` has limited regex support (`-regex` for path matching). `find` and `ag`/`ripgrep` need to traverse the filesystem on every search. `locate` uses a pre-built index but doesn't update in real-time. `ffind` combines the best of both: real-time updates with instant search.
 
 ## Performance Benchmarks
 
-Real-world benchmarks performed on Linux kernel headers (5,629 files, 44 directories, 28MB):
+**Test System:**
+- CPU: Intel Core i5-8300H @ 2.30GHz (8 cores)
+- RAM: 32GB
+- Disk: XFS on SSD
+- OS: Linux
 
-| Operation | find | grep -r | ffind | Speedup |
-|-----------|------|---------|-------|---------|
-| Find *.c files | 0.008s | - | **0.003s** | **2.5x faster** |
-| Find *.h files | 0.008s | - | **0.003s** | **2.5x faster** |
-| Find files in include/* | 0.007s | - | **0.005s** | **1.4x faster** |
-| Find files >100KB | 0.015s | - | **0.003s** | **5.2x faster** |
-| Content search "static" | - | 0.044s | **0.020s** | **2.2x faster** |
-| Regex search "EXPORT_SYMBOL\|MODULE_" | - | 0.064s | **0.039s** | **1.6x faster** |
-| List all files | 0.008s | - | **0.005s** | **1.6x faster** |
+**Test Corpus:** `/usr/include`
+- Files: 63,093
+- Directories: 3,841
+- Total size: 712MB
 
-**System Specifications:**
-- CPU: AMD EPYC 7763 64-Core Processor (4 cores allocated)
-- RAM: 16GB
-- Disk: SSD (ext4 filesystem)
-- OS: Ubuntu 24.04 LTS
-- GNU find: 4.9.0
-- GNU grep: 3.11
+Real-world benchmarks on SSD showing ffind's advantages over traditional tools:
+
+| Operation | find/grep | ripgrep | ffind | Speedup vs find/grep | Speedup vs ripgrep |
+|-----------|-----------|---------|-------|---------------------|-------------------|
+| Find *.c files | 0.536s | - | **0.009s** | **59.6x faster** | - |
+| Find *.h files | 0.547s | - | **0.039s** | **14.0x faster** | - |
+| Find files >100KB | 2.958s | - | **0.019s** | **155.8x faster** | - |
+| Content search "static" | 17.1s | 4.02s | **0.69s** | **24.7x faster** | **5.8x faster** |
+| Regex search | 16.7s | 4.00s | **1.89s** | **8.8x faster** | **2.1x faster** |
+| List all files | 0.568s | - | **0.029s** | **19.5x faster** | - |
+
+**Key Results:**
+- **File metadata searches**: Massive speedups (14x-156x) because ffind serves results from RAM while find traverses the filesystem
+- **Content searches**: Significantly faster than both grep (24.7x) and ripgrep (5.8x) due to parallel processing and memory-mapped I/O
+- **Regex searches**: Outperforms grep (8.8x) and ripgrep (2.1x) using the RE2 regex engine
 
 **Benchmark Methodology:** Tests use fair cache management methodology:
 - `find`/`grep` run with cold cache (caches flushed before each run when run with proper privileges)
@@ -119,7 +126,7 @@ Real-world benchmarks performed on Linux kernel headers (5,629 files, 44 directo
 - **Content searches**: Parallel processing using all CPU cores with minimal disk latency
 - **Real-time indexing**: Index stays up-to-date automatically via inotify
 
-For complete benchmark methodology and cache-flushing setup, see [`benchmarks/README.md`](benchmarks/README.md).
+For complete benchmark details and full results, see [`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md).
 
 ### Indexing Performance
 
@@ -135,10 +142,10 @@ Initial indexing of test corpus (5,629 files, 44 directories, 28MB):
 The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically sound methodology for fair comparisons:
 
 **Cache Management with Dedicated Binary:**
-- ✅ **Cache-flush utility**: Minimal C binary requiring `sudo` for secure cache clearing
-- ✅ **Security best practice**: Only the tiny `cache-flush` binary runs with elevated privileges
-- ✅ **Minimal sudo usage**: Only cache-flush requires sudo, benchmark scripts run as normal user
-- ✅ **Fair comparison**: `find`/`grep` run with cold cache (disk reads), `ffind` with warm cache (RAM)
+- :white_check_mark: **Cache-flush utility**: Minimal C binary requiring `sudo` for secure cache clearing
+- :white_check_mark: **Security best practice**: Only the tiny `cache-flush` binary runs with elevated privileges
+- :white_check_mark: **Minimal sudo usage**: Only cache-flush requires sudo, benchmark scripts run as normal user
+- :white_check_mark: **Fair comparison**: `find`/`grep` run with cold cache (disk reads), `ffind` with warm cache (RAM)
 
 **Security Model:**
 - The `cache-flush` binary must run with `sudo` to write to `/proc/sys/vm/drop_caches`
@@ -591,6 +598,49 @@ sudo mkdir -p /var/cache/ffind
 sudo chown root:root /var/cache/ffind
 ```
 
+### systemd (Most Linux Distributions)
+
+For systems using systemd (Ubuntu, Fedora, Debian, Arch, etc.):
+
+1. Install the service file:
+   ```bash
+   sudo make install-systemd
+   ```
+
+2. Edit the configuration:
+   ```bash
+   sudo nano /etc/ffind/config.yaml
+   ```
+
+3. Modify the service if needed:
+   ```bash
+   sudo systemctl edit ffind-daemon
+   ```
+   
+   Override the ExecStart to change indexed directories:
+   ```ini
+   [Service]
+   ExecStart=
+   ExecStart=/usr/local/bin/ffind-daemon --foreground --db /var/cache/ffind/index.db /home /var/www
+   ```
+
+4. Start the service:
+   ```bash
+   sudo systemctl start ffind-daemon
+   ```
+
+5. Enable at boot:
+   ```bash
+   sudo systemctl enable ffind-daemon
+   ```
+
+6. Check status:
+   ```bash
+   sudo systemctl status ffind-daemon
+   ```
+
+**Note**: The default service monitors `/home`. Edit the service to change directories.
+
 ## FAQ
 
 ### Q: How fast is it?
@@ -638,16 +688,16 @@ For very large trees (> 1 million files), consider:
 5. **Crash safety**: Uses WAL (Write-Ahead Logging) mode for atomic writes
 
 This means:
-- ✅ Fast startup even after system reboot
-- ✅ No data loss on crashes or power failures  
-- ✅ Automatic sync between database and filesystem
+- :white_check_mark: Fast startup even after system reboot
+- :white_check_mark: No data loss on crashes or power failures  
+- :white_check_mark: Automatic sync between database and filesystem
 
 ### Q: Can I use it on network filesystems (NFS, CIFS)?
 
 **A:** inotify (which ffind uses for real-time monitoring) only works on local filesystems. For network filesystems:
-- ❌ Real-time monitoring won't work
-- ✅ You can still use ffind, but you'll need to restart the daemon to pick up changes
-- 💡 Consider using `locate` or scheduled rescans for network shares
+- :x: Real-time monitoring won't work
+- :white_check_mark: You can still use ffind, but you'll need to restart the daemon to pick up changes
+- :bulb: Consider using `locate` or scheduled rescans for network shares
 
 ### Q: How do I search multiple directories?
 
