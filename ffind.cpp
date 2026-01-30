@@ -18,11 +18,23 @@
 // Protocol: Binary protocol with network byte order for integers
 // See handle_client() in ffind-daemon.cpp for protocol details
 
-#include <bits/stdc++.h>
+// Standard C++ headers
+#include <iostream>
+#include <vector>
+#include <string>
+#include <memory>
+#include <algorithm>
+#include <stdexcept>
+#include <cctype>
+#include <cstring>
+
+// POSIX headers
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+
+// External libraries
 #include <re2/re2.h>
 
 using namespace std;

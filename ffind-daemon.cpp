@@ -21,7 +21,32 @@
 // - handle_client(): Process search requests from clients
 // - search_content_worker(): Parallel content search
 
-#include <bits/stdc++.h>
+// Standard C++ headers
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <queue>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+#include <future>
+#include <chrono>
+#include <filesystem>
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <stdexcept>
+#include <cerrno>
+#include <cstring>
+#include <cctype>
+#include <iomanip>
+#include <cassert>
+
+// POSIX headers
 #include <sys/stat.h>
 #include <sys/inotify.h>
 #include <fnmatch.h>
@@ -31,14 +56,14 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <fstream>
-#include <re2/re2.h>
-#include <string.h>
 #include <arpa/inet.h>
 #include <poll.h>
-#include <sqlite3.h>
 #include <sys/uio.h>
 #include <sys/mman.h>
+
+// External libraries
+#include <re2/re2.h>
+#include <sqlite3.h>
 
 using namespace std;
 using namespace std::filesystem;
