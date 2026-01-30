@@ -58,32 +58,32 @@ Fast daemon-based file finder with real-time inotify indexing.
 
 ## Features
 
-:white_check_mark: **Real-time indexing** with Linux inotify  
-:white_check_mark: **Instant search** from in-memory index  
-:white_check_mark: **Parallel content search** using thread pool (all CPU cores)  
-:white_check_mark: **Content search** with fixed-string, regex, or glob patterns  
-:white_check_mark: **Context lines** (grep-style -A/-B/-C)  
-:white_check_mark: **Multiple filters** (name, path, type, size, mtime)  
-:white_check_mark: **Multiple root directories** support  
-:white_check_mark: **SQLite persistence** for fast startup  
-:white_check_mark: **Colored output** with auto-detection  
-:white_check_mark: **Glob and regex** support  
-:white_check_mark: **Graceful directory renames** (no restart needed)  
+✓ **Real-time indexing** with Linux inotify  
+✓ **Instant search** from in-memory index  
+✓ **Parallel content search** using thread pool (all CPU cores)  
+✓ **Content search** with fixed-string, regex, or glob patterns  
+✓ **Context lines** (grep-style -A/-B/-C)  
+✓ **Multiple filters** (name, path, type, size, mtime)  
+✓ **Multiple root directories** support  
+✓ **SQLite persistence** for fast startup  
+✓ **Colored output** with auto-detection  
+✓ **Glob and regex** support  
+✓ **Graceful directory renames** (no restart needed)  
 
 ## Comparison with Other Tools
 
 | Feature | find | locate | ag | ripgrep | ffind |
-|---------|------|--------|----|---------| ------|
-| Real-time indexing | :x: | :x: | :x: | :x: | :white_check_mark: |
-| Content search | :x: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Regex support | :radio_button: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Glob patterns | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
-| Context lines | :x: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Multiple roots | :white_check_mark: | :x: | :x: | :x: | :white_check_mark: |
-| Persistence | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: |
+|---------|:----:|:------:|:--:|:-------:|:-----:|
+| Real-time indexing | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Content search | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Regex support | ◐ | ✗ | ✓ | ✓ | ✓ |
+| Glob patterns | ✓ | ✓ | ✗ | ✓ | ✓ |
+| Context lines | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Multiple roots | ✓ | ✗ | ✗ | ✗ | ✓ |
+| Persistence | ✗ | ✓ | ✗ | ✗ | ✓ |
 | Speed (indexed) | Slow | Fast | Slow | Fast | **Instant** |
 
-**Legend**: :radio_button: = partial/limited support  
+**Legend**: ◐ = partial/limited support  
 **Note**: `find` has limited regex support (`-regex` for path matching). `find` and `ag`/`ripgrep` need to traverse the filesystem on every search. `locate` uses a pre-built index but doesn't update in real-time. `ffind` combines the best of both: real-time updates with instant search.
 
 ## Performance Benchmarks
@@ -142,10 +142,10 @@ Initial indexing of test corpus (5,629 files, 44 directories, 28MB):
 The benchmark script (`benchmarks/run_real_benchmarks.sh`) uses scientifically sound methodology for fair comparisons:
 
 **Cache Management with Dedicated Binary:**
-- :white_check_mark: **Cache-flush utility**: Minimal C binary requiring `sudo` for secure cache clearing
-- :white_check_mark: **Security best practice**: Only the tiny `cache-flush` binary runs with elevated privileges
-- :white_check_mark: **Minimal sudo usage**: Only cache-flush requires sudo, benchmark scripts run as normal user
-- :white_check_mark: **Fair comparison**: `find`/`grep` run with cold cache (disk reads), `ffind` with warm cache (RAM)
+- ✓ **Cache-flush utility**: Minimal C binary requiring `sudo` for secure cache clearing
+- ✓ **Security best practice**: Only the tiny `cache-flush` binary runs with elevated privileges
+- ✓ **Minimal sudo usage**: Only cache-flush requires sudo, benchmark scripts run as normal user
+- ✓ **Fair comparison**: `find`/`grep` run with cold cache (disk reads), `ffind` with warm cache (RAM)
 
 **Security Model:**
 - The `cache-flush` binary must run with `sudo` to write to `/proc/sys/vm/drop_caches`
@@ -688,16 +688,16 @@ For very large trees (> 1 million files), consider:
 5. **Crash safety**: Uses WAL (Write-Ahead Logging) mode for atomic writes
 
 This means:
-- :white_check_mark: Fast startup even after system reboot
-- :white_check_mark: No data loss on crashes or power failures  
-- :white_check_mark: Automatic sync between database and filesystem
+- ✓ Fast startup even after system reboot
+- ✓ No data loss on crashes or power failures  
+- ✓ Automatic sync between database and filesystem
 
 ### Q: Can I use it on network filesystems (NFS, CIFS)?
 
 **A:** inotify (which ffind uses for real-time monitoring) only works on local filesystems. For network filesystems:
-- :x: Real-time monitoring won't work
-- :white_check_mark: You can still use ffind, but you'll need to restart the daemon to pick up changes
-- :bulb: Consider using `locate` or scheduled rescans for network shares
+- ✗ Real-time monitoring won't work
+- ✓ You can still use ffind, but you'll need to restart the daemon to pick up changes
+- → Consider using `locate` or scheduled rescans for network shares
 
 ### Q: How do I search multiple directories?
 
