@@ -114,7 +114,7 @@ Current benchmark results (Linux kernel headers, 16,548 files):
 | Files >100KB | 0.090s | 0.003s | **28.4x** |
 | List all files | 0.063s | 0.025s | **2.5x** |
 
-**Note:** Content search performance is currently slower than grep, but file/metadata searches show significant speedups.
+**Note:** ffind outperforms both grep and ripgrep for content searches when tested on real SSD storage. See main README.md for detailed benchmarks.
 
 See main [README.md](../README.md#performance-benchmarks) for complete benchmark results.
 
